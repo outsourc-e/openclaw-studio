@@ -21,20 +21,20 @@ function formatShort(timestamp: number): string {
   const date = new Date(timestamp)
   const now = new Date()
   if (isSameDay(date, now)) {
-    return new Intl.DateTimeFormat(undefined, {
+    return new Intl.DateTimeFormat('en-GB', {
       hour: '2-digit',
       minute: '2-digit',
     }).format(date)
   }
 
-  return new Intl.DateTimeFormat('fr-FR', {
+  return new Intl.DateTimeFormat('en-GB', {
     day: '2-digit',
     month: 'short',
   }).format(date)
 }
 
 function formatFull(timestamp: number): string {
-  const value = new Intl.DateTimeFormat('fr-FR', {
+  const value = new Intl.DateTimeFormat('en-GB', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
@@ -42,7 +42,7 @@ function formatFull(timestamp: number): string {
     minute: '2-digit',
     second: '2-digit',
   }).format(new Date(timestamp))
-  return value.replace(' à ', ', ')
+  return value
 }
 
 export function MessageTimestamp({ timestamp }: MessageTimestampProps) {
