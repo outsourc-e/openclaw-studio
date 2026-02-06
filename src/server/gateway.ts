@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto'
 import WebSocket from 'ws'
+import type { RawData } from 'ws'
 
-type GatewayFrame =
+export type GatewayFrame =
   | { type: 'req'; id: string; method: string; params?: unknown }
   | {
       type: 'res'
@@ -30,10 +31,10 @@ type ConnectParams = {
 
 type GatewayWaiter = {
   waitForRes: (id: string) => Promise<unknown>
-  handleMessage: (evt: MessageEvent) => void
+  handleMessage: (data: RawData) => void
 }
 
-function getGatewayConfig() {
+export function getGatewayConfig() {
   const url = process.env.CLAWDBOT_GATEWAY_URL?.trim() || 'ws://127.0.0.1:18789'
   const token = process.env.CLAWDBOT_GATEWAY_TOKEN?.trim() || ''
   const password = process.env.CLAWDBOT_GATEWAY_PASSWORD?.trim() || ''
@@ -48,7 +49,7 @@ function getGatewayConfig() {
   return { url, token, password }
 }
 
-function buildConnectParams(token: string, password: string): ConnectParams {
+export function buildConnectParams(token: string, password: string): ConnectParams {
   return {
     minProtocol: 3,
     maxProtocol: 3,
@@ -84,10 +85,15 @@ function createGatewayWaiter(): GatewayWaiter {
     })
   }
 
-  function handleMessage(evt: MessageEvent) {
+  function handleMessage(data: RawData) {
     try {
-      const data = typeof evt.data === 'string' ? evt.data : ''
-      const parsed = JSON.parse(data) as GatewayFrame
+      const raw =
+        typeof data === 'string'
+          ? data
+          : Array.isArray(data)
+            ? Buffer.concat(data).toString('utf8')
+            : data.toString()
+      const parsed = JSON.parse(raw) as GatewayFrame
       if (parsed.type !== 'res') return
       const w = waiters.get(parsed.id)
       if (!w) return
@@ -109,23 +115,23 @@ async function wsOpen(ws: WebSocket): Promise<void> {
       cleanup()
       resolve()
     }
-    const onError = (e: Event) => {
+    const onError = (error: Error) => {
       cleanup()
-      reject(new Error(`WebSocket error: ${String((e as any)?.message ?? e)}`))
+      reject(new Error(`WebSocket error: ${String(error.message)}`))
     }
     const cleanup = () => {
-      ws.removeEventListener('open', onOpen)
-      ws.removeEventListener('error', onError)
+      ws.off('open', onOpen)
+      ws.off('error', onError)
     }
-    ws.addEventListener('open', onOpen)
-    ws.addEventListener('error', onError)
+    ws.on('open', onOpen)
+    ws.on('error', onError)
   })
 }
 
 async function wsClose(ws: WebSocket): Promise<void> {
   if (ws.readyState === ws.CLOSED || ws.readyState === ws.CLOSING) return
   await new Promise<void>((resolve) => {
-    ws.addEventListener('close', () => resolve(), { once: true })
+    ws.once('close', () => resolve())
     ws.close()
   })
 }
@@ -161,7 +167,7 @@ export async function gatewayRpc<TPayload = unknown>(
 
     const waiter = createGatewayWaiter()
 
-    ws.addEventListener('message', waiter.handleMessage)
+    ws.on('message', waiter.handleMessage)
 
     ws.send(JSON.stringify(connectReq))
     await waiter.waitForRes(connectId)
@@ -169,7 +175,7 @@ export async function gatewayRpc<TPayload = unknown>(
     ws.send(JSON.stringify(req))
     const payload = await waiter.waitForRes(requestId)
 
-    ws.removeEventListener('message', waiter.handleMessage)
+    ws.off('message', waiter.handleMessage)
     return payload as TPayload
   } finally {
     try {
@@ -197,10 +203,10 @@ export async function gatewayConnectCheck(): Promise<void> {
     }
 
     const waiter = createGatewayWaiter()
-    ws.addEventListener('message', waiter.handleMessage)
+    ws.on('message', waiter.handleMessage)
     ws.send(JSON.stringify(connectReq))
     await waiter.waitForRes(connectId)
-    ws.removeEventListener('message', waiter.handleMessage)
+    ws.off('message', waiter.handleMessage)
   } finally {
     try {
       await wsClose(ws)

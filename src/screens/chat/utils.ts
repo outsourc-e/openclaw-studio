@@ -3,6 +3,8 @@ import type {
   SessionMeta,
   SessionSummary,
   ToolCallContent,
+  SessionTitleSource,
+  SessionTitleStatus,
 } from './types'
 
 export function deriveFriendlyIdFromKey(key: string | undefined): string {
@@ -70,6 +72,29 @@ export function getMessageTimestamp(message: GatewayMessage): number {
   return Date.now()
 }
 
+function deriveTitleStatus(
+  label?: string,
+  explicitTitle?: string,
+  derivedTitle?: string,
+  providedStatus?: SessionTitleStatus,
+): SessionTitleStatus {
+  if (providedStatus) return providedStatus
+  if (label || explicitTitle || derivedTitle) return 'ready'
+  return 'idle'
+}
+
+function deriveTitleSource(
+  label?: string,
+  explicitTitle?: string,
+  derivedTitle?: string,
+  providedSource?: SessionTitleSource,
+): SessionTitleSource | undefined {
+  if (providedSource) return providedSource
+  if (label || explicitTitle) return 'manual'
+  if (derivedTitle) return 'auto'
+  return undefined
+}
+
 export function normalizeSessions(
   rows: Array<SessionSummary> | undefined,
 ): Array<SessionMeta> {
@@ -85,18 +110,44 @@ export function normalizeSessions(
         ? session.friendlyId.trim()
         : deriveFriendlyIdFromKey(key)
 
+    const label =
+      typeof session.label === 'string' && session.label.trim().length > 0
+        ? session.label.trim()
+        : undefined
+    const explicitTitle =
+      typeof session.title === 'string' && session.title.trim().length > 0
+        ? session.title.trim()
+        : undefined
+    const derivedTitle =
+      typeof session.derivedTitle === 'string' &&
+      session.derivedTitle.trim().length > 0
+        ? session.derivedTitle.trim()
+        : undefined
+    const titleStatus = deriveTitleStatus(
+      label,
+      explicitTitle,
+      derivedTitle,
+      session.titleStatus,
+    )
+    const titleSource = deriveTitleSource(
+      label,
+      explicitTitle,
+      derivedTitle,
+      session.titleSource,
+    )
+
     return {
       key,
       friendlyId: friendlyIdCandidate,
-      title: typeof session.title === 'string' ? session.title : undefined,
-      derivedTitle:
-        typeof session.derivedTitle === 'string'
-          ? session.derivedTitle
-          : undefined,
-      label: typeof session.label === 'string' ? session.label : undefined,
+      title: explicitTitle,
+      derivedTitle,
+      label,
       updatedAt:
         typeof session.updatedAt === 'number' ? session.updatedAt : undefined,
       lastMessage: session.lastMessage ?? null,
+      titleStatus,
+      titleSource,
+      titleError: session.titleError ?? null,
     }
   })
 }

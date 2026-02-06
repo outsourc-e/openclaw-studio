@@ -1,17 +1,36 @@
-import { memo } from 'react'
+import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import {
   getMessageTimestamp,
   getToolCallsFromMessage,
   textFromMessage,
 } from '../utils'
 import { MessageActionsBar } from './message-actions-bar'
-import type { GatewayMessage, ToolCallContent } from '../types'
+import type {
+  GatewayAttachment,
+  GatewayMessage,
+  ToolCallContent,
+} from '../types'
 import type { ToolPart } from '@/components/prompt-kit/tool'
 import { Message, MessageContent } from '@/components/prompt-kit/message'
 import { Thinking } from '@/components/prompt-kit/thinking'
+import { ThinkingIndicator } from '@/components/prompt-kit/thinking-indicator'
 import { Tool } from '@/components/prompt-kit/tool'
+import { ToolIndicator } from '@/components/prompt-kit/tool-indicator'
 import { useChatSettings } from '@/hooks/use-chat-settings'
 import { cn } from '@/lib/utils'
+
+// Streaming cursor component
+function StreamingCursor() {
+  return (
+    <span
+      className="chat-streaming-lobster"
+      role="img"
+      aria-label="Assistant is streaming"
+    >
+      🦞
+    </span>
+  )
+}
 
 type MessageItemProps = {
   message: GatewayMessage
@@ -20,6 +39,11 @@ type MessageItemProps = {
   wrapperRef?: React.RefObject<HTMLDivElement | null>
   wrapperClassName?: string
   wrapperScrollMarginTop?: number
+  isStreaming?: boolean
+  streamingText?: string
+  streamingThinking?: string
+  simulateStreaming?: boolean
+  streamingKey?: string | null
 }
 
 function mapToolCallToToolPart(
@@ -129,6 +153,17 @@ function thinkingFromMessage(msg: GatewayMessage): string | null {
   return null
 }
 
+function attachmentSource(attachment: GatewayAttachment | undefined): string {
+  if (!attachment) return ''
+  const candidates = [attachment.previewUrl, attachment.dataUrl, attachment.url]
+  for (const candidate of candidates) {
+    if (typeof candidate === 'string' && candidate.trim().length > 0) {
+      return candidate
+    }
+  }
+  return ''
+}
+
 function MessageItemComponent({
   message,
   toolResultsByCallId,
@@ -136,13 +171,151 @@ function MessageItemComponent({
   wrapperRef,
   wrapperClassName,
   wrapperScrollMarginTop,
+  isStreaming = false,
+  streamingText,
+  streamingThinking,
+  simulateStreaming = false,
+  streamingKey,
 }: MessageItemProps) {
   const { settings } = useChatSettings()
   const role = message.role || 'assistant'
-  const text = textFromMessage(message)
-  const thinking = thinkingFromMessage(message)
+
+  const messageStreamingStatus = message.__streamingStatus
+  const messageStreamingText =
+    typeof message.__streamingText === 'string'
+      ? message.__streamingText
+      : undefined
+  const messageStreamingThinking =
+    typeof message.__streamingThinking === 'string'
+      ? message.__streamingThinking
+      : undefined
+  const remoteStreamingText =
+    streamingText !== undefined ? streamingText : messageStreamingText
+  const remoteStreamingThinking =
+    streamingThinking !== undefined
+      ? streamingThinking
+      : messageStreamingThinking
+  const remoteStreamingActive =
+    isStreaming || messageStreamingStatus === 'streaming'
+
+  const fullText = useMemo(() => textFromMessage(message), [message])
+  const [displayText, setDisplayText] = useState(() =>
+    remoteStreamingActive ? remoteStreamingText ?? fullText : fullText,
+  )
+  const [isLocalStreaming, setIsLocalStreaming] = useState(false)
+  const animationKeyRef = useRef<string | null>(null)
+  const animationTimeoutRef = useRef<number | null>(null)
+  const animationIndexRef = useRef(0)
+
+  const shouldFakeStream =
+    Boolean(simulateStreaming && !remoteStreamingActive && fullText.length > 0)
+
+  useEffect(() => {
+    if (remoteStreamingActive) {
+      setIsLocalStreaming(false)
+      animationKeyRef.current = null
+      if (animationTimeoutRef.current) {
+        window.clearTimeout(animationTimeoutRef.current)
+        animationTimeoutRef.current = null
+      }
+      setDisplayText(remoteStreamingText ?? fullText)
+      return
+    }
+
+    if (!shouldFakeStream) {
+      setDisplayText((current) =>
+        current === fullText ? current : fullText,
+      )
+      setIsLocalStreaming(false)
+      animationKeyRef.current = null
+      if (animationTimeoutRef.current) {
+        window.clearTimeout(animationTimeoutRef.current)
+        animationTimeoutRef.current = null
+      }
+    }
+  }, [remoteStreamingActive, remoteStreamingText, fullText, shouldFakeStream])
+
+  useEffect(() => {
+    if (!shouldFakeStream) {
+      return
+    }
+
+    const key = streamingKey ?? `${fullText.length}:${fullText.slice(-24)}`
+    if (animationKeyRef.current === key) {
+      return
+    }
+    animationKeyRef.current = key
+
+    if (animationTimeoutRef.current) {
+      window.clearTimeout(animationTimeoutRef.current)
+      animationTimeoutRef.current = null
+    }
+
+    animationIndexRef.current = 0
+    setIsLocalStreaming(true)
+    setDisplayText('')
+
+    if (fullText.length === 0) {
+      setIsLocalStreaming(false)
+      return
+    }
+
+    const targetDuration = Math.min(4200, Math.max(900, fullText.length * 26))
+    const stepDelay = 18
+    const totalSteps = Math.max(1, Math.round(targetDuration / stepDelay))
+    const chunkSize = Math.max(1, Math.ceil(fullText.length / totalSteps))
+
+    const tick = () => {
+      const nextIndex = Math.min(
+        fullText.length,
+        animationIndexRef.current + chunkSize,
+      )
+      animationIndexRef.current = nextIndex
+      setDisplayText(fullText.slice(0, nextIndex))
+
+      if (nextIndex >= fullText.length) {
+        setIsLocalStreaming(false)
+        animationTimeoutRef.current = null
+        return
+      }
+
+      animationTimeoutRef.current = window.setTimeout(tick, stepDelay)
+    }
+
+    animationTimeoutRef.current = window.setTimeout(tick, stepDelay)
+
+    return () => {
+      if (animationTimeoutRef.current) {
+        window.clearTimeout(animationTimeoutRef.current)
+        animationTimeoutRef.current = null
+      }
+    }
+  }, [shouldFakeStream, streamingKey, fullText])
+
+  useEffect(() => {
+    return () => {
+      if (animationTimeoutRef.current) {
+        window.clearTimeout(animationTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  const effectiveIsStreaming =
+    remoteStreamingActive || isLocalStreaming
+
+  const thinking =
+    remoteStreamingActive && remoteStreamingThinking !== undefined
+      ? remoteStreamingThinking
+      : thinkingFromMessage(message)
   const isUser = role === 'user'
   const timestamp = getMessageTimestamp(message)
+  const attachments = Array.isArray(message.attachments)
+    ? (message.attachments as Array<GatewayAttachment>).filter(
+        (attachment) => attachmentSource(attachment).length > 0,
+      )
+    : []
+  const hasAttachments = attachments.length > 0
+  const hasText = displayText.length > 0 || effectiveIsStreaming
 
   // Get tool calls from this message (for assistant messages)
   const toolCalls = role === 'assistant' ? getToolCallsFromMessage(message) : []
@@ -162,48 +335,112 @@ function MessageItemComponent({
         isUser ? 'items-end' : 'items-start',
       )}
     >
-      {thinking && settings.showReasoningBlocks && (
+      {thinking && (
         <div className="w-full max-w-[900px]">
-          <Thinking content={thinking} />
+          {settings.showReasoningBlocks ? (
+            <Thinking content={thinking} />
+          ) : (
+            <ThinkingIndicator
+              content={thinking}
+              defaultOpen={false}
+              isStreaming={effectiveIsStreaming}
+            />
+          )}
         </div>
       )}
-      <Message className={cn(isUser ? 'flex-row-reverse' : '')}>
-        <MessageContent
-          markdown={!isUser}
-          className={cn(
-            'text-primary-900',
-            !isUser
-              ? 'bg-transparent w-full'
-              : 'bg-primary-100 px-4 py-2.5 max-w-[85%]',
+      {(hasText || hasAttachments) && (
+        <Message className={cn(isUser ? 'flex-row-reverse' : '')}>
+          <div
+            className={cn(
+              'rounded-[12px] break-words whitespace-normal min-w-0 text-primary-900 flex flex-col gap-2',
+              effectiveIsStreaming && !isUser ? 'chat-streaming-message' : '',
+              !isUser
+                ? 'bg-transparent w-full'
+                : 'bg-primary-100 px-4 py-2.5 max-w-[85%]',
+            )}
+          >
+            {hasAttachments && (
+              <div className="flex flex-wrap gap-2">
+                {attachments.map((attachment) => (
+                  <a
+                    key={attachment.id}
+                    href={attachmentSource(attachment)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block overflow-hidden rounded-lg border border-primary-200 hover:border-primary-400 transition-colors"
+                  >
+                    <img
+                      src={attachmentSource(attachment)}
+                      alt={attachment.name || 'Attached image'}
+                      className="max-h-48 max-w-full object-contain"
+                    />
+                  </a>
+                ))}
+              </div>
+            )}
+            {hasText &&
+              (isUser ? (
+                <span className="text-pretty">{displayText}</span>
+              ) : (
+                <div className="relative">
+                  <MessageContent
+                    markdown
+                    className="text-primary-900 bg-transparent w-full text-pretty"
+                  >
+                    {displayText}
+                  </MessageContent>
+                  {effectiveIsStreaming && <StreamingCursor />}
+                </div>
+              ))}
+            {effectiveIsStreaming && !hasText && (
+              <div className="flex items-center gap-1.5 text-primary-500">
+                <span className="animate-pulse">Lobster is thinking</span>
+                <StreamingCursor />
+              </div>
+            )}
+          </div>
+        </Message>
+      )}
+
+      {/* Render tool calls - either expanded or as compact indicator */}
+      {hasToolCalls && (
+        <div className="w-full max-w-[900px] mt-2">
+          {settings.showToolMessages ? (
+            // Expanded view: show each tool individually
+            <div className="flex flex-col gap-3">
+              {toolCalls.map((toolCall) => {
+                const resultMessage = toolCall.id
+                  ? toolResultsByCallId?.get(toolCall.id)
+                  : undefined
+                const toolPart = mapToolCallToToolPart(toolCall, resultMessage)
+
+                return (
+                  <Tool
+                    key={toolCall.id || toolCall.name}
+                    toolPart={toolPart}
+                    defaultOpen={false}
+                  />
+                )
+              })}
+            </div>
+          ) : (
+            // Compact view: show "X tools used" indicator
+            <ToolIndicator
+              tools={toolCalls.map((toolCall) => {
+                const resultMessage = toolCall.id
+                  ? toolResultsByCallId?.get(toolCall.id)
+                  : undefined
+                return mapToolCallToToolPart(toolCall, resultMessage)
+              })}
+              defaultOpen={false}
+            />
           )}
-        >
-          {text}
-        </MessageContent>
-      </Message>
-
-      {/* Render tool calls with their results */}
-      {hasToolCalls && settings.showToolMessages && (
-        <div className="w-full max-w-[900px] mt-2 flex flex-col gap-3">
-          {toolCalls.map((toolCall) => {
-            const resultMessage = toolCall.id
-              ? toolResultsByCallId?.get(toolCall.id)
-              : undefined
-            const toolPart = mapToolCallToToolPart(toolCall, resultMessage)
-
-            return (
-              <Tool
-                key={toolCall.id || toolCall.name}
-                toolPart={toolPart}
-                defaultOpen={false}
-              />
-            )
-          })}
         </div>
       )}
 
       {!hasToolCalls && (
         <MessageActionsBar
-          text={text}
+          text={fullText}
           timestamp={timestamp}
           align={isUser ? 'end' : 'start'}
           forceVisible={forceActionsVisible}
@@ -223,6 +460,37 @@ function areMessagesEqual(
   if (prevProps.wrapperClassName !== nextProps.wrapperClassName) return false
   if (prevProps.wrapperRef !== nextProps.wrapperRef) return false
   if (prevProps.wrapperScrollMarginTop !== nextProps.wrapperScrollMarginTop) {
+    return false
+  }
+  // Check streaming state
+  if (prevProps.isStreaming !== nextProps.isStreaming) {
+    return false
+  }
+  if (prevProps.streamingText !== nextProps.streamingText) {
+    return false
+  }
+  if (prevProps.streamingThinking !== nextProps.streamingThinking) {
+    return false
+  }
+  if (prevProps.simulateStreaming !== nextProps.simulateStreaming) {
+    return false
+  }
+  if (prevProps.streamingKey !== nextProps.streamingKey) {
+    return false
+  }
+  if (
+    prevProps.message.__streamingStatus !==
+    nextProps.message.__streamingStatus
+  ) {
+    return false
+  }
+  if (prevProps.message.__streamingText !== nextProps.message.__streamingText) {
+    return false
+  }
+  if (
+    prevProps.message.__streamingThinking !==
+    nextProps.message.__streamingThinking
+  ) {
     return false
   }
   if (
@@ -255,6 +523,16 @@ function areMessagesEqual(
     return false
   }
   if (rawTimestamp(prevProps.message) !== rawTimestamp(nextProps.message)) {
+    return false
+  }
+  // Check attachments
+  const prevAttachments = Array.isArray(prevProps.message.attachments)
+    ? prevProps.message.attachments
+    : []
+  const nextAttachments = Array.isArray(nextProps.message.attachments)
+    ? nextProps.message.attachments
+    : []
+  if (prevAttachments.length !== nextAttachments.length) {
     return false
   }
   // No need to check settings here as the hook will cause a re-render

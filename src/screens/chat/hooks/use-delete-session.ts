@@ -8,6 +8,7 @@ import {
 import { clearPendingSendForSession, resetPendingSend } from '../pending-send'
 import { clearSessionDeleted, markSessionDeleted } from '../session-tombstones'
 import { readError } from '../utils'
+import { clearSessionTitleState } from '../session-title-store'
 
 export type DeleteSessionResult = {
   deleteSession: (
@@ -73,6 +74,7 @@ export function useDeleteSession(): DeleteSessionResult {
       if (payload.isActive) {
         resetPendingSend()
       }
+      clearSessionTitleState(payload.friendlyId || payload.sessionKey)
       queryClient.invalidateQueries({ queryKey: chatQueryKeys.sessions })
     },
     onSettled: function onSettled() {

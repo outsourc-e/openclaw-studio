@@ -13,7 +13,10 @@ import { Route as NewRouteImport } from './routes/new'
 import { Route as ConnectRouteImport } from './routes/connect'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ChatSessionKeyRouteImport } from './routes/chat/$sessionKey'
+import { Route as ApiStreamRouteImport } from './routes/api/stream'
 import { Route as ApiSessionsRouteImport } from './routes/api/sessions'
+import { Route as ApiSessionTitleRouteImport } from './routes/api/session-title'
+import { Route as ApiSendStreamRouteImport } from './routes/api/send-stream'
 import { Route as ApiSendRouteImport } from './routes/api/send'
 import { Route as ApiPingRouteImport } from './routes/api/ping'
 import { Route as ApiPathsRouteImport } from './routes/api/paths'
@@ -39,9 +42,24 @@ const ChatSessionKeyRoute = ChatSessionKeyRouteImport.update({
   path: '/chat/$sessionKey',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiStreamRoute = ApiStreamRouteImport.update({
+  id: '/api/stream',
+  path: '/api/stream',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiSessionsRoute = ApiSessionsRouteImport.update({
   id: '/api/sessions',
   path: '/api/sessions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSessionTitleRoute = ApiSessionTitleRouteImport.update({
+  id: '/api/session-title',
+  path: '/api/session-title',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSendStreamRoute = ApiSendStreamRouteImport.update({
+  id: '/api/send-stream',
+  path: '/api/send-stream',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiSendRoute = ApiSendRouteImport.update({
@@ -73,7 +91,10 @@ export interface FileRoutesByFullPath {
   '/api/paths': typeof ApiPathsRoute
   '/api/ping': typeof ApiPingRoute
   '/api/send': typeof ApiSendRoute
+  '/api/send-stream': typeof ApiSendStreamRoute
+  '/api/session-title': typeof ApiSessionTitleRoute
   '/api/sessions': typeof ApiSessionsRoute
+  '/api/stream': typeof ApiStreamRoute
   '/chat/$sessionKey': typeof ChatSessionKeyRoute
 }
 export interface FileRoutesByTo {
@@ -84,7 +105,10 @@ export interface FileRoutesByTo {
   '/api/paths': typeof ApiPathsRoute
   '/api/ping': typeof ApiPingRoute
   '/api/send': typeof ApiSendRoute
+  '/api/send-stream': typeof ApiSendStreamRoute
+  '/api/session-title': typeof ApiSessionTitleRoute
   '/api/sessions': typeof ApiSessionsRoute
+  '/api/stream': typeof ApiStreamRoute
   '/chat/$sessionKey': typeof ChatSessionKeyRoute
 }
 export interface FileRoutesById {
@@ -96,7 +120,10 @@ export interface FileRoutesById {
   '/api/paths': typeof ApiPathsRoute
   '/api/ping': typeof ApiPingRoute
   '/api/send': typeof ApiSendRoute
+  '/api/send-stream': typeof ApiSendStreamRoute
+  '/api/session-title': typeof ApiSessionTitleRoute
   '/api/sessions': typeof ApiSessionsRoute
+  '/api/stream': typeof ApiStreamRoute
   '/chat/$sessionKey': typeof ChatSessionKeyRoute
 }
 export interface FileRouteTypes {
@@ -109,7 +136,10 @@ export interface FileRouteTypes {
     | '/api/paths'
     | '/api/ping'
     | '/api/send'
+    | '/api/send-stream'
+    | '/api/session-title'
     | '/api/sessions'
+    | '/api/stream'
     | '/chat/$sessionKey'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -120,7 +150,10 @@ export interface FileRouteTypes {
     | '/api/paths'
     | '/api/ping'
     | '/api/send'
+    | '/api/send-stream'
+    | '/api/session-title'
     | '/api/sessions'
+    | '/api/stream'
     | '/chat/$sessionKey'
   id:
     | '__root__'
@@ -131,7 +164,10 @@ export interface FileRouteTypes {
     | '/api/paths'
     | '/api/ping'
     | '/api/send'
+    | '/api/send-stream'
+    | '/api/session-title'
     | '/api/sessions'
+    | '/api/stream'
     | '/chat/$sessionKey'
   fileRoutesById: FileRoutesById
 }
@@ -143,7 +179,10 @@ export interface RootRouteChildren {
   ApiPathsRoute: typeof ApiPathsRoute
   ApiPingRoute: typeof ApiPingRoute
   ApiSendRoute: typeof ApiSendRoute
+  ApiSendStreamRoute: typeof ApiSendStreamRoute
+  ApiSessionTitleRoute: typeof ApiSessionTitleRoute
   ApiSessionsRoute: typeof ApiSessionsRoute
+  ApiStreamRoute: typeof ApiStreamRoute
   ChatSessionKeyRoute: typeof ChatSessionKeyRoute
 }
 
@@ -177,11 +216,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ChatSessionKeyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/stream': {
+      id: '/api/stream'
+      path: '/api/stream'
+      fullPath: '/api/stream'
+      preLoaderRoute: typeof ApiStreamRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/sessions': {
       id: '/api/sessions'
       path: '/api/sessions'
       fullPath: '/api/sessions'
       preLoaderRoute: typeof ApiSessionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/session-title': {
+      id: '/api/session-title'
+      path: '/api/session-title'
+      fullPath: '/api/session-title'
+      preLoaderRoute: typeof ApiSessionTitleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/send-stream': {
+      id: '/api/send-stream'
+      path: '/api/send-stream'
+      fullPath: '/api/send-stream'
+      preLoaderRoute: typeof ApiSendStreamRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/send': {
@@ -223,7 +283,10 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPathsRoute: ApiPathsRoute,
   ApiPingRoute: ApiPingRoute,
   ApiSendRoute: ApiSendRoute,
+  ApiSendStreamRoute: ApiSendStreamRoute,
+  ApiSessionTitleRoute: ApiSessionTitleRoute,
   ApiSessionsRoute: ApiSessionsRoute,
+  ApiStreamRoute: ApiStreamRoute,
   ChatSessionKeyRoute: ChatSessionKeyRoute,
 }
 export const routeTree = rootRouteImport

@@ -8,15 +8,18 @@ import {
 import { HugeiconsIcon } from '@hugeicons/react'
 import { ArrowDown01Icon } from '@hugeicons/core-free-icons'
 import { Button } from '@/components/ui/button'
+import { useState } from 'react'
 
 export type ThinkingProps = {
   content: string
 }
 
 function Thinking({ content }: ThinkingProps) {
+  const [isOpen, setIsOpen] = useState(false)
+
   return (
     <div className="inline-flex flex-col">
-      <Collapsible>
+      <Collapsible open={isOpen} onOpenChange={setIsOpen}>
         <CollapsibleTrigger
           render={
             <Button

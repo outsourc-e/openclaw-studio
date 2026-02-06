@@ -19,8 +19,8 @@ export const useChatSettingsStore = create<ChatSettingsState>()(
   persist(
     (set) => ({
       settings: {
-        showToolMessages: true,
-        showReasoningBlocks: true,
+        showToolMessages: false,
+        showReasoningBlocks: false,
         theme: 'system',
       },
       updateSettings: (updates) =>

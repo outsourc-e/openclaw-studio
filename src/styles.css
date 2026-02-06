@@ -127,3 +127,45 @@ code {
     background-position: -200% 50%;
   }
 }
+
+.chat-streaming-lobster {
+  display: inline-flex;
+  margin-left: 0.25rem;
+  transform-origin: 50% 65%;
+  vertical-align: text-bottom;
+  animation: chatLobsterSpinPulse 1.2s ease-in-out infinite;
+}
+
+.chat-streaming-message {
+  animation: chatStreamingFadeIn 260ms ease-out both;
+}
+
+@keyframes chatLobsterSpinPulse {
+  0% {
+    opacity: 0.72;
+    transform: translateY(1px) rotate(-10deg) scale(0.92);
+  }
+  35% {
+    opacity: 1;
+    transform: translateY(-1px) rotate(8deg) scale(1.08);
+  }
+  65% {
+    opacity: 0.96;
+    transform: translateY(0) rotate(16deg) scale(1.02);
+  }
+  100% {
+    opacity: 0.72;
+    transform: translateY(1px) rotate(350deg) scale(0.92);
+  }
+}
+
+@keyframes chatStreamingFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

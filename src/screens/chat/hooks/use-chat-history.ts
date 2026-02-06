@@ -67,6 +67,7 @@ export function useChatHistory({
       Boolean(activeFriendlyId) &&
       !isRedirecting &&
       (!sessionsReady || activeExists),
+    refetchInterval: 10000, // Poll every 10 seconds for new messages from other channels
     placeholderData: function useCachedHistory(): HistoryResponse | undefined {
       return queryClient.getQueryData(historyKey)
     },

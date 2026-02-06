@@ -29,9 +29,24 @@ export type ThinkingContent = {
 
 export type MessageContent = TextContent | ToolCallContent | ThinkingContent
 
+export type GatewayAttachment = {
+  id?: string
+  name?: string
+  contentType?: string
+  size?: number
+  url?: string
+  dataUrl?: string
+  previewUrl?: string
+  width?: number
+  height?: number
+}
+
+export type StreamingStatus = 'idle' | 'streaming' | 'complete' | 'error'
+
 export type GatewayMessage = {
   role?: string
   content?: Array<MessageContent>
+  attachments?: Array<GatewayAttachment>
   toolCallId?: string
   toolName?: string
   details?: Record<string, unknown>
@@ -39,7 +54,13 @@ export type GatewayMessage = {
   timestamp?: number
   [key: string]: unknown
   __optimisticId?: string
+  __streamingStatus?: StreamingStatus
+  __streamingText?: string
+  __streamingThinking?: string
 }
+
+export type SessionTitleStatus = 'idle' | 'generating' | 'ready' | 'error'
+export type SessionTitleSource = 'auto' | 'manual'
 
 export type SessionSummary = {
   key?: string
@@ -49,6 +70,9 @@ export type SessionSummary = {
   updatedAt?: number
   lastMessage?: GatewayMessage | null
   friendlyId?: string
+  titleStatus?: SessionTitleStatus
+  titleSource?: SessionTitleSource
+  titleError?: string | null
 }
 
 export type SessionListResponse = {
@@ -69,6 +93,9 @@ export type SessionMeta = {
   label?: string
   updatedAt?: number
   lastMessage?: GatewayMessage | null
+  titleStatus?: SessionTitleStatus
+  titleSource?: SessionTitleSource
+  titleError?: string | null
 }
 
 export type PathsPayload = {

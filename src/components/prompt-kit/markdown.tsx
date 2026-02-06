@@ -1,5 +1,12 @@
 import { marked } from 'marked'
-import { memo, useId, useMemo } from 'react'
+import {
+  createContext,
+  memo,
+  useContext,
+  useId,
+  useMemo,
+  useRef,
+} from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkBreaks from 'remark-breaks'
 import remarkGfm from 'remark-gfm'
@@ -23,6 +30,40 @@ function extractLanguage(className?: string): string {
   if (!className) return 'text'
   const match = className.match(/language-(\w+)/)
   return match ? match[1] : 'text'
+}
+
+type TableRenderContextValue = {
+  headersRef: React.MutableRefObject<Array<string>>
+  columnIndexRef: React.MutableRefObject<number>
+  collectingHeaderRef: React.MutableRefObject<boolean>
+}
+
+const TableRenderContext = createContext<TableRenderContextValue | null>(null)
+
+function useTableRenderContext() {
+  return useContext(TableRenderContext)
+}
+
+function textFromNode(node: React.ReactNode): string {
+  if (typeof node === 'string' || typeof node === 'number') {
+    return String(node)
+  }
+  if (Array.isArray(node)) {
+    return node.map((item) => textFromNode(item)).join('')
+  }
+  if (node && typeof node === 'object' && 'props' in node) {
+    return textFromNode((node as React.ReactElement).props.children)
+  }
+  return ''
+}
+
+function slugifyHeading(children: React.ReactNode): string {
+  const raw = textFromNode(children)
+    .trim()
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/\s+/g, '-')
+  return raw.length > 0 ? raw : 'section'
 }
 
 const INITIAL_COMPONENTS: Partial<Components> = {
@@ -50,13 +91,76 @@ const INITIAL_COMPONENTS: Partial<Components> = {
     return <>{children}</>
   },
   h1: function H1Component({ children }) {
-    return <h1 className="text-xl font-medium text-primary-950">{children}</h1>
+    return (
+      <h1 className="mt-5 mb-2 text-2xl leading-tight font-medium text-primary-950 text-balance first:mt-0">
+        {children}
+      </h1>
+    )
   },
   h2: function H2Component({ children }) {
-    return <h2 className="text-lg font-medium text-primary-900">{children}</h2>
+    const id = slugifyHeading(children)
+    return (
+      <h2
+        id={id}
+        className="mt-5 mb-2 text-xl leading-tight font-medium text-primary-950 text-balance first:mt-0"
+      >
+        <a
+          href={`#${id}`}
+          className="group/heading inline-flex items-center gap-1 no-underline"
+        >
+          <span>{children}</span>
+          <span
+            aria-hidden="true"
+            className="text-primary-500 opacity-0 transition-opacity group-hover/heading:opacity-100"
+          >
+            #
+          </span>
+        </a>
+      </h2>
+    )
   },
   h3: function H3Component({ children }) {
-    return <h3 className="font-medium text-primary-900">{children}</h3>
+    const id = slugifyHeading(children)
+    return (
+      <h3
+        id={id}
+        className="mt-4 mb-1.5 text-lg leading-tight font-medium text-primary-950 text-balance first:mt-0"
+      >
+        <a
+          href={`#${id}`}
+          className="group/heading inline-flex items-center gap-1 no-underline"
+        >
+          <span>{children}</span>
+          <span
+            aria-hidden="true"
+            className="text-primary-500 opacity-0 transition-opacity group-hover/heading:opacity-100"
+          >
+            #
+          </span>
+        </a>
+      </h3>
+    )
+  },
+  h4: function H4Component({ children }) {
+    return (
+      <h4 className="mt-4 mb-1.5 text-base leading-tight font-medium text-primary-950 text-balance first:mt-0">
+        {children}
+      </h4>
+    )
+  },
+  h5: function H5Component({ children }) {
+    return (
+      <h5 className="mt-3.5 mb-1 text-sm leading-tight font-medium text-primary-950 text-balance first:mt-0">
+        {children}
+      </h5>
+    )
+  },
+  h6: function H6Component({ children }) {
+    return (
+      <h6 className="mt-3.5 mb-1 text-sm leading-tight font-medium text-primary-900 text-balance first:mt-0">
+        {children}
+      </h6>
+    )
   },
   p: function PComponent({ children }) {
     return (
@@ -109,36 +213,95 @@ const INITIAL_COMPONENTS: Partial<Components> = {
     return <hr className="my-3 border-primary-200" />
   },
   table: function TableComponent({ children }) {
+    const headersRef = useRef<Array<string>>([])
+    const columnIndexRef = useRef(0)
+    const collectingHeaderRef = useRef(false)
     return (
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-sm">{children}</table>
-      </div>
+      <TableRenderContext.Provider
+        value={{ headersRef, columnIndexRef, collectingHeaderRef }}
+      >
+        <div className="my-3 max-w-full overflow-x-auto rounded-lg border border-primary-200 bg-primary-50/20">
+          <table className="w-full min-w-max border-collapse text-sm sm:min-w-full tabular-nums">
+            {children}
+          </table>
+        </div>
+      </TableRenderContext.Provider>
     )
   },
   thead: function TheadComponent({ children }) {
+    const context = useTableRenderContext()
+    if (context) {
+      context.collectingHeaderRef.current = true
+      context.columnIndexRef.current = 0
+      context.headersRef.current = []
+    }
     return (
-      <thead className="border-b border-primary-200 bg-primary-50">
+      <thead className="sticky top-0 z-10 border-b border-primary-200 bg-primary-100/95 backdrop-blur-sm max-sm:hidden">
         {children}
       </thead>
     )
   },
   tbody: function TbodyComponent({ children }) {
-    return <tbody className="divide-y divide-primary-100">{children}</tbody>
+    const context = useTableRenderContext()
+    if (context) {
+      context.collectingHeaderRef.current = false
+      context.columnIndexRef.current = 0
+    }
+    return (
+      <tbody className="divide-y divide-primary-100 max-sm:block max-sm:divide-y-0">
+        {children}
+      </tbody>
+    )
   },
   tr: function TrComponent({ children }) {
+    const context = useTableRenderContext()
+    if (context) {
+      context.columnIndexRef.current = 0
+    }
     return (
-      <tr className="transition-colors hover:bg-primary-50/50">{children}</tr>
+      <tr className="odd:bg-primary-50/60 even:bg-primary-100/20 transition-colors hover:bg-primary-100/45 max-sm:mb-3 max-sm:block max-sm:overflow-hidden max-sm:rounded-lg max-sm:border max-sm:border-primary-200 max-sm:bg-primary-50">
+        {children}
+      </tr>
     )
   },
   th: function ThComponent({ children }) {
+    const context = useTableRenderContext()
+    if (context) {
+      const index = context.columnIndexRef.current
+      context.columnIndexRef.current += 1
+      if (context.collectingHeaderRef.current) {
+        context.headersRef.current[index] = textFromNode(children).trim()
+      }
+    }
     return (
-      <th className="px-3 py-2 text-left font-medium text-primary-950">
+      <th className="px-3 py-2 text-left font-medium text-primary-950 whitespace-nowrap">
         {children}
       </th>
     )
   },
   td: function TdComponent({ children }) {
-    return <td className="px-3 py-2 text-primary-950">{children}</td>
+    const context = useTableRenderContext()
+    let label = ''
+    if (context) {
+      const index = context.columnIndexRef.current
+      context.columnIndexRef.current += 1
+      label = context.headersRef.current[index] ?? `Column ${index + 1}`
+    }
+    return (
+      <td
+        data-label={label}
+        className="px-3 py-2 text-primary-950 align-top max-sm:grid max-sm:grid-cols-[minmax(0,9rem)_1fr] max-sm:gap-3 max-sm:border-b max-sm:border-primary-100 max-sm:px-3 max-sm:py-2 max-sm:last:border-b-0 max-sm:before:content-[attr(data-label)] max-sm:before:text-xs max-sm:before:font-medium max-sm:before:text-primary-700"
+      >
+        {children}
+      </td>
+    )
+  },
+  tfoot: function TfootComponent({ children }) {
+    return (
+      <tfoot className="border-t border-primary-200 bg-primary-100/40">
+        {children}
+      </tfoot>
+    )
   },
 }
 

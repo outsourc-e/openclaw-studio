@@ -1,4 +1,4 @@
-import type { GatewayMessage } from './types'
+import type { GatewayAttachment, GatewayMessage } from './types'
 
 type OptimisticMessagePayload = {
   clientId: string
@@ -8,13 +8,17 @@ type OptimisticMessagePayload = {
 
 export function createOptimisticMessage(
   body: string,
+  attachments: Array<GatewayAttachment> = [],
 ): OptimisticMessagePayload {
   const clientId = crypto.randomUUID()
   const optimisticId = `opt-${clientId}`
   const timestamp = Date.now()
+  const textContent = body.length > 0 ? [{ type: 'text' as const, text: body }] : []
+
   const optimisticMessage: GatewayMessage = {
     role: 'user',
-    content: [{ type: 'text', text: body }],
+    content: textContent.length > 0 ? textContent : undefined,
+    attachments: attachments.length > 0 ? attachments : undefined,
     __optimisticId: optimisticId,
     clientId,
     status: 'sending',

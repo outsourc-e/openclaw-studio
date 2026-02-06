@@ -96,6 +96,9 @@ function areSidebarSessionsEqual(
     if (prevSession.title !== nextSession.title) return false
     if (prevSession.derivedTitle !== nextSession.derivedTitle) return false
     if (prevSession.updatedAt !== nextSession.updatedAt) return false
+    if (prevSession.titleStatus !== nextSession.titleStatus) return false
+    if (prevSession.titleSource !== nextSession.titleSource) return false
+    if (prevSession.titleError !== nextSession.titleError) return false
   }
   return true
 }

@@ -2,7 +2,6 @@
 
 import * as React from 'react'
 import { createPortal } from 'react-dom'
-import { ScrollButton } from './scroll-button'
 import {
   ScrollAreaCorner,
   ScrollAreaRoot,
@@ -14,8 +13,13 @@ import { cn } from '@/lib/utils'
 
 export type ChatContainerRootProps = {
   children: React.ReactNode
+  overlay?: React.ReactNode
   className?: string
-  onUserScroll?: (scrollTop: number) => void
+  onUserScroll?: (metrics: {
+    scrollTop: number
+    scrollHeight: number
+    clientHeight: number
+  }) => void
 } & React.HTMLAttributes<HTMLDivElement>
 
 export type ChatContainerContentProps = {
@@ -25,20 +29,20 @@ export type ChatContainerContentProps = {
 
 export type ChatContainerScrollAnchorProps = {
   className?: string
-  ref?: React.RefObject<HTMLDivElement | null>
+  ref?: React.Ref<HTMLDivElement>
 } & React.HTMLAttributes<HTMLDivElement>
 
 type ChatContainerShellProps = {
   className?: string
+  overlay?: React.ReactNode
   viewportRef: React.Ref<HTMLDivElement>
-  scrollRef: React.RefObject<HTMLDivElement | null>
   viewportProps: React.HTMLAttributes<HTMLDivElement>
 }
 
 function ChatContainerShell({
   className,
+  overlay,
   viewportRef,
-  scrollRef,
   viewportProps,
 }: ChatContainerShellProps) {
   return (
@@ -50,11 +54,7 @@ function ChatContainerShell({
         ref={viewportRef}
         {...viewportProps}
       />
-      <div className="relative mx-auto w-full max-w-full px-5 sm:max-w-[768px] sm:min-w-[400px] ">
-        <div className="pointer-events-none absolute bottom-10 right-10 z-50">
-          <ScrollButton scrollRef={scrollRef} />
-        </div>
-      </div>
+      {overlay}
       <ScrollAreaScrollbar orientation="vertical">
         <ScrollAreaThumb />
       </ScrollAreaScrollbar>
@@ -87,8 +87,8 @@ function areShellPropsEqual(
   nextProps: ChatContainerShellProps,
 ): boolean {
   if (prevProps.className !== nextProps.className) return false
+  if (prevProps.overlay !== nextProps.overlay) return false
   if (prevProps.viewportRef !== nextProps.viewportRef) return false
-  if (prevProps.scrollRef !== nextProps.scrollRef) return false
   if (
     !areViewportPropsEqual(prevProps.viewportProps, nextProps.viewportProps)
   ) {
@@ -120,6 +120,7 @@ function ChatContainerPortal({
 
 function ChatContainerRoot({
   children,
+  overlay,
   className,
   onUserScroll,
   ...props
@@ -141,9 +142,14 @@ function ChatContainerRoot({
     if (!element) return
 
     const handleScroll = () => {
-      onUserScroll?.(element.scrollTop)
+      onUserScroll?.({
+        scrollTop: element.scrollTop,
+        scrollHeight: element.scrollHeight,
+        clientHeight: element.clientHeight,
+      })
     }
 
+    handleScroll()
     element.addEventListener('scroll', handleScroll)
     return () => element.removeEventListener('scroll', handleScroll)
   }, [onUserScroll])
@@ -152,8 +158,8 @@ function ChatContainerRoot({
     <>
       <MemoizedChatContainerShell
         className={className}
+        overlay={overlay}
         viewportRef={handleViewportRef}
-        scrollRef={scrollRef}
         viewportProps={props}
       />
       <ChatContainerPortal viewportNode={viewportNode}>

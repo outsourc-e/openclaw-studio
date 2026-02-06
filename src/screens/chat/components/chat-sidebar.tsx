@@ -66,6 +66,9 @@ function ChatSidebarComponent({
 
   const [renameDialogOpen, setRenameDialogOpen] = useState(false)
   const [renameSessionKey, setRenameSessionKey] = useState<string | null>(null)
+  const [renameFriendlyId, setRenameFriendlyId] = useState<string | null>(
+    null,
+  )
   const [renameSessionTitle, setRenameSessionTitle] = useState('')
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -75,6 +78,7 @@ function ChatSidebarComponent({
 
   function handleOpenRename(session: SessionMeta) {
     setRenameSessionKey(session.key)
+    setRenameFriendlyId(session.friendlyId)
     setRenameSessionTitle(
       session.label || session.title || session.derivedTitle || '',
     )
@@ -83,10 +87,11 @@ function ChatSidebarComponent({
 
   function handleSaveRename(newTitle: string) {
     if (renameSessionKey) {
-      void renameSession(renameSessionKey, newTitle)
+      void renameSession(renameSessionKey, renameFriendlyId, newTitle)
     }
     setRenameDialogOpen(false)
     setRenameSessionKey(null)
+    setRenameFriendlyId(null)
   }
 
   function handleOpenDelete(session: SessionMeta) {
@@ -284,10 +289,22 @@ function ChatSidebarComponent({
 
       <SessionRenameDialog
         open={renameDialogOpen}
-        onOpenChange={setRenameDialogOpen}
+        onOpenChange={(open) => {
+          setRenameDialogOpen(open)
+          if (!open) {
+            setRenameSessionKey(null)
+            setRenameFriendlyId(null)
+            setRenameSessionTitle('')
+          }
+        }}
         sessionTitle={renameSessionTitle}
         onSave={handleSaveRename}
-        onCancel={() => setRenameDialogOpen(false)}
+        onCancel={() => {
+          setRenameDialogOpen(false)
+          setRenameSessionKey(null)
+          setRenameFriendlyId(null)
+          setRenameSessionTitle('')
+        }}
       />
 
       <SessionDeleteDialog
@@ -316,6 +333,9 @@ function areSessionsEqual(
     if (prev.title !== next.title) return false
     if (prev.derivedTitle !== next.derivedTitle) return false
     if (prev.updatedAt !== next.updatedAt) return false
+    if (prev.titleStatus !== next.titleStatus) return false
+    if (prev.titleSource !== next.titleSource) return false
+    if (prev.titleError !== next.titleError) return false
   }
   return true
 }

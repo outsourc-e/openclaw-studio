@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
 } from 'react'
+import { useStreamingMessage } from './hooks/use-streaming-message'
 import { useNavigate } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 
@@ -45,8 +46,12 @@ import { useChatMeasurements } from './hooks/use-chat-measurements'
 import { useChatHistory } from './hooks/use-chat-history'
 import { useChatMobile } from './hooks/use-chat-mobile'
 import { useChatSessions } from './hooks/use-chat-sessions'
-import type { ChatComposerHelpers } from './components/chat-composer'
-import type { HistoryResponse } from './types'
+import { useAutoSessionTitle } from './hooks/use-auto-session-title'
+import type {
+  ChatComposerAttachment,
+  ChatComposerHelpers,
+} from './components/chat-composer'
+import type { GatewayAttachment, GatewayMessage, HistoryResponse } from './types'
 import { cn } from '@/lib/utils'
 
 type ChatScreenProps = {
@@ -57,6 +62,38 @@ type ChatScreenProps = {
     friendlyId: string
   }) => void
   forcedSessionKey?: string
+}
+
+type ActiveStreamContext = {
+  streamId: string
+  sessionKey: string
+  friendlyId: string
+}
+
+function waitFor(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms)
+  })
+}
+
+function hasResolvedAssistantMessage(
+  messages: Array<GatewayMessage>,
+  context: ActiveStreamContext,
+  finalText: string,
+): boolean {
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index]
+    if (message.role !== 'assistant') continue
+    const messageId = message.__optimisticId || (message as any).id
+    if (messageId === context.streamId) continue
+    const text = textFromMessage(message)
+    if (!text.trim()) continue
+    if (finalText.trim().length > 0) {
+      return text === finalText
+    }
+    return true
+  }
+  return false
 }
 
 export function ChatScreen({
@@ -79,15 +116,24 @@ export function ChatScreen({
   const [pinToTop, setPinToTop] = useState(
     () => hasPendingSend() || hasPendingGeneration(),
   )
+  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(
+    null,
+  )
+  const [streamingText, setStreamingText] = useState<string>('')
+  const [streamingThinking, setStreamingThinking] = useState<string>('')
+  const [useStreamingApi, setUseStreamingApi] = useState(true)
+
   const streamTimer = useRef<number | null>(null)
   const streamIdleTimer = useRef<number | null>(null)
   const lastAssistantSignature = useRef('')
+  const activeStreamRef = useRef<ActiveStreamContext | null>(null)
   const refreshHistoryRef = useRef<() => void>(() => {})
   const pendingStartRef = useRef(false)
   const { isMobile } = useChatMobile(queryClient)
   const {
     sessionsQuery,
     sessions,
+    activeSession,
     activeExists,
     activeSessionKey,
     activeTitle,
@@ -110,6 +156,162 @@ export function ChatScreen({
     activeExists,
     sessionsReady: sessionsQuery.isSuccess,
     queryClient,
+  })
+
+  useAutoSessionTitle({
+    friendlyId: activeFriendlyId,
+    sessionKey: resolvedSessionKey,
+    activeSession,
+    messages: historyMessages,
+    enabled: !isNewChat && Boolean(resolvedSessionKey) && historyQuery.isSuccess,
+  })
+
+  const clearActiveStream = useCallback(function clearActiveStream(
+    streamId?: string,
+  ) {
+    const current = activeStreamRef.current
+    if (!current) return
+    if (streamId && current.streamId !== streamId) return
+    activeStreamRef.current = null
+    setStreamingMessageId(null)
+    setStreamingText('')
+    setStreamingThinking('')
+  }, [])
+
+  const streamStop = useCallback(() => {
+    if (streamTimer.current) {
+      window.clearInterval(streamTimer.current)
+      streamTimer.current = null
+    }
+    if (streamIdleTimer.current) {
+      window.clearTimeout(streamIdleTimer.current)
+      streamIdleTimer.current = null
+    }
+  }, [])
+
+  const streamFinish = useCallback(() => {
+    streamStop()
+    setPendingGeneration(false)
+    setWaitingForResponse(false)
+  }, [streamStop])
+
+  const finalizeStreamingPlaceholder = useCallback(
+    async function finalizeStreamingPlaceholder(
+      context: ActiveStreamContext,
+      finalText: string,
+    ) {
+      updateHistoryMessageByClientId(
+        queryClient,
+        context.friendlyId,
+        context.sessionKey,
+        context.streamId,
+        function markStreamComplete(message) {
+          return {
+            ...message,
+            __streamingStatus: 'complete',
+            __streamingText: finalText,
+          }
+        },
+      )
+
+      const historyKey = chatQueryKeys.history(
+        context.friendlyId,
+        context.sessionKey,
+      )
+      const maxAttempts = 12
+
+      for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+        const cached = queryClient.getQueryData(historyKey) as
+          | HistoryResponse
+          | undefined
+        const cachedMessages = Array.isArray(cached?.messages)
+          ? cached.messages
+          : []
+        if (hasResolvedAssistantMessage(cachedMessages, context, finalText)) {
+          break
+        }
+        await historyQuery.refetch()
+        await waitFor(Math.min(320, 80 + attempt * 20))
+      }
+
+      if (activeStreamRef.current?.streamId !== context.streamId) {
+        return
+      }
+
+      removeHistoryMessageByClientId(
+        queryClient,
+        context.friendlyId,
+        context.sessionKey,
+        context.streamId,
+      )
+      clearActiveStream(context.streamId)
+      streamFinish()
+    },
+    [clearActiveStream, historyQuery, queryClient, streamFinish],
+  )
+
+  // Streaming message hook
+  const streaming = useStreamingMessage({
+    onChunk: useCallback((_chunk: string, fullText: string) => {
+      setStreamingText(fullText)
+      const context = activeStreamRef.current
+      if (!context) return
+      updateHistoryMessageByClientId(
+        queryClient,
+        context.friendlyId,
+        context.sessionKey,
+        context.streamId,
+        function updateStreamingMessage(message) {
+          return { ...message, __streamingText: fullText }
+        },
+      )
+    }, [queryClient]),
+    onThinking: useCallback((thinking: string) => {
+      setStreamingThinking(thinking)
+      const context = activeStreamRef.current
+      if (!context) return
+      updateHistoryMessageByClientId(
+        queryClient,
+        context.friendlyId,
+        context.sessionKey,
+        context.streamId,
+        function updateStreamingThinking(message) {
+          return { ...message, __streamingThinking: thinking }
+        },
+      )
+    }, [queryClient]),
+    onComplete: useCallback(
+      async function onComplete(message: GatewayMessage) {
+        const context = activeStreamRef.current
+        if (!context) {
+          streamFinish()
+          return
+        }
+        const finalText = textFromMessage(message)
+        setStreamingText(finalText)
+        setStreamingThinking('')
+        await finalizeStreamingPlaceholder(context, finalText)
+      },
+      [finalizeStreamingPlaceholder, streamFinish],
+    ),
+    onError: useCallback((errorMessage: string) => {
+      const context = activeStreamRef.current
+      if (context) {
+        removeHistoryMessageByClientId(
+          queryClient,
+          context.friendlyId,
+          context.sessionKey,
+          context.streamId,
+        )
+        clearActiveStream(context.streamId)
+      } else {
+        setStreamingMessageId(null)
+        setStreamingText('')
+        setStreamingThinking('')
+      }
+      setError(`Streaming error: ${errorMessage}`)
+      streamFinish()
+    }, [clearActiveStream, queryClient, streamFinish]),
   })
 
   const uiQuery = useQuery({
@@ -147,21 +349,6 @@ export function ChatScreen({
     setIsRedirecting(true)
     navigate({ to: '/new', replace: true })
   }, [navigate])
-  const streamStop = useCallback(() => {
-    if (streamTimer.current) {
-      window.clearInterval(streamTimer.current)
-      streamTimer.current = null
-    }
-    if (streamIdleTimer.current) {
-      window.clearTimeout(streamIdleTimer.current)
-      streamIdleTimer.current = null
-    }
-  }, [])
-  const streamFinish = useCallback(() => {
-    streamStop()
-    setPendingGeneration(false)
-    setWaitingForResponse(false)
-  }, [streamStop])
   const streamStart = useCallback(() => {
     if (!activeFriendlyId || isNewChat) return
     if (streamTimer.current) window.clearInterval(streamTimer.current)
@@ -287,9 +474,10 @@ export function ChatScreen({
     }
     streamStop()
     lastAssistantSignature.current = ''
+    clearActiveStream()
     setWaitingForResponse(false)
     setPinToTop(false)
-  }, [activeFriendlyId, isNewChat, streamStop])
+  }, [activeFriendlyId, clearActiveStream, isNewChat, streamStop])
 
   useLayoutEffect(() => {
     if (isNewChat) return
@@ -331,7 +519,13 @@ export function ChatScreen({
     }
     setWaitingForResponse(true)
     setPinToTop(true)
-    sendMessage(pending.sessionKey, pending.friendlyId, pending.message, true)
+    sendMessage(
+      pending.sessionKey,
+      pending.friendlyId,
+      pending.message,
+      pending.attachments,
+      true,
+    )
   }, [
     activeFriendlyId,
     activeSessionKey,
@@ -345,11 +539,20 @@ export function ChatScreen({
     sessionKey: string,
     friendlyId: string,
     body: string,
+    attachments: Array<GatewayAttachment> = [],
     skipOptimistic = false,
   ) {
+    const normalizedAttachments = attachments.map((attachment) => ({
+      ...attachment,
+      id: attachment.id ?? crypto.randomUUID(),
+    }))
+
     let optimisticClientId = ''
     if (!skipOptimistic) {
-      const { clientId, optimisticMessage } = createOptimisticMessage(body)
+      const { clientId, optimisticMessage } = createOptimisticMessage(
+        body,
+        normalizedAttachments,
+      )
       optimisticClientId = clientId
       appendHistoryMessage(
         queryClient,
@@ -371,6 +574,100 @@ export function ChatScreen({
     setWaitingForResponse(true)
     setPinToTop(true)
 
+    const payloadAttachments = normalizedAttachments.map((attachment) => ({
+      id: attachment.id,
+      name: attachment.name,
+      contentType: attachment.contentType,
+      size: attachment.size,
+      dataUrl: attachment.dataUrl,
+    }))
+
+    if (useStreamingApi) {
+      if (activeStreamRef.current) {
+        const previous = activeStreamRef.current
+        removeHistoryMessageByClientId(
+          queryClient,
+          previous.friendlyId,
+          previous.sessionKey,
+          previous.streamId,
+        )
+        clearActiveStream(previous.streamId)
+      }
+
+      const streamContext: ActiveStreamContext = {
+        streamId: `streaming-${Date.now()}`,
+        friendlyId,
+        sessionKey,
+      }
+      activeStreamRef.current = streamContext
+      setStreamingMessageId(streamContext.streamId)
+      setStreamingText('')
+      setStreamingThinking('')
+
+      const streamingPlaceholder: GatewayMessage = {
+        role: 'assistant',
+        content: [],
+        __optimisticId: streamContext.streamId,
+        __streamingStatus: 'streaming',
+        __streamingText: '',
+        __streamingThinking: '',
+        timestamp: Date.now(),
+      }
+      appendHistoryMessage(queryClient, friendlyId, sessionKey, streamingPlaceholder)
+
+      streaming.startStreaming({
+        sessionKey,
+        friendlyId,
+        message: body,
+        thinking: 'low',
+        attachments: payloadAttachments.length > 0 ? payloadAttachments : undefined,
+      }).catch((err) => {
+        console.warn('Streaming failed, falling back to polling:', err)
+        setUseStreamingApi(false)
+        if (activeStreamRef.current?.streamId === streamContext.streamId) {
+          removeHistoryMessageByClientId(
+            queryClient,
+            friendlyId,
+            sessionKey,
+            streamContext.streamId,
+          )
+          clearActiveStream(streamContext.streamId)
+        }
+        sendMessageNonStreaming(
+          sessionKey,
+          friendlyId,
+          body,
+          payloadAttachments,
+          optimisticClientId,
+        )
+      })
+
+      setSending(false)
+      return
+    }
+
+    sendMessageNonStreaming(
+      sessionKey,
+      friendlyId,
+      body,
+      payloadAttachments,
+      optimisticClientId,
+    )
+  }
+
+  function sendMessageNonStreaming(
+    sessionKey: string,
+    friendlyId: string,
+    body: string,
+    payloadAttachments: Array<{
+      id?: string
+      name?: string
+      contentType?: string
+      size?: number
+      dataUrl?: string
+    }>,
+    optimisticClientId: string,
+  ) {
     fetch('/api/send', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -378,6 +675,7 @@ export function ChatScreen({
         sessionKey,
         friendlyId,
         message: body,
+        attachments: payloadAttachments.length > 0 ? payloadAttachments : undefined,
         thinking: 'low',
         idempotencyKey: crypto.randomUUID(),
       }),
@@ -447,13 +745,25 @@ export function ChatScreen({
   }, [queryClient])
 
   const send = useCallback(
-    (body: string, helpers: ChatComposerHelpers) => {
-      if (body.length === 0) return
+    (
+      body: string,
+      attachments: Array<ChatComposerAttachment>,
+      helpers: ChatComposerHelpers,
+    ) => {
+      const trimmedBody = body.trim()
+      if (trimmedBody.length === 0 && attachments.length === 0) return
       helpers.reset()
+
+      const attachmentPayload: Array<GatewayAttachment> = attachments.map(
+        (attachment) => ({
+          ...attachment,
+          id: attachment.id ?? crypto.randomUUID(),
+        }),
+      )
 
       if (isNewChat) {
         const { clientId, optimisticId, optimisticMessage } =
-          createOptimisticMessage(body)
+          createOptimisticMessage(trimmedBody, attachmentPayload)
         appendHistoryMessage(queryClient, 'new', 'new', optimisticMessage)
         setPendingGeneration(true)
         setSending(true)
@@ -466,7 +776,8 @@ export function ChatScreen({
             stashPendingSend({
               sessionKey,
               friendlyId,
-              message: body,
+              message: trimmedBody,
+              attachments: attachmentPayload,
               optimisticMessage,
             })
             if (onSessionResolved) {
@@ -487,7 +798,8 @@ export function ChatScreen({
               clientId,
               optimisticId,
             )
-            helpers.setValue(body)
+            helpers.setValue(trimmedBody)
+            helpers.setAttachments(attachments)
             setError(
               `Failed to create session. ${err instanceof Error ? err.message : String(err)}`,
             )
@@ -501,7 +813,12 @@ export function ChatScreen({
 
       const sessionKeyForSend =
         forcedSessionKey || resolvedSessionKey || activeSessionKey
-      sendMessage(sessionKeyForSend, activeFriendlyId, body)
+      sendMessage(
+        sessionKeyForSend,
+        activeFriendlyId,
+        trimmedBody,
+        attachmentPayload,
+      )
     },
     [
       activeFriendlyId,
@@ -578,6 +895,7 @@ export function ChatScreen({
       onActiveSessionDelete={handleActiveSessionDelete}
     />
   )
+  const hasActiveStreamPlaceholder = streamingMessageId !== null
 
   return (
     <div className="h-screen bg-surface text-primary-900">
@@ -624,6 +942,10 @@ export function ChatScreen({
                 pinGroupMinHeight={pinGroupMinHeight}
                 headerHeight={headerHeight}
                 contentStyle={stableContentStyle}
+                isStreaming={streaming.isStreaming || hasActiveStreamPlaceholder}
+                streamingMessageId={streamingMessageId}
+                streamingText={streamingText}
+                streamingThinking={streamingThinking}
               />
               <ChatComposer
                 onSubmit={send}

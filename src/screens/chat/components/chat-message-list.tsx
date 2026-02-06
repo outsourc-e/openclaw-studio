@@ -1,6 +1,19 @@
-import { memo, useLayoutEffect, useMemo, useRef } from 'react'
-import { getToolCallsFromMessage } from '../utils'
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
+import {
+  getMessageTimestamp,
+  getToolCallsFromMessage,
+  textFromMessage,
+} from '../utils'
 import { MessageItem } from './message-item'
+import { ScrollToBottomButton } from './scroll-to-bottom-button'
 import type { GatewayMessage } from '../types'
 import {
   ChatContainerContent,
@@ -8,6 +21,11 @@ import {
   ChatContainerScrollAnchor,
 } from '@/components/prompt-kit/chat-container'
 import { TypingIndicator } from '@/components/prompt-kit/typing-indicator'
+import { cn } from '@/lib/utils'
+
+const VIRTUAL_ROW_HEIGHT = 136
+const VIRTUAL_OVERSCAN = 8
+const NEAR_BOTTOM_THRESHOLD = 120
 
 type ChatMessageListProps = {
   messages: Array<GatewayMessage>
@@ -22,6 +40,11 @@ type ChatMessageListProps = {
   pinGroupMinHeight: number
   headerHeight: number
   contentStyle?: React.CSSProperties
+  // Streaming support
+  streamingMessageId?: string | null
+  streamingText?: string
+  streamingThinking?: string
+  isStreaming?: boolean
 }
 
 function ChatMessageListComponent({
@@ -37,12 +60,79 @@ function ChatMessageListComponent({
   pinGroupMinHeight,
   headerHeight,
   contentStyle,
+  streamingMessageId,
+  streamingText,
+  streamingThinking,
+  isStreaming = false,
 }: ChatMessageListProps) {
   const anchorRef = useRef<HTMLDivElement | null>(null)
   const lastUserRef = useRef<HTMLDivElement | null>(null)
   const programmaticScroll = useRef(false)
   const prevPinRef = useRef(pinToTop)
   const prevUserIndexRef = useRef<number | undefined>(undefined)
+  const prevSessionKeyRef = useRef<string | undefined>(sessionKey)
+  const stickToBottomRef = useRef(true)
+  const messageSignatureRef = useRef<Map<string, string>>(new Map())
+  const initialRenderRef = useRef(true)
+  const lastScrollTopRef = useRef(0)
+  const smoothScrollFrameRef = useRef<number | null>(null)
+  const releaseProgrammaticScrollTimerRef = useRef<number | null>(null)
+  const prevDisplayMessageCountRef = useRef(0)
+  const prevUnreadSessionKeyRef = useRef<string | undefined>(sessionKey)
+  const [isNearBottom, setIsNearBottom] = useState(true)
+  const [unreadCount, setUnreadCount] = useState(0)
+  const [scrollMetrics, setScrollMetrics] = useState({
+    scrollTop: 0,
+    scrollHeight: 0,
+    clientHeight: 0,
+  })
+
+  const handleUserScroll = useCallback(function handleUserScroll(metrics: {
+    scrollTop: number
+    scrollHeight: number
+    clientHeight: number
+  }) {
+    const isUserScrollingUp = metrics.scrollTop < lastScrollTopRef.current - 2
+    lastScrollTopRef.current = metrics.scrollTop
+
+    if (isUserScrollingUp) {
+      stickToBottomRef.current = false
+    }
+
+    if (!programmaticScroll.current) {
+      const distanceFromBottom =
+        metrics.scrollHeight - metrics.scrollTop - metrics.clientHeight
+      const nearBottom = distanceFromBottom <= NEAR_BOTTOM_THRESHOLD
+      stickToBottomRef.current = nearBottom
+      setIsNearBottom(nearBottom)
+      if (nearBottom) {
+        setUnreadCount(0)
+      }
+    }
+    setScrollMetrics(metrics)
+  }, [])
+
+  const setProgrammaticScroll = useCallback(function setProgrammaticScroll(
+    activeForMs: number,
+  ) {
+    programmaticScroll.current = true
+    if (releaseProgrammaticScrollTimerRef.current !== null) {
+      window.clearTimeout(releaseProgrammaticScrollTimerRef.current)
+    }
+    releaseProgrammaticScrollTimerRef.current = window.setTimeout(() => {
+      programmaticScroll.current = false
+      releaseProgrammaticScrollTimerRef.current = null
+    }, activeForMs)
+  }, [])
+
+  const scrollToAnchor = useCallback(
+    function scrollToAnchor(behavior: ScrollBehavior, activeForMs: number) {
+      if (!anchorRef.current) return
+      setProgrammaticScroll(activeForMs)
+      anchorRef.current.scrollIntoView({ behavior, block: 'end' })
+    },
+    [setProgrammaticScroll],
+  )
 
   // Filter out toolResult messages - they'll be displayed inside their associated tool calls
   const displayMessages = useMemo(() => {
@@ -61,6 +151,41 @@ function ChatMessageListComponent({
     return map
   }, [messages])
 
+  const streamingState = useMemo(() => {
+    const prevSignatures = messageSignatureRef.current
+    const nextSignatures = new Map<string, string>()
+    const toStream = new Set<string>()
+    const isInitialRender = initialRenderRef.current
+
+    displayMessages.forEach((message, index) => {
+      const stableId = getStableMessageId(message, index)
+      const text = textFromMessage(message)
+      const timestamp = getMessageTimestamp(message)
+      const streamingStatus = message.__streamingStatus ?? 'idle'
+      const signature = `${streamingStatus}:${timestamp}:${text.length}:${text.slice(-48)}`
+      nextSignatures.set(stableId, signature)
+
+      if (
+        !isInitialRender &&
+        message.role === 'assistant' &&
+        streamingStatus !== 'streaming'
+      ) {
+        const prevSignature = prevSignatures.get(stableId)
+        if (prevSignature !== signature && text.trim().length > 0) {
+          toStream.add(stableId)
+        }
+      }
+    })
+
+    messageSignatureRef.current = nextSignatures
+    if (isInitialRender) {
+      initialRenderRef.current = false
+      return { streamingTargets: new Set<string>(), signatureById: nextSignatures }
+    }
+
+    return { streamingTargets: toStream, signatureById: nextSignatures }
+  }, [displayMessages])
+
   const lastAssistantIndex = displayMessages
     .map((message, index) => ({ message, index }))
     .filter(({ message }) => message.role !== 'user')
@@ -71,14 +196,87 @@ function ChatMessageListComponent({
     .filter(({ message }) => message.role === 'user')
     .map(({ index }) => index)
     .pop()
+  // Don't show typing indicator if we're streaming
   const showTypingIndicator =
+    !isStreaming &&
+    streamingState.streamingTargets.size === 0 &&
     waitingForResponse &&
     (typeof lastUserIndex !== 'number' ||
       typeof lastAssistantIndex !== 'number' ||
       lastAssistantIndex < lastUserIndex)
+
   // Pin the last user+assistant group without adding bottom padding.
   const groupStartIndex = typeof lastUserIndex === 'number' ? lastUserIndex : -1
   const hasGroup = pinToTop && groupStartIndex >= 0
+  const shouldVirtualize = !hasGroup && displayMessages.length > 80
+
+  const virtualRange = useMemo(() => {
+    if (!shouldVirtualize || scrollMetrics.clientHeight <= 0) {
+      return {
+        startIndex: 0,
+        endIndex: displayMessages.length,
+        topSpacerHeight: 0,
+        bottomSpacerHeight: 0,
+      }
+    }
+
+    const startIndex = Math.max(
+      0,
+      Math.floor(scrollMetrics.scrollTop / VIRTUAL_ROW_HEIGHT) - VIRTUAL_OVERSCAN,
+    )
+    const visibleCount = Math.ceil(
+      scrollMetrics.clientHeight / VIRTUAL_ROW_HEIGHT,
+    )
+    const endIndex = Math.min(
+      displayMessages.length,
+      startIndex + visibleCount + VIRTUAL_OVERSCAN * 2,
+    )
+
+    return {
+      startIndex,
+      endIndex,
+      topSpacerHeight: startIndex * VIRTUAL_ROW_HEIGHT,
+      bottomSpacerHeight: (displayMessages.length - endIndex) * VIRTUAL_ROW_HEIGHT,
+    }
+  }, [displayMessages.length, scrollMetrics, shouldVirtualize])
+
+  function isMessageStreaming(message: GatewayMessage, index: number) {
+    if (!isStreaming || !streamingMessageId) return false
+    const messageId = message.__optimisticId || (message as any).id
+    return (
+      messageId === streamingMessageId ||
+      (message.role === 'assistant' && index === lastAssistantIndex)
+    )
+  }
+
+  function renderMessage(chatMessage: GatewayMessage, realIndex: number) {
+    const messageIsStreaming = isMessageStreaming(chatMessage, realIndex)
+    const stableId = getStableMessageId(chatMessage, realIndex)
+    const signature = streamingState.signatureById.get(stableId)
+    const simulateStreaming =
+      !messageIsStreaming && streamingState.streamingTargets.has(stableId)
+    const spacingClass = getMessageSpacingClass(displayMessages, realIndex)
+    const forceActionsVisible =
+      typeof lastAssistantIndex === 'number' && realIndex === lastAssistantIndex
+    const hasToolCalls =
+      chatMessage.role === 'assistant' &&
+      getToolCallsFromMessage(chatMessage).length > 0
+
+    return (
+      <MessageItem
+        key={stableId}
+        message={chatMessage}
+        toolResultsByCallId={hasToolCalls ? toolResultsByCallId : undefined}
+        forceActionsVisible={forceActionsVisible}
+        wrapperClassName={spacingClass}
+        isStreaming={messageIsStreaming}
+        streamingText={messageIsStreaming ? streamingText : undefined}
+        streamingThinking={messageIsStreaming ? streamingThinking : undefined}
+        simulateStreaming={simulateStreaming}
+        streamingKey={signature}
+      />
+    )
+  }
 
   useLayoutEffect(() => {
     if (loading) return
@@ -88,78 +286,130 @@ function ChatMessageListComponent({
       prevPinRef.current = true
       prevUserIndexRef.current = lastUserIndex
       if (shouldPin && lastUserRef.current) {
-        programmaticScroll.current = true
+        setProgrammaticScroll(32)
         lastUserRef.current.scrollIntoView({ behavior: 'auto', block: 'start' })
-        window.setTimeout(() => {
-          programmaticScroll.current = false
-        }, 0)
       }
       return
     }
 
     prevPinRef.current = false
     prevUserIndexRef.current = lastUserIndex
+    const sessionChanged = prevSessionKeyRef.current !== sessionKey
+    prevSessionKeyRef.current = sessionKey
+    if (!stickToBottomRef.current && !sessionChanged) return
+
     if (anchorRef.current) {
-      programmaticScroll.current = true
-      anchorRef.current.scrollIntoView({ behavior: 'auto', block: 'end' })
-      window.setTimeout(() => {
-        programmaticScroll.current = false
-      }, 0)
+      scrollToAnchor(sessionChanged ? 'auto' : 'smooth', sessionChanged ? 32 : 220)
     }
   }, [loading, displayMessages.length, sessionKey, pinToTop, lastUserIndex])
 
+  useLayoutEffect(() => {
+    if (loading || pinToTop || !isStreaming) return
+    if (!stickToBottomRef.current) return
+    if (smoothScrollFrameRef.current !== null) {
+      window.cancelAnimationFrame(smoothScrollFrameRef.current)
+    }
+    smoothScrollFrameRef.current = window.requestAnimationFrame(() => {
+      smoothScrollFrameRef.current = null
+      scrollToAnchor('smooth', 180)
+    })
+  }, [isStreaming, loading, pinToTop, streamingText, streamingThinking])
+
+  useEffect(() => {
+    const sessionChanged = prevUnreadSessionKeyRef.current !== sessionKey
+    if (sessionChanged) {
+      prevUnreadSessionKeyRef.current = sessionKey
+      prevDisplayMessageCountRef.current = displayMessages.length
+      setUnreadCount(0)
+      return
+    }
+
+    const previousCount = prevDisplayMessageCountRef.current
+    const nextCount = displayMessages.length
+    if (previousCount === 0) {
+      prevDisplayMessageCountRef.current = nextCount
+      return
+    }
+
+    const addedCount = nextCount - previousCount
+    if (addedCount > 0 && !stickToBottomRef.current && !loading) {
+      setUnreadCount((currentCount) => currentCount + addedCount)
+    }
+    prevDisplayMessageCountRef.current = nextCount
+  }, [displayMessages.length, loading, sessionKey])
+
+  const handleScrollToBottom = useCallback(function handleScrollToBottom() {
+    stickToBottomRef.current = true
+    setIsNearBottom(true)
+    setUnreadCount(0)
+    scrollToAnchor('smooth', 220)
+  }, [scrollToAnchor])
+
+  const scrollToBottomOverlay = useMemo(() => {
+    return (
+      <div className="pointer-events-none absolute bottom-6 right-6 z-40">
+        <ScrollToBottomButton
+          isVisible={!isNearBottom}
+          unreadCount={unreadCount}
+          onClick={handleScrollToBottom}
+        />
+      </div>
+    )
+  }, [handleScrollToBottom, isNearBottom, unreadCount])
+
+  useEffect(() => {
+    return () => {
+      if (smoothScrollFrameRef.current !== null) {
+        window.cancelAnimationFrame(smoothScrollFrameRef.current)
+      }
+      if (releaseProgrammaticScrollTimerRef.current !== null) {
+        window.clearTimeout(releaseProgrammaticScrollTimerRef.current)
+      }
+    }
+  }, [])
+
   return (
     // mt-2 is to fix the prompt-input cut off
-    <ChatContainerRoot className="flex-1 min-h-0 -mb-4">
+    <ChatContainerRoot
+      className="flex-1 min-h-0 -mb-4"
+      onUserScroll={handleUserScroll}
+      overlay={scrollToBottomOverlay}
+    >
       <ChatContainerContent className="pt-6" style={contentStyle}>
         {notice && noticePosition === 'start' ? notice : null}
         {empty && !notice ? (
           (emptyState ?? <div aria-hidden></div>)
         ) : hasGroup ? (
           <>
-            {displayMessages
-              .slice(0, groupStartIndex)
-              .map((chatMessage, index) => {
-                const messageKey =
-                  chatMessage.__optimisticId || (chatMessage as any).id || index
-                const forceActionsVisible =
-                  typeof lastAssistantIndex === 'number' &&
-                  index === lastAssistantIndex
-                const hasToolCalls =
-                  chatMessage.role === 'assistant' &&
-                  getToolCallsFromMessage(chatMessage).length > 0
-                return (
-                  <MessageItem
-                    key={messageKey}
-                    message={chatMessage}
-                    toolResultsByCallId={
-                      hasToolCalls ? toolResultsByCallId : undefined
-                    }
-                    forceActionsVisible={forceActionsVisible}
-                  />
-                )
-              })}
+            {displayMessages.slice(0, groupStartIndex).map(renderMessage)}
             {/* // Keep the last exchange pinned without extra tail gap. // Account
             for space-y-6 (24px) when pinning. */}
             <div
-              className="flex flex-col space-y-6"
-              style={{ minHeight: `${Math.max(0, pinGroupMinHeight - 24)}px` }}
+              className="my-3 flex flex-col gap-3"
+              style={{ minHeight: `${Math.max(0, pinGroupMinHeight - 12)}px` }}
             >
               {displayMessages
                 .slice(groupStartIndex)
                 .map((chatMessage, index) => {
                   const realIndex = groupStartIndex + index
-                  const messageKey =
-                    chatMessage.__optimisticId ||
-                    (chatMessage as any).id ||
-                    realIndex
+                  const messageIsStreaming = isMessageStreaming(
+                    chatMessage,
+                    realIndex,
+                  )
+                  const stableId = getStableMessageId(chatMessage, realIndex)
+                  const signature = streamingState.signatureById.get(stableId)
+                  const simulateStreaming =
+                    !messageIsStreaming &&
+                    streamingState.streamingTargets.has(stableId)
                   const forceActionsVisible =
                     typeof lastAssistantIndex === 'number' &&
                     realIndex === lastAssistantIndex
                   const wrapperRef =
                     realIndex === lastUserIndex ? lastUserRef : undefined
-                  const wrapperClassName =
-                    realIndex === lastUserIndex ? 'scroll-mt-0' : undefined
+                  const wrapperClassName = cn(
+                    getMessageSpacingClass(displayMessages, realIndex),
+                    realIndex === lastUserIndex ? 'scroll-mt-0' : '',
+                  )
                   const wrapperScrollMarginTop =
                     realIndex === lastUserIndex ? headerHeight : undefined
                   const hasToolCalls =
@@ -167,7 +417,7 @@ function ChatMessageListComponent({
                     getToolCallsFromMessage(chatMessage).length > 0
                   return (
                     <MessageItem
-                      key={messageKey}
+                      key={stableId}
                       message={chatMessage}
                       toolResultsByCallId={
                         hasToolCalls ? toolResultsByCallId : undefined
@@ -176,6 +426,13 @@ function ChatMessageListComponent({
                       wrapperRef={wrapperRef}
                       wrapperClassName={wrapperClassName}
                       wrapperScrollMarginTop={wrapperScrollMarginTop}
+                      isStreaming={messageIsStreaming}
+                      streamingText={messageIsStreaming ? streamingText : undefined}
+                      streamingThinking={
+                        messageIsStreaming ? streamingThinking : undefined
+                      }
+                      simulateStreaming={simulateStreaming}
+                      streamingKey={signature}
                     />
                   )
                 })}
@@ -187,34 +444,66 @@ function ChatMessageListComponent({
             </div>
           </>
         ) : (
-          displayMessages.map((chatMessage, index) => {
-            const messageKey =
-              chatMessage.__optimisticId || (chatMessage as any).id || index
-            const forceActionsVisible =
-              typeof lastAssistantIndex === 'number' &&
-              index === lastAssistantIndex
-            const hasToolCalls =
-              chatMessage.role === 'assistant' &&
-              getToolCallsFromMessage(chatMessage).length > 0
-            return (
-              <MessageItem
-                key={messageKey}
-                message={chatMessage}
-                toolResultsByCallId={
-                  hasToolCalls ? toolResultsByCallId : undefined
-                }
-                forceActionsVisible={forceActionsVisible}
+          <>
+            {shouldVirtualize && virtualRange.topSpacerHeight > 0 ? (
+              <div
+                aria-hidden="true"
+                style={{ height: `${virtualRange.topSpacerHeight}px` }}
               />
-            )
-          })
+            ) : null}
+            {displayMessages
+              .slice(virtualRange.startIndex, virtualRange.endIndex)
+              .map((chatMessage, index) =>
+                renderMessage(chatMessage, virtualRange.startIndex + index),
+              )}
+            {shouldVirtualize && virtualRange.bottomSpacerHeight > 0 ? (
+              <div
+                aria-hidden="true"
+                style={{ height: `${virtualRange.bottomSpacerHeight}px` }}
+              />
+            ) : null}
+          </>
         )}
         {notice && noticePosition === 'end' ? notice : null}
-        <ChatContainerScrollAnchor
-          ref={anchorRef as React.RefObject<HTMLDivElement>}
-        />
+        <ChatContainerScrollAnchor ref={anchorRef} />
       </ChatContainerContent>
     </ChatContainerRoot>
   )
+}
+
+function getMessageSpacingClass(
+  messages: Array<GatewayMessage>,
+  index: number,
+): string {
+  if (index === 0) return 'mt-0'
+  const currentRole = messages[index]?.role ?? 'assistant'
+  const previousRole = messages[index - 1]?.role ?? 'assistant'
+  if (currentRole === previousRole) {
+    return 'mt-3'
+  }
+  if (currentRole === 'assistant') {
+    return 'mt-4 pt-1'
+  }
+  return 'mt-4'
+}
+
+function getStableMessageId(message: GatewayMessage, index: number): string {
+  if (message.__optimisticId) return message.__optimisticId
+
+  const idCandidates = ['id', 'messageId', 'uuid', 'clientId'] as const
+  for (const key of idCandidates) {
+    const value = (message as Record<string, unknown>)[key]
+    if (typeof value === 'string' && value.trim().length > 0) {
+      return value
+    }
+  }
+
+  const timestamp = getMessageTimestamp(message)
+  if (timestamp) {
+    return `${message.role ?? 'assistant'}-${timestamp}`
+  }
+
+  return `${message.role ?? 'assistant'}-${index}`
 }
 
 function areChatMessageListEqual(
@@ -233,7 +522,11 @@ function areChatMessageListEqual(
     prev.pinToTop === next.pinToTop &&
     prev.pinGroupMinHeight === next.pinGroupMinHeight &&
     prev.headerHeight === next.headerHeight &&
-    prev.contentStyle === next.contentStyle
+    prev.contentStyle === next.contentStyle &&
+    prev.streamingMessageId === next.streamingMessageId &&
+    prev.streamingText === next.streamingText &&
+    prev.streamingThinking === next.streamingThinking &&
+    prev.isStreaming === next.isStreaming
   )
 }
 
