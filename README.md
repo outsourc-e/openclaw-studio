@@ -1,113 +1,158 @@
 # OpenClaw Studio
 
-<p align="center">
-  <img src="https://img.shields.io/badge/version-1.0.0-blue.svg" alt="Version">
-  <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey.svg" alt="Platforms">
-  <img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License">
-</p>
+**"VSCode for AI Agents"** - Desktop interface for OpenClaw Gateway
 
-**VSCode for AI Agents** — A beautiful desktop interface for [OpenClaw Gateway](https://github.com/anthropics/openclaw).
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![GitHub release](https://img.shields.io/github/v/release/outsourc-e/openclaw-studio)](https://github.com/outsourc-e/openclaw-studio/releases)
 
-OpenClaw Studio gives you a visual command center for your AI agents: monitor sessions, browse files, run terminals, view activity logs, and chat with agents — all from one unified interface.
+## Features
 
-## ✨ Features
+- 💬 **Real-time chat** with AI agents
+- 📁 **File explorer** with Monaco code editor
+- 🖥️ **Integrated terminal** (Cmd+\` or dedicated route)
+- 🔍 **Global search** (Cmd+K) - 6 search scopes
+- 📊 **Session monitoring** with real-time agent view
+- 🎯 **Skills marketplace** (2,070+ skills from ClawdHub)
+- ⚙️ **Cron job manager** for scheduled tasks
+- 📝 **Memory viewer** for agent context
+- 🌐 **Browser automation** control panel
+- 📈 **Usage tracking** and cost monitoring
+- ⌨️ **Keyboard shortcuts** (press `?` to see all)
+- 🟢 **Gateway status** indicator
 
-- **📊 Dashboard** — Real-time Gateway status, quick actions, recent sessions, cost tracking
-- **💬 Chat Interface** — Conversational interface for agent interactions
-- **📁 File Explorer** — Browse and edit workspace files with Monaco editor
-- **🖥️ Terminal** — Full terminal access to agent workspace
-- **📜 Activity Logs** — Stream of agent events and tool invocations
-- **🌐 Browser Control** — View and control agent browser sessions
-- **⏰ Cron Jobs** — Schedule and manage automated tasks
-- **🧠 Memory View** — Inspect agent memory and context
-- **🔧 Skills Manager** — Browse and configure agent capabilities
-- **⚙️ Settings** — Configure Gateway connection and preferences
+## Installation
 
-## 🚀 Quick Start
+### macOS
+
+**Download:** [OpenClaw Studio v1.0.0 (.zip)](https://github.com/outsourc-e/openclaw-studio/releases/download/v1.0.0/OpenClaw.Studio_1.0.0_universal.app.zip) (9.6 MB, recommended)
+
+Alternative: [.dmg installer](https://github.com/outsourc-e/openclaw-studio/releases/download/v1.0.0/OpenClaw.Studio_1.0.0_universal.dmg) (45 MB)
+
+**Install:**
+1. Download the `.zip` file
+2. Extract by double-clicking
+3. Drag `OpenClaw Studio.app` to Applications folder
+4. **First launch:** Right-click → Open (to bypass Gatekeeper)
+5. After first launch, you can open normally from Applications
+
+**Universal Binary:** Works natively on both Apple Silicon (M1/M2/M3) and Intel Macs.
+
+### Linux & Windows
+
+*Coming soon - use development build for now.*
+
+## Requirements
+
+- **OpenClaw Gateway** must be running on `localhost:18789`
+- macOS 11+ (Big Sur or later)
+- 100MB free disk space
+
+## Screenshots
+
+![Dashboard](docs/screenshots/dashboard.png)
+*Real-time dashboard with Gateway connection status*
+
+![Chat Interface](docs/screenshots/chat.png)
+*Multi-session chat with agent monitoring*
+
+![Terminal](docs/screenshots/terminal.png)
+*Integrated terminal with full xterm support*
+
+## Development
 
 ### Prerequisites
 
-- [OpenClaw Gateway](https://github.com/anthropics/openclaw) running locally or remotely
-- macOS 10.15+, Windows 10+, or Linux
+- Node.js 22+
+- Rust 1.80+ (for Tauri)
+- macOS (for building .dmg/.app)
 
-### Installation
-
-1. Download the latest release for your platform from [Releases](https://github.com/outsourc-e/openclaw-studio/releases)
-2. Install:
-   - **macOS**: Open `.dmg`, drag to Applications
-   - **Windows**: Run the installer
-   - **Linux**: Make AppImage executable and run
-3. Launch OpenClaw Studio
-4. Connect to your Gateway (default: `localhost:6118`)
-
-### Development Setup
+### Setup
 
 ```bash
-# Clone the repository
+# Clone the repo
 git clone https://github.com/outsourc-e/openclaw-studio.git
 cd openclaw-studio
 
 # Install dependencies
 npm install
 
-# Start development server
+# Run dev server (web only, no desktop app)
 npm run dev
 
-# Build for production
-npm run build
+# Build Tauri desktop app
+npm install @tauri-apps/cli
+npx tauri build --target universal-apple-darwin
 ```
 
-### Tauri Desktop Build
+### Project Structure
 
-```bash
-# Install Tauri CLI
-npm install -g @tauri-apps/cli
-
-# Build desktop app (requires Rust)
-npm run tauri build
+```
+openclaw-studio/
+├── src/
+│   ├── routes/          # TanStack Router routes
+│   ├── components/      # React components
+│   ├── screens/         # Screen-level components
+│   ├── hooks/           # Custom React hooks
+│   └── server/          # Server-side code (Gateway API)
+├── src-tauri/           # Tauri Rust backend
+├── docs/                # Documentation
+└── public/              # Static assets
 ```
 
-## 📸 Screenshots
+## Architecture
 
-*Coming soon*
+Built with:
+- **React 19** - UI framework
+- **TanStack Router** - File-based routing
+- **TanStack Start** - SSR/SSG framework
+- **Tauri 2.10** - Desktop app framework
+- **Vite** - Build tool
+- **Tailwind CSS 4** - Styling
+- **Monaco Editor** - Code editing
+- **xterm.js** - Terminal emulation
+- **Framer Motion** - Animations
 
-## 🏗️ Architecture
+See [ARCHITECTURE.md](docs/OPENCLAW-STUDIO-ARCHITECTURE.md) for detailed system design.
 
-- **Frontend**: React 19 + TanStack Router + TanStack Query
-- **Styling**: Tailwind CSS 4
-- **Editor**: Monaco Editor
-- **Terminal**: xterm.js
-- **Desktop**: Tauri 2.x
-- **Build**: Vite 7
+## Keyboard Shortcuts
 
-## 🔌 Gateway Connection
+| Shortcut | Action |
+|----------|--------|
+| `Cmd+K` | Open global search |
+| `Ctrl+\`` | Toggle terminal panel |
+| `Cmd+B` | Toggle sidebar |
+| `?` | Show keyboard shortcuts modal |
+| `Esc` | Close modals/overlays |
 
-OpenClaw Studio connects to your Gateway via:
-- **HTTP API**: `http://localhost:6118` (status, config)
-- **WebSocket**: `ws://localhost:6118` (real-time events)
+## Roadmap
 
-Configure the Gateway URL in Settings or set the `GATEWAY_URL` environment variable.
+### Phase 3: Production Desktop App ✅
+- [x] Build system (Tauri)
+- [x] Universal binary (Apple Silicon + Intel)
+- [x] .dmg and .zip distributions
+- [ ] GitHub Actions CI/CD
+- [ ] Auto-update system
 
-## 🗺️ Roadmap
+### Phase 4: Workflow Builder (Q1 2026)
+- [ ] Visual workflow editor (drag-drop nodes)
+- [ ] Multi-agent orchestration dashboard
+- [ ] Plugin system for custom tools
+- [ ] Real-time collaboration features
 
-- [ ] Multi-agent swarm visualization
-- [ ] Session recording and playback
-- [ ] Plugin system for custom views
-- [ ] Cloud deployment panel
-- [ ] Team collaboration features
+See [PHASE-3-ACTION-PLAN.md](docs/PHASE-3-ACTION-PLAN.md) for full roadmap.
 
-## 🤝 Contributing
+## Contributing
 
-Contributions welcome! Please read our contributing guidelines first.
+This is a personal project by [@outsourc_e](https://x.com/outsourc_e). Issues and PRs welcome!
 
-## 📄 License
+## License
 
-MIT License — see [LICENSE](LICENSE) for details.
+MIT © Eric ([outsourc-e](https://github.com/outsourc-e))
 
-## 🙏 Credits
+Built with ❤️ in Miami
 
-Built with ❤️ by [@outsourc_e](https://twitter.com/outsourc_e)
+---
 
-Part of the [OpenClaw](https://github.com/anthropics/openclaw) ecosystem.
-
-Learn more at [buildingthefuture.io](https://buildingthefuture.io)
+**Part of the Building the Future ecosystem:**
+- 🌐 [buildingthefuture.io](https://buildingthefuture.io)
+- 🐦 [@outsourc_e](https://x.com/outsourc_e)
