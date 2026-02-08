@@ -170,21 +170,22 @@ function toModelOption(entry: GatewayModelCatalogEntry): ModelOption | null {
   const provider = readText(entry.provider)
   const model = readText(entry.model)
   const id = readText(entry.id)
+  
+  if (!provider || !id) return null
+
+  // Gateway expects provider/model format for sessions.patch
+  // If id already contains provider prefix (e.g., "anthropic/claude-opus-4-6"), use as-is
+  // Otherwise, prepend provider (e.g., "anthropic" + "claude-opus-4-6")
+  const hasProviderPrefix = id.includes('/')
+  const value = hasProviderPrefix ? id : `${provider}/${id}`
+  
   const display =
     readText(entry.label) ||
     readText(entry.displayName) ||
     readText(entry.name) ||
     alias ||
-    (provider && model ? `${provider}/${model}` : '') ||
-    model ||
     id
 
-  const value =
-    alias ||
-    (provider && model ? `${provider}/${model}` : '') ||
-    model ||
-    id
-  if (!value || !provider) return null
   return { value, label: display || value, provider }
 }
 
