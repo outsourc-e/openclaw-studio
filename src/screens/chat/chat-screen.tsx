@@ -56,6 +56,7 @@ import type { GatewayAttachment, GatewayMessage, HistoryResponse } from './types
 import { cn } from '@/lib/utils'
 import { FileExplorerSidebar } from '@/components/file-explorer'
 import { SEARCH_MODAL_EVENTS } from '@/hooks/use-search-modal'
+import { SIDEBAR_TOGGLE_EVENT } from '@/hooks/use-global-shortcuts'
 import { TerminalPanel } from '@/components/terminal-panel'
 import { AgentViewPanel } from '@/components/agent-view/agent-view-panel'
 import { useAgentViewStore } from '@/hooks/use-agent-view'
@@ -938,13 +939,21 @@ export function ChatScreen({
       SEARCH_MODAL_EVENTS.TOGGLE_FILE_EXPLORER,
       handleToggleFileExplorerFromSearch,
     )
+    window.addEventListener(
+      SIDEBAR_TOGGLE_EVENT,
+      handleToggleSidebarCollapse,
+    )
     return () => {
       window.removeEventListener(
         SEARCH_MODAL_EVENTS.TOGGLE_FILE_EXPLORER,
         handleToggleFileExplorerFromSearch,
       )
+      window.removeEventListener(
+        SIDEBAR_TOGGLE_EVENT,
+        handleToggleSidebarCollapse,
+      )
     }
-  }, [handleToggleFileExplorer])
+  }, [handleToggleFileExplorer, handleToggleSidebarCollapse])
 
   const handleInsertFileReference = useCallback((reference: string) => {
     composerHandleRef.current?.insertText(reference)

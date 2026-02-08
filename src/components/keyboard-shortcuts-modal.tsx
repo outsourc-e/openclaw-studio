@@ -13,8 +13,10 @@ const SHORTCUT_GROUPS = [
     title: 'Navigation',
     items: [
       { keys: [`${MOD}+K`], label: 'Open Search' },
-      { keys: ['Ctrl+`'], label: 'Toggle Terminal' },
+      { keys: [`${MOD}+P`], label: 'Quick Open File' },
       { keys: [`${MOD}+B`], label: 'Toggle Sidebar' },
+      { keys: [`${MOD}+Shift+L`], label: 'Activity Log' },
+      { keys: ['Ctrl+`'], label: 'Toggle Terminal' },
       { keys: ['?'], label: 'Keyboard Shortcuts' },
     ],
   },
@@ -30,7 +32,6 @@ const SHORTCUT_GROUPS = [
     title: 'Editor',
     items: [
       { keys: [`${MOD}+S`], label: 'Save File' },
-      { keys: [`${MOD}+P`], label: 'Quick Open File' },
     ],
   },
 ]
