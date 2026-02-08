@@ -11,7 +11,7 @@ import {
   Sun01Icon,
 } from '@hugeicons/core-free-icons'
 import { createFileRoute } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type * as React from 'react'
 import type {AccentColor, SettingsThemeMode} from '@/hooks/use-settings';
 import { usePageTitle } from '@/hooks/use-page-title'
@@ -81,6 +81,29 @@ function SettingsRoute() {
   const [connectionStatus, setConnectionStatus] = useState<
     'idle' | 'testing' | 'connected' | 'failed'
   >('idle')
+
+  // Phase 4.2: Fetch models for preferred model dropdowns
+  const [availableModels, setAvailableModels] = useState<Array<{ id: string; label: string }>>([])
+  
+  useEffect(() => {
+    async function fetchModels() {
+      try {
+        const res = await fetch('/api/models')
+        if (!res.ok) return
+        const data = await res.json()
+        const models = Array.isArray(data.models) ? data.models : []
+        setAvailableModels(
+          models.map((m: any) => ({
+            id: m.id || '',
+            label: m.id?.split('/').pop() || m.id || '',
+          }))
+        )
+      } catch {
+        // Ignore fetch errors
+      }
+    }
+    void fetchModels()
+  }, [])
 
   async function handleTestConnection() {
     setConnectionStatus('testing')
@@ -327,6 +350,58 @@ function SettingsRoute() {
               checked={settings.smartSuggestionsEnabled}
               onCheckedChange={function onSmartSuggestionsChange(checked) {
                 updateSettings({ smartSuggestionsEnabled: checked })
+              }}
+            />
+          </SettingsRow>
+
+          <SettingsRow
+            label="Preferred budget model"
+            description="Default model for cheaper suggestions (leave empty for auto-detect)."
+          >
+            <select
+              value={settings.preferredBudgetModel}
+              onChange={function onBudgetModelChange(event) {
+                updateSettings({ preferredBudgetModel: event.target.value })
+              }}
+              className="h-9 min-w-[220px] rounded-lg border border-primary-200 bg-primary-50 px-3 text-sm text-primary-900 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary-400"
+            >
+              <option value="">Auto-detect</option>
+              {availableModels.map((model) => (
+                <option key={model.id} value={model.id}>
+                  {model.label}
+                </option>
+              ))}
+            </select>
+          </SettingsRow>
+
+          <SettingsRow
+            label="Preferred premium model"
+            description="Default model for upgrade suggestions (leave empty for auto-detect)."
+          >
+            <select
+              value={settings.preferredPremiumModel}
+              onChange={function onPremiumModelChange(event) {
+                updateSettings({ preferredPremiumModel: event.target.value })
+              }}
+              className="h-9 min-w-[220px] rounded-lg border border-primary-200 bg-primary-50 px-3 text-sm text-primary-900 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary-400"
+            >
+              <option value="">Auto-detect</option>
+              {availableModels.map((model) => (
+                <option key={model.id} value={model.id}>
+                  {model.label}
+                </option>
+              ))}
+            </select>
+          </SettingsRow>
+
+          <SettingsRow
+            label="Only suggest cheaper models"
+            description="Never suggest upgrades, only suggest cheaper alternatives."
+          >
+            <Switch
+              checked={settings.onlySuggestCheaper}
+              onCheckedChange={function onOnlySuggestCheaperChange(checked) {
+                updateSettings({ onlySuggestCheaper: checked })
               }}
             />
           </SettingsRow>

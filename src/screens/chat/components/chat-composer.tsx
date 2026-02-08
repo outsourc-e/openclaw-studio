@@ -34,6 +34,7 @@ import type {
   GatewayModelCatalogEntry,
   GatewayModelSwitchResponse,
 } from '@/lib/gateway-api'
+import { usePinnedModels } from '@/hooks/use-pinned-models'
 import { cn } from '@/lib/utils'
 
 type ChatComposerAttachment = {
@@ -272,6 +273,10 @@ function ChatComposerComponent({
   const modelSelectorRef = useRef<HTMLDivElement | null>(null)
   const isVoiceInputDisabled = true
   const isSupplementalActionDisabled = true
+  
+  // Phase 4.2: Pinned models
+  const { pinned, togglePin, isPinned } = usePinnedModels()
+  
   const modelsQuery = useQuery({
     queryKey: ['gateway', 'models'],
     queryFn: fetchModels,
@@ -310,6 +315,22 @@ function ChatComposerComponent({
     }
     return Array.from(groups.entries()).sort((a, b) => a[0].localeCompare(b[0]))
   }, [modelOptions])
+
+  // Phase 4.2: Split pinned and unpinned models
+  const pinnedModels = useMemo(() => {
+    return modelOptions.filter((option) => isPinned(option.value))
+  }, [modelOptions, pinned])
+
+  const unpinnedGroupedModels = useMemo(() => {
+    const groups = new Map<string, Array<ModelOption>>()
+    for (const option of modelOptions) {
+      if (isPinned(option.value)) continue // Skip pinned models
+      const existing = groups.get(option.provider) ?? []
+      existing.push(option)
+      groups.set(option.provider, existing)
+    }
+    return Array.from(groups.entries()).sort((a, b) => a[0].localeCompare(b[0]))
+  }, [modelOptions, pinned])
 
   const modelSwitchMutation = useMutation({
     mutationFn: async function switchGatewayModel(payload: {
@@ -841,7 +862,57 @@ function ChatComposerComponent({
                     </div>
                   ) : (
                     <div className="max-h-[20rem] overflow-y-auto p-1">
-                      {groupedModels.map(([provider, models]) => (
+                      {/* Phase 4.2: Pinned models section */}
+                      {pinnedModels.length > 0 && (
+                        <div className="mb-2">
+                          <div className="px-2 py-1 text-xs font-medium uppercase tracking-wide text-primary-500">
+                            📌 Pinned
+                          </div>
+                          {pinnedModels.map((option) => {
+                            const optionActive = isSameModel(option, currentModel)
+                            return (
+                              <div key={option.value} className="group relative flex items-center">
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.stopPropagation()
+                                    setIsModelMenuOpen(false)
+                                    handleModelSelect(option.value)
+                                  }}
+                                  className={cn(
+                                    'flex flex-1 items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-primary-700 transition-colors hover:bg-primary-100',
+                                    optionActive && 'bg-primary-100 text-primary-900',
+                                  )}
+                                  role="option"
+                                  aria-selected={optionActive}
+                                >
+                                  <span className="flex-1 truncate">{option.label}</span>
+                                  {optionActive && (
+                                    <span className="text-primary-900" aria-label="Active">
+                                      ✓
+                                    </span>
+                                  )}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.stopPropagation()
+                                    togglePin(option.value)
+                                  }}
+                                  className="absolute right-2 rounded px-1 text-base leading-none opacity-100 transition-opacity hover:bg-primary-200"
+                                  aria-label="Unpin model"
+                                  title="Unpin"
+                                >
+                                  ⭐
+                                </button>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+                      
+                      {/* Regular models grouped by provider */}
+                      {unpinnedGroupedModels.map(([provider, models]) => (
                         <div key={provider} className="mb-2 last:mb-0">
                           <div className="px-2 py-1 text-xs font-medium uppercase tracking-wide text-primary-500">
                             {provider}
@@ -849,28 +920,41 @@ function ChatComposerComponent({
                           {models.map((option) => {
                             const optionActive = isSameModel(option, currentModel)
                             return (
-                              <button
-                                key={option.value}
-                                type="button"
-                                onClick={(event) => {
-                                  event.stopPropagation()
-                                  setIsModelMenuOpen(false)
-                                  handleModelSelect(option.value)
-                                }}
-                                className={cn(
-                                  'flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-primary-700 transition-colors hover:bg-primary-100',
-                                  optionActive && 'bg-primary-100 text-primary-900',
-                                )}
-                                role="option"
-                                aria-selected={optionActive}
-                              >
-                                <span className="flex-1 truncate">{option.label}</span>
-                                {optionActive ? (
-                                  <span className="text-primary-900" aria-label="Active">
-                                    ✓
-                                  </span>
-                                ) : null}
-                              </button>
+                              <div key={option.value} className="group relative flex items-center">
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.stopPropagation()
+                                    setIsModelMenuOpen(false)
+                                    handleModelSelect(option.value)
+                                  }}
+                                  className={cn(
+                                    'flex flex-1 items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-primary-700 transition-colors hover:bg-primary-100',
+                                    optionActive && 'bg-primary-100 text-primary-900',
+                                  )}
+                                  role="option"
+                                  aria-selected={optionActive}
+                                >
+                                  <span className="flex-1 truncate">{option.label}</span>
+                                  {optionActive && (
+                                    <span className="text-primary-900" aria-label="Active">
+                                      ✓
+                                    </span>
+                                  )}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.stopPropagation()
+                                    togglePin(option.value)
+                                  }}
+                                  className="absolute right-2 rounded px-1 text-base leading-none opacity-0 transition-opacity hover:bg-primary-200 group-hover:opacity-100"
+                                  aria-label="Pin model"
+                                  title="Pin"
+                                >
+                                  ☆
+                                </button>
+                              </div>
                             )
                           })}
                         </div>

@@ -198,7 +198,15 @@ export function useModelSuggestions({
     
     // Check for downgrade opportunity (simple tasks on expensive model)
     if ((currentTier === 'balanced' || currentTier === 'premium') && isSimpleTask(messages)) {
-      const cheaperModel = findModelInTier(provider, 'budget', availableModels)
+      // Phase 4.2: Prefer user's preferred budget model
+      let cheaperModel: string | null = null
+      
+      if (settings.preferredBudgetModel && availableModels.includes(settings.preferredBudgetModel)) {
+        cheaperModel = settings.preferredBudgetModel
+      } else {
+        cheaperModel = findModelInTier(provider, 'budget', availableModels)
+      }
+      
       if (cheaperModel && cheaperModel !== currentModel) {
         setSuggestion({
           currentModel,
@@ -212,24 +220,35 @@ export function useModelSuggestions({
     }
     
     // Check for upgrade opportunity (complex task on weak model)
-    const lastMessage = messages[messages.length - 1]
-    if (lastMessage && isComplexTask(lastMessage)) {
-      let targetTier: ModelTier | null = null
-      
-      if (currentTier === 'budget') targetTier = 'balanced'
-      else if (currentTier === 'balanced') targetTier = 'premium'
-      
-      if (targetTier) {
-        const betterModel = findModelInTier(provider, targetTier, availableModels)
-        if (betterModel && betterModel !== currentModel) {
-          setSuggestion({
-            currentModel,
-            suggestedModel: betterModel,
-            reason: 'This looks complex',
-            costImpact: targetTier === 'premium' ? 'Better quality (2x cost)' : 'Better quality',
-          })
-          setLastShownTimestamp()
-          return
+    // Phase 4.2: Skip if "Only suggest cheaper" is enabled
+    if (!settings.onlySuggestCheaper) {
+      const lastMessage = messages[messages.length - 1]
+      if (lastMessage && isComplexTask(lastMessage)) {
+        let targetTier: ModelTier | null = null
+        
+        if (currentTier === 'budget') targetTier = 'balanced'
+        else if (currentTier === 'balanced') targetTier = 'premium'
+        
+        if (targetTier) {
+          // Phase 4.2: Prefer user's preferred premium model
+          let betterModel: string | null = null
+          
+          if (settings.preferredPremiumModel && availableModels.includes(settings.preferredPremiumModel)) {
+            betterModel = settings.preferredPremiumModel
+          } else {
+            betterModel = findModelInTier(provider, targetTier, availableModels)
+          }
+          
+          if (betterModel && betterModel !== currentModel) {
+            setSuggestion({
+              currentModel,
+              suggestedModel: betterModel,
+              reason: 'This looks complex',
+              costImpact: targetTier === 'premium' ? 'Better quality (2x cost)' : 'Better quality',
+            })
+            setLastShownTimestamp()
+            return
+          }
         }
       }
     }

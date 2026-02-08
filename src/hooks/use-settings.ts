@@ -14,6 +14,9 @@ export type StudioSettings = {
   notificationsEnabled: boolean
   usageThreshold: number
   smartSuggestionsEnabled: boolean
+  preferredBudgetModel: string
+  preferredPremiumModel: string
+  onlySuggestCheaper: boolean
 }
 
 type SettingsState = {
@@ -31,6 +34,9 @@ export const defaultStudioSettings: StudioSettings = {
   notificationsEnabled: true,
   usageThreshold: 80,
   smartSuggestionsEnabled: false,
+  preferredBudgetModel: '',
+  preferredPremiumModel: '',
+  onlySuggestCheaper: false,
 }
 
 export const useSettingsStore = create<SettingsState>()(
