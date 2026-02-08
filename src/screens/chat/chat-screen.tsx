@@ -1062,6 +1062,11 @@ export function ChatScreen({
               onSubmit={send}
               isLoading={sending}
               disabled={sending || hideUi}
+              sessionKey={
+                isNewChat
+                  ? undefined
+                  : forcedSessionKey || resolvedSessionKey || activeSessionKey
+              }
               wrapperRef={composerRef}
               composerRef={composerHandleRef}
               // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime safety

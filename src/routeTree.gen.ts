@@ -39,6 +39,8 @@ import { Route as ApiSendRouteImport } from './routes/api/send'
 import { Route as ApiProviderUsageRouteImport } from './routes/api/provider-usage'
 import { Route as ApiPingRouteImport } from './routes/api/ping'
 import { Route as ApiPathsRouteImport } from './routes/api/paths'
+import { Route as ApiModelsRouteImport } from './routes/api/models'
+import { Route as ApiModelSwitchRouteImport } from './routes/api/model-switch'
 import { Route as ApiHistoryRouteImport } from './routes/api/history'
 import { Route as ApiFilesRouteImport } from './routes/api/files'
 import { Route as ApiSessionsSendRouteImport } from './routes/api/sessions/send'
@@ -199,6 +201,16 @@ const ApiPathsRoute = ApiPathsRouteImport.update({
   path: '/api/paths',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiModelsRoute = ApiModelsRouteImport.update({
+  id: '/api/models',
+  path: '/api/models',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiModelSwitchRoute = ApiModelSwitchRouteImport.update({
+  id: '/api/model-switch',
+  path: '/api/model-switch',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiHistoryRoute = ApiHistoryRouteImport.update({
   id: '/api/history',
   path: '/api/history',
@@ -262,6 +274,8 @@ export interface FileRoutesByFullPath {
   '/terminal': typeof TerminalRoute
   '/api/files': typeof ApiFilesRoute
   '/api/history': typeof ApiHistoryRoute
+  '/api/model-switch': typeof ApiModelSwitchRoute
+  '/api/models': typeof ApiModelsRoute
   '/api/paths': typeof ApiPathsRoute
   '/api/ping': typeof ApiPingRoute
   '/api/provider-usage': typeof ApiProviderUsageRoute
@@ -303,6 +317,8 @@ export interface FileRoutesByTo {
   '/terminal': typeof TerminalRoute
   '/api/files': typeof ApiFilesRoute
   '/api/history': typeof ApiHistoryRoute
+  '/api/model-switch': typeof ApiModelSwitchRoute
+  '/api/models': typeof ApiModelsRoute
   '/api/paths': typeof ApiPathsRoute
   '/api/ping': typeof ApiPingRoute
   '/api/provider-usage': typeof ApiProviderUsageRoute
@@ -345,6 +361,8 @@ export interface FileRoutesById {
   '/terminal': typeof TerminalRoute
   '/api/files': typeof ApiFilesRoute
   '/api/history': typeof ApiHistoryRoute
+  '/api/model-switch': typeof ApiModelSwitchRoute
+  '/api/models': typeof ApiModelsRoute
   '/api/paths': typeof ApiPathsRoute
   '/api/ping': typeof ApiPingRoute
   '/api/provider-usage': typeof ApiProviderUsageRoute
@@ -388,6 +406,8 @@ export interface FileRouteTypes {
     | '/terminal'
     | '/api/files'
     | '/api/history'
+    | '/api/model-switch'
+    | '/api/models'
     | '/api/paths'
     | '/api/ping'
     | '/api/provider-usage'
@@ -429,6 +449,8 @@ export interface FileRouteTypes {
     | '/terminal'
     | '/api/files'
     | '/api/history'
+    | '/api/model-switch'
+    | '/api/models'
     | '/api/paths'
     | '/api/ping'
     | '/api/provider-usage'
@@ -470,6 +492,8 @@ export interface FileRouteTypes {
     | '/terminal'
     | '/api/files'
     | '/api/history'
+    | '/api/model-switch'
+    | '/api/models'
     | '/api/paths'
     | '/api/ping'
     | '/api/provider-usage'
@@ -512,6 +536,8 @@ export interface RootRouteChildren {
   TerminalRoute: typeof TerminalRoute
   ApiFilesRoute: typeof ApiFilesRoute
   ApiHistoryRoute: typeof ApiHistoryRoute
+  ApiModelSwitchRoute: typeof ApiModelSwitchRoute
+  ApiModelsRoute: typeof ApiModelsRoute
   ApiPathsRoute: typeof ApiPathsRoute
   ApiPingRoute: typeof ApiPingRoute
   ApiProviderUsageRoute: typeof ApiProviderUsageRoute
@@ -748,6 +774,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPathsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/models': {
+      id: '/api/models'
+      path: '/api/models'
+      fullPath: '/api/models'
+      preLoaderRoute: typeof ApiModelsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/model-switch': {
+      id: '/api/model-switch'
+      path: '/api/model-switch'
+      fullPath: '/api/model-switch'
+      preLoaderRoute: typeof ApiModelSwitchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/history': {
       id: '/api/history'
       path: '/api/history'
@@ -843,6 +883,8 @@ const rootRouteChildren: RootRouteChildren = {
   TerminalRoute: TerminalRoute,
   ApiFilesRoute: ApiFilesRoute,
   ApiHistoryRoute: ApiHistoryRoute,
+  ApiModelSwitchRoute: ApiModelSwitchRoute,
+  ApiModelsRoute: ApiModelsRoute,
   ApiPathsRoute: ApiPathsRoute,
   ApiPingRoute: ApiPingRoute,
   ApiProviderUsageRoute: ApiProviderUsageRoute,
