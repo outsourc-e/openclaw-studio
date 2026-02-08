@@ -174,10 +174,9 @@ function toModelOption(entry: GatewayModelCatalogEntry): ModelOption | null {
   if (!provider || !id) return null
 
   // Gateway expects provider/model format for sessions.patch
-  // If id already contains provider prefix (e.g., "anthropic/claude-opus-4-6"), use as-is
-  // Otherwise, prepend provider (e.g., "anthropic" + "claude-opus-4-6")
-  const hasProviderPrefix = id.includes('/')
-  const value = hasProviderPrefix ? id : `${provider}/${id}`
+  // Always prepend provider — even if id contains "/" (e.g., openrouter models
+  // have ids like "google/gemini-2.5-flash" but need "openrouter/google/gemini-2.5-flash")
+  const value = `${provider}/${id}`
   
   const display =
     readText(entry.label) ||

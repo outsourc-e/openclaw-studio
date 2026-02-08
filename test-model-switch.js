@@ -62,7 +62,7 @@ async function main() {
 
     const testModel = providerModels[0]
     const modelId = testModel.id
-    const expectedValue = modelId.includes('/') ? modelId : `${provider}/${modelId}`
+    const expectedValue = `${provider}/${modelId}`
     
     console.log(`   Testing: ${provider} → ${testModel.name}`)
     console.log(`      Model ID: ${modelId}`)
