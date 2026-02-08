@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import {
   Activity01Icon,
   AiBookIcon,
@@ -53,7 +54,7 @@ export function formatRelativeTimestamp(timestamp: number): string {
   return `${days}d ago`
 }
 
-export function ActivityEventRow({ event }: { event: ActivityEvent }) {
+export const ActivityEventRow = memo(function ActivityEventRow({ event }: { event: ActivityEvent }) {
   return (
     <article className="rounded-lg border border-primary-200 bg-primary-50/80 px-2.5 py-2">
       <div className="flex items-start gap-2.5">
@@ -91,4 +92,4 @@ export function ActivityEventRow({ event }: { event: ActivityEvent }) {
       </div>
     </article>
   )
-}
+})
