@@ -35,6 +35,7 @@ import type {
   GatewayModelSwitchResponse,
 } from '@/lib/gateway-api'
 import { usePinnedModels } from '@/hooks/use-pinned-models'
+import { ModeSelector } from '@/components/mode-selector'
 import { cn } from '@/lib/utils'
 
 type ChatComposerAttachment = {
@@ -995,6 +996,13 @@ function ChatComposerComponent({
                 </div>
               ) : null}
             </div>
+            <ModeSelector
+              currentModel={currentModel}
+              onModelSwitch={handleModelSelect}
+              disabled={disabled || isLoading}
+              availableModels={modelOptions.map(m => m.value)}
+              isStreaming={isLoading}
+            />
           </div>
           <div className="flex items-center gap-1">
             <PromptInputAction tooltip="Voice input unavailable">
