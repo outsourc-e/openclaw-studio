@@ -20,6 +20,17 @@
 - ⌨️ **Keyboard shortcuts** (press `?` to see all)
 - 🟢 **Gateway status** indicator
 
+## Current Status
+
+| Area | Status |
+|------|--------|
+| Dashboard widgets | ⚠️ Demo data shown when Gateway data unavailable (labeled "Demo") |
+| Model switcher | 🔒 Disabled — not wired to Gateway RPC yet |
+| Voice input | 🔒 Disabled — not implemented yet |
+| Chat, files, terminal, cron, memory, skills | ✅ Functional via Gateway |
+
+> Phase 0 (v0.1.1-alpha): UI honesty pass — all non-functional controls are clearly labeled.
+
 ## Installation
 
 ### macOS
