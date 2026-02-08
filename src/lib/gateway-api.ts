@@ -58,6 +58,37 @@ export type GatewaySessionStatusResponse = {
   [key: string]: unknown
 }
 
+export type GatewayModelCatalogEntry =
+  | string
+  | {
+      alias?: string
+      provider?: string
+      model?: string
+      name?: string
+      label?: string
+      displayName?: string
+      id?: string
+      [key: string]: unknown
+    }
+
+export type GatewayModelsResponse = {
+  ok?: boolean
+  models?: Array<GatewayModelCatalogEntry>
+  configuredProviders?: Array<string>
+  error?: string
+}
+
+export type GatewayModelSwitchResponse = {
+  ok?: boolean
+  error?: string
+  resolved?: {
+    modelProvider?: string
+    model?: string
+    [key: string]: unknown
+  }
+  [key: string]: unknown
+}
+
 async function readError(response: Response): Promise<string> {
   try {
     const payload = (await response.json()) as Record<string, unknown>
@@ -72,6 +103,13 @@ async function readError(response: Response): Promise<string> {
 
 function makeEndpoint(pathname: string): string {
   return new URL(pathname, BASE_URL).toString()
+}
+
+function isAbortError(error: unknown): boolean {
+  return (
+    (error instanceof DOMException && error.name === 'AbortError') ||
+    (error instanceof Error && error.name === 'AbortError')
+  )
 }
 
 export async function fetchSessions(): Promise<GatewaySessionsResponse> {
@@ -92,4 +130,73 @@ export async function fetchSessionStatus(
     throw new Error(await readError(response))
   }
   return (await response.json()) as GatewaySessionStatusResponse
+}
+
+export async function fetchModels(): Promise<GatewayModelsResponse> {
+  const controller = new AbortController()
+  const timeout = globalThis.setTimeout(() => controller.abort(), 7000)
+
+  try {
+    const response = await fetch(makeEndpoint('/api/models'), {
+      signal: controller.signal,
+    })
+    if (!response.ok) {
+      throw new Error(await readError(response))
+    }
+
+    const payload = (await response.json()) as GatewayModelsResponse
+    if (payload.ok === false) {
+      throw new Error(payload.error || 'Failed to load models')
+    }
+
+    return {
+      ok: true,
+      models: Array.isArray(payload.models) ? payload.models : [],
+    }
+  } catch (error) {
+    if (isAbortError(error)) {
+      throw new Error('Gateway disconnected')
+    }
+    throw error
+  } finally {
+    globalThis.clearTimeout(timeout)
+  }
+}
+
+export async function switchModel(
+  model: string,
+  sessionKey?: string,
+): Promise<GatewayModelSwitchResponse> {
+  const controller = new AbortController()
+  const timeout = globalThis.setTimeout(() => controller.abort(), 12000)
+
+  try {
+    const response = await fetch(makeEndpoint('/api/model-switch'), {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ model, sessionKey }),
+      signal: controller.signal,
+    })
+
+    const payload = (await response
+      .json()
+      .catch(() => ({}))) as GatewayModelSwitchResponse
+
+    if (!response.ok || payload.ok === false) {
+      const message =
+        typeof payload.error === 'string' && payload.error.trim().length > 0
+          ? payload.error
+          : response.statusText || 'Failed to switch model'
+      throw new Error(message)
+    }
+
+    return payload
+  } catch (error) {
+    if (isAbortError(error)) {
+      throw new Error('Request timed out')
+    }
+    throw error
+  } finally {
+    globalThis.clearTimeout(timeout)
+  }
 }

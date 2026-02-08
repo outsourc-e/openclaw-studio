@@ -9,12 +9,14 @@ import {
   SourceCodeIcon,
 } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import {
   memo,
   useCallback,
   useEffect,
   useImperativeHandle,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react'
@@ -27,6 +29,11 @@ import {
   PromptInputTextarea,
 } from '@/components/prompt-kit/prompt-input'
 import { Button } from '@/components/ui/button'
+import { fetchModels, switchModel } from '@/lib/gateway-api'
+import type {
+  GatewayModelCatalogEntry,
+  GatewayModelSwitchResponse,
+} from '@/lib/gateway-api'
 import { cn } from '@/lib/utils'
 
 type ChatComposerAttachment = {
@@ -46,6 +53,7 @@ type ChatComposerProps = {
   ) => void
   isLoading: boolean
   disabled: boolean
+  sessionKey?: string
   wrapperRef?: Ref<HTMLDivElement>
   composerRef?: Ref<ChatComposerHandle>
   focusKey?: string
@@ -62,14 +70,24 @@ type ChatComposerHandle = {
   insertText: (value: string) => void
 }
 
-const MODEL_STORAGE_KEY = 'openclaw-studio-selected-model'
-const AVAILABLE_MODELS = [
-  'sonnet 4.5',
-  'opus 4.6',
-  'gpt-5-codex',
-  'kimi k2.5',
-  'gemini 2.5 flash',
-] as const
+type ModelOption = {
+  value: string
+  label: string
+  provider: string
+}
+
+type SessionStatusApiResponse = {
+  ok?: boolean
+  payload?: unknown
+  error?: string
+  [key: string]: unknown
+}
+
+type ModelSwitchNotice = {
+  tone: 'success' | 'error'
+  message: string
+  retryModel?: string
+}
 
 function formatFileSize(size: number): string {
   if (!Number.isFinite(size) || size <= 0) return ''
@@ -104,10 +122,137 @@ async function readFileAsDataUrl(file: File): Promise<string | null> {
   })
 }
 
+function readText(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : ''
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+}
+
+function readModelFromStatusPayload(payload: unknown): string {
+  if (!isRecord(payload)) return ''
+
+  const directCandidates = [
+    payload.model,
+    payload.currentModel,
+    payload.modelAlias,
+  ]
+  for (const candidate of directCandidates) {
+    const text = readText(candidate)
+    if (text) return text
+  }
+
+  if (isRecord(payload.resolved)) {
+    const provider = readText(payload.resolved.modelProvider)
+    const model = readText(payload.resolved.model)
+    if (provider && model) return `${provider}/${model}`
+    if (model) return model
+  }
+
+  const nestedCandidates = [payload.status, payload.session, payload.payload]
+  for (const nested of nestedCandidates) {
+    const nestedModel = readModelFromStatusPayload(nested)
+    if (nestedModel) return nestedModel
+  }
+
+  return ''
+}
+
+function toModelOption(entry: GatewayModelCatalogEntry): ModelOption | null {
+  if (typeof entry === 'string') {
+    const value = entry.trim()
+    if (!value) return null
+    return { value, label: value, provider: 'unknown' }
+  }
+
+  const alias = readText(entry.alias)
+  const provider = readText(entry.provider)
+  const model = readText(entry.model)
+  const id = readText(entry.id)
+  
+  if (!provider || !id) return null
+
+  // Gateway expects provider/model format for sessions.patch
+  // Always prepend provider — even if id contains "/" (e.g., openrouter models
+  // have ids like "google/gemini-2.5-flash" but need "openrouter/google/gemini-2.5-flash")
+  const value = `${provider}/${id}`
+  
+  const display =
+    readText(entry.label) ||
+    readText(entry.displayName) ||
+    readText(entry.name) ||
+    alias ||
+    id
+
+  return { value, label: display || value, provider }
+}
+
+function isSameModel(option: ModelOption, currentModel: string): boolean {
+  const normalizedCurrent = currentModel.trim().toLowerCase()
+  if (!normalizedCurrent) return false
+  return (
+    option.value.trim().toLowerCase() === normalizedCurrent ||
+    option.label.trim().toLowerCase() === normalizedCurrent
+  )
+}
+
+function isTimeoutErrorMessage(message: string): boolean {
+  const normalized = message.toLowerCase()
+  return (
+    normalized.includes('timed out') ||
+    normalized.includes('timeout')
+  )
+}
+
+async function readResponseError(response: Response): Promise<string> {
+  try {
+    const payload = (await response.json()) as Record<string, unknown>
+    if (typeof payload.error === 'string') return payload.error
+    if (typeof payload.message === 'string') return payload.message
+    return JSON.stringify(payload)
+  } catch {
+    const text = await response.text().catch(() => '')
+    return text || response.statusText || 'Request failed'
+  }
+}
+
+async function fetchCurrentModelFromStatus(): Promise<string> {
+  const controller = new AbortController()
+  const timeout = globalThis.setTimeout(() => controller.abort(), 7000)
+
+  try {
+    const response = await fetch('/api/session-status', {
+      signal: controller.signal,
+    })
+    if (!response.ok) {
+      throw new Error(await readResponseError(response))
+    }
+
+    const payload = (await response.json()) as SessionStatusApiResponse
+    if (payload.ok === false) {
+      throw new Error(readText(payload.error) || 'Gateway unavailable')
+    }
+
+    return readModelFromStatusPayload(payload.payload ?? payload)
+  } catch (error) {
+    if (
+      (error instanceof DOMException && error.name === 'AbortError') ||
+      (error instanceof Error && error.name === 'AbortError')
+    ) {
+      throw new Error('Request timed out')
+    }
+    throw error
+  } finally {
+    globalThis.clearTimeout(timeout)
+  }
+}
+
 function ChatComposerComponent({
   onSubmit,
   isLoading,
   disabled,
+  sessionKey,
   wrapperRef,
   composerRef,
   focusKey,
@@ -119,20 +264,133 @@ function ChatComposerComponent({
   const [isDraggingOver, setIsDraggingOver] = useState(false)
   const [focusAfterSubmitTick, setFocusAfterSubmitTick] = useState(0)
   const [isModelMenuOpen, setIsModelMenuOpen] = useState(false)
-  const [selectedModel, setSelectedModel] = useState<string>(() => {
-    if (typeof window === 'undefined') return AVAILABLE_MODELS[0]
-    const stored = window.localStorage.getItem(MODEL_STORAGE_KEY)
-    if (stored && AVAILABLE_MODELS.includes(stored as (typeof AVAILABLE_MODELS)[number])) {
-      return stored
-    }
-    return AVAILABLE_MODELS[0]
-  })
+  const [modelNotice, setModelNotice] = useState<ModelSwitchNotice | null>(null)
   const promptRef = useRef<HTMLTextAreaElement | null>(null)
   const dragCounterRef = useRef(0)
   const shouldRefocusAfterSendRef = useRef(false)
   const modelSelectorRef = useRef<HTMLDivElement | null>(null)
-  const isModelSwitcherDisabled = true
   const isVoiceInputDisabled = true
+  const modelsQuery = useQuery({
+    queryKey: ['gateway', 'models'],
+    queryFn: fetchModels,
+    refetchInterval: 60_000,
+    retry: false,
+  })
+  const currentModelQuery = useQuery({
+    queryKey: ['gateway', 'session-status-model'],
+    queryFn: fetchCurrentModelFromStatus,
+    refetchInterval: 30_000,
+    retry: false,
+  })
+
+  const modelOptions = useMemo(function buildModelOptions(): Array<ModelOption> {
+    const rows = Array.isArray(modelsQuery.data?.models)
+      ? modelsQuery.data.models
+      : []
+    const seen = new Set<string>()
+    const options: Array<ModelOption> = []
+    for (const row of rows) {
+      const option = toModelOption(row)
+      if (!option) continue
+      if (seen.has(option.value)) continue
+      seen.add(option.value)
+      options.push(option)
+    }
+    return options
+  }, [modelsQuery.data?.models])
+
+  const groupedModels = useMemo(function groupModelsByProvider() {
+    const groups = new Map<string, Array<ModelOption>>()
+    for (const option of modelOptions) {
+      const existing = groups.get(option.provider) ?? []
+      existing.push(option)
+      groups.set(option.provider, existing)
+    }
+    return Array.from(groups.entries()).sort((a, b) => a[0].localeCompare(b[0]))
+  }, [modelOptions])
+
+  const modelSwitchMutation = useMutation({
+    mutationFn: async function switchGatewayModel(payload: {
+      model: string
+      sessionKey?: string
+    }) {
+      return await switchModel(payload.model, payload.sessionKey)
+    },
+    onSuccess: function onSuccess(
+      payload: GatewayModelSwitchResponse,
+      variables,
+    ) {
+      const provider = readText(payload.resolved?.modelProvider)
+      const model = readText(payload.resolved?.model)
+      const resolvedModel =
+        provider && model ? `${provider}/${model}` : model || variables.model
+      setModelNotice({
+        tone: 'success',
+        message: `Model switched to ${resolvedModel}`,
+      })
+      setIsModelMenuOpen(false)
+      void currentModelQuery.refetch()
+    },
+    onError: function onError(error, variables) {
+      const message = error instanceof Error ? error.message : String(error)
+      if (isTimeoutErrorMessage(message)) {
+        setModelNotice({
+          tone: 'error',
+          message: 'Request timed out',
+          retryModel: variables.model,
+        })
+        return
+      }
+      setModelNotice({
+        tone: 'error',
+        message: message || 'Failed to switch model',
+      })
+    },
+  })
+
+  const handleModelSelect = useCallback(
+    function handleModelSelect(nextModel: string) {
+      const model = nextModel.trim()
+      if (!model) return
+      const normalizedSessionKey =
+        typeof sessionKey === 'string' && sessionKey.trim().length > 0
+          ? sessionKey.trim()
+          : undefined
+      setModelNotice(null)
+      modelSwitchMutation.mutate({
+        model,
+        sessionKey: normalizedSessionKey,
+      })
+    },
+    [modelSwitchMutation, sessionKey],
+  )
+
+  const retryModel = modelNotice?.retryModel ?? ''
+  const handleRetryModelSwitch = useCallback(
+    function handleRetryModelSwitch() {
+      if (!retryModel) return
+      handleModelSelect(retryModel)
+    },
+    [handleModelSelect, retryModel],
+  )
+
+  const gatewayDisconnected = modelsQuery.isError
+  const noModelsAvailable = modelsQuery.isSuccess && modelOptions.length === 0
+  const isModelSwitcherDisabled =
+    disabled ||
+    modelsQuery.isLoading ||
+    gatewayDisconnected ||
+    noModelsAvailable ||
+    modelSwitchMutation.isPending
+  const currentModel = currentModelQuery.data ?? ''
+  const modelButtonLabel =
+    currentModel ||
+    (currentModelQuery.isLoading ? 'Loading model…' : 'Select model')
+  const modelAvailabilityLabel = gatewayDisconnected
+    ? 'Gateway disconnected'
+    : noModelsAvailable
+      ? 'No models available'
+      : null
 
   const focusPrompt = useCallback(() => {
     if (typeof window === 'undefined') return
@@ -166,11 +424,6 @@ function ChatComposerComponent({
     if (disabled) return
     focusPrompt()
   }, [disabled, focusKey, focusPrompt])
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    window.localStorage.setItem(MODEL_STORAGE_KEY, selectedModel)
-  }, [selectedModel])
 
   useEffect(() => {
     if (!isModelMenuOpen) return
@@ -484,35 +737,96 @@ function ChatComposerComponent({
                 aria-expanded={!isModelSwitcherDisabled && isModelMenuOpen}
                 aria-disabled={isModelSwitcherDisabled}
                 disabled={isModelSwitcherDisabled}
-                title={isModelSwitcherDisabled ? 'Not wired yet' : undefined}
+                title={modelAvailabilityLabel ?? undefined}
               >
-                <span className="max-w-[10rem] truncate">{selectedModel}</span>
+                <span className="max-w-[10rem] truncate">{modelButtonLabel}</span>
                 <HugeiconsIcon icon={ArrowDown01Icon} size={20} strokeWidth={1.5} />
               </button>
-              {isModelSwitcherDisabled ? (
-                <span className="text-xs text-primary-500 text-pretty">Not wired yet</span>
+              {modelAvailabilityLabel ? (
+                <span className="text-xs text-primary-500 text-pretty">
+                  {modelAvailabilityLabel}
+                </span>
               ) : null}
-              {!isModelSwitcherDisabled && isModelMenuOpen ? (
-                <div className="absolute bottom-[calc(100%+0.5rem)] left-0 z-40 min-w-[12rem] rounded-xl border border-primary-200 bg-surface p-1 shadow-lg">
-                  {AVAILABLE_MODELS.map((model) => (
+              {modelNotice ? (
+                <span
+                  className={cn(
+                    'inline-flex items-center gap-1 text-xs text-pretty',
+                    modelNotice.tone === 'error'
+                      ? 'text-primary-700'
+                      : 'text-primary-500',
+                  )}
+                >
+                  {modelNotice.message}
+                  {retryModel ? (
                     <button
-                      key={model}
                       type="button"
                       onClick={(event) => {
                         event.stopPropagation()
-                        setSelectedModel(model)
-                        setIsModelMenuOpen(false)
+                        handleRetryModelSwitch()
                       }}
                       className={cn(
-                        'flex w-full items-center rounded-lg px-2 py-1.5 text-left text-sm text-primary-700 transition-colors hover:bg-primary-100',
-                        model === selectedModel && 'bg-primary-100 text-primary-900',
+                        'rounded px-1 font-medium text-primary-700 hover:bg-primary-100',
+                        modelSwitchMutation.isPending && 'cursor-not-allowed opacity-60',
                       )}
-                      role="option"
-                      aria-selected={model === selectedModel}
+                      disabled={modelSwitchMutation.isPending}
                     >
-                      {model}
+                      Retry
                     </button>
-                  ))}
+                  ) : null}
+                </span>
+              ) : null}
+              {!isModelSwitcherDisabled && isModelMenuOpen ? (
+                <div className="absolute bottom-[calc(100%+0.5rem)] left-0 z-40 min-w-[16rem] max-w-[24rem] rounded-xl border border-primary-200 bg-surface shadow-lg">
+                  {groupedModels.length === 0 ? (
+                    <div className="p-4 text-center text-sm text-primary-500">
+                      No models available.{' '}
+                      <a
+                        href="https://docs.openclaw.ai/configuration"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary-700 underline hover:text-primary-900"
+                      >
+                        Configure providers
+                      </a>
+                    </div>
+                  ) : (
+                    <div className="max-h-[20rem] overflow-y-auto p-1">
+                      {groupedModels.map(([provider, models]) => (
+                        <div key={provider} className="mb-2 last:mb-0">
+                          <div className="px-2 py-1 text-xs font-medium uppercase tracking-wide text-primary-500">
+                            {provider}
+                          </div>
+                          {models.map((option) => {
+                            const optionActive = isSameModel(option, currentModel)
+                            return (
+                              <button
+                                key={option.value}
+                                type="button"
+                                onClick={(event) => {
+                                  event.stopPropagation()
+                                  setIsModelMenuOpen(false)
+                                  handleModelSelect(option.value)
+                                }}
+                                className={cn(
+                                  'flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-primary-700 transition-colors hover:bg-primary-100',
+                                  optionActive && 'bg-primary-100 text-primary-900',
+                                )}
+                                role="option"
+                                aria-selected={optionActive}
+                              >
+                                <span className="flex-1 truncate">{option.label}</span>
+                                {optionActive ? (
+                                  <span className="text-primary-900" aria-label="Active">
+                                    ✓
+                                  </span>
+                                ) : null}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ) : null}
             </div>
