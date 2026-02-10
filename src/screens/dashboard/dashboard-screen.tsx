@@ -31,6 +31,40 @@ import type { SessionMeta } from '@/screens/chat/types'
 import { getMessageTimestamp, textFromMessage } from '@/screens/chat/utils'
 import { chatQueryKeys, fetchGatewayStatus, fetchSessions } from '@/screens/chat/chat-queries'
 
+type SessionStatusPayload = {
+  ok?: boolean
+  payload?: {
+    sessions?: {
+      defaults?: { model?: string; contextTokens?: number }
+      count?: number
+      recent?: Array<{ age?: number; model?: string; percentUsed?: number }>
+    }
+  }
+}
+
+async function fetchSessionStatus(): Promise<SessionStatusPayload> {
+  const response = await fetch('/api/session-status')
+  if (!response.ok) return {}
+  return response.json() as Promise<SessionStatusPayload>
+}
+
+function formatModelName(raw: string): string {
+  if (!raw) return '—'
+  // claude-opus-4-6 → Opus 4.6, claude-sonnet-4-5 → Sonnet 4.5, gpt-5.2-codex → GPT-5.2 Codex
+  const lower = raw.toLowerCase()
+  if (lower.includes('opus')) {
+    const match = raw.match(/opus[- ]?(\d+)[- ]?(\d+)/i)
+    return match ? `Opus ${match[1]}.${match[2]}` : 'Opus'
+  }
+  if (lower.includes('sonnet')) {
+    const match = raw.match(/sonnet[- ]?(\d+)[- ]?(\d+)/i)
+    return match ? `Sonnet ${match[1]}.${match[2]}` : 'Sonnet'
+  }
+  if (lower.includes('gpt')) return raw.replace('gpt-', 'GPT-')
+  if (lower.includes('gemini')) return raw.split('/').pop() ?? raw
+  return raw
+}
+
 const containerMotion = {
   hidden: { opacity: 0 },
   visible: {
@@ -139,6 +173,13 @@ export function DashboardScreen() {
     refetchInterval: 15_000,
   })
 
+  const sessionStatusQuery = useQuery({
+    queryKey: ['gateway', 'session-status'],
+    queryFn: fetchSessionStatus,
+    retry: false,
+    refetchInterval: 30_000,
+  })
+
   const recentSessions = useMemo(function buildRecentSessions() {
     const sessions = Array.isArray(sessionsQuery.data) ? sessionsQuery.data : []
     if (sessions.length === 0) return fallbackRecentSessions
@@ -161,17 +202,29 @@ export function DashboardScreen() {
   const systemStatus = useMemo(function buildSystemStatus() {
     const nowIso = new Date().toISOString()
     const sessions = Array.isArray(sessionsQuery.data) ? sessionsQuery.data : []
+    const ssPayload = sessionStatusQuery.data?.payload?.sessions
+    
+    // Get default model from gateway session-status (real data)
+    const rawModel = ssPayload?.defaults?.model ?? ''
+    const currentModel = formatModelName(rawModel)
+    
+    // Derive uptime from main session age (milliseconds → seconds)
+    const mainSession = ssPayload?.recent?.[0]
+    const uptimeSeconds = mainSession?.age ? Math.floor(mainSession.age / 1000) : 0
+    
+    // Session count from session-status (canonical) or fallback to sessions list
+    const sessionCount = ssPayload?.count ?? sessions.length
     
     return {
       gateway: {
         connected: gatewayStatusQuery.data?.ok ?? false,
         checkedAtIso: nowIso,
       },
-      uptimeSeconds: 0, // Gateway doesn't expose uptime via current API
-      currentModel: 'sonnet', // Could be read from session-status if we fix that endpoint
-      sessionCount: sessions.length,
+      uptimeSeconds,
+      currentModel,
+      sessionCount,
     }
-  }, [gatewayStatusQuery.data?.ok, sessionsQuery.data])
+  }, [gatewayStatusQuery.data?.ok, sessionsQuery.data, sessionStatusQuery.data])
 
   return (
     <motion.main
