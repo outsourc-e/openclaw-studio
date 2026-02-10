@@ -204,8 +204,9 @@ export function DashboardScreen() {
     const sessions = Array.isArray(sessionsQuery.data) ? sessionsQuery.data : []
     const ssPayload = sessionStatusQuery.data?.payload?.sessions
     
-    // Get default model from gateway session-status (real data)
-    const rawModel = ssPayload?.defaults?.model ?? ''
+    // Get active model from main session, fall back to gateway default
+    const mainSessionModel = ssPayload?.recent?.[0]?.model ?? ''
+    const rawModel = mainSessionModel || ssPayload?.defaults?.model || ''
     const currentModel = formatModelName(rawModel)
     
     // Derive uptime from main session age (milliseconds → seconds)
