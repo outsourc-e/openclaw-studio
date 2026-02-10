@@ -139,7 +139,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
           </DialogDescription>
         </div>
 
-        <div className="overflow-y-auto px-5 py-4 space-y-3" style={{ maxHeight: 'calc(80vh - 72px)' }}>
+        <div className="overflow-y-scroll px-5 py-4 space-y-3" style={{ maxHeight: 'calc(80vh - 72px)' }}>
           {/* Gateway */}
           <Section title="Gateway" description="Endpoint and connectivity." icon={CloudIcon}>
             <Row label="Gateway URL">
