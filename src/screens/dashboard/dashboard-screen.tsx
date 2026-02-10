@@ -245,17 +245,13 @@ export function DashboardScreen() {
                 <h1 className="text-sm font-semibold text-ink">
                   OpenClaw <span className="font-medium text-primary-400">Studio</span>
                 </h1>
-                <p className="mt-0.5 flex items-center gap-1.5 text-[11px] tabular-nums text-primary-500">
+                <p className="mt-0.5 flex items-center gap-1.5 text-[11px] text-primary-400">
                   <span className="inline-flex items-center gap-1">
                     <span className={`size-1.5 shrink-0 rounded-full ${systemStatus.gateway.connected ? 'bg-emerald-500' : 'bg-red-500'}`} />
                     <span>{systemStatus.gateway.connected ? 'Connected' : 'Disconnected'}</span>
                   </span>
                   <span className="text-primary-300">·</span>
-                  <span className="font-medium text-primary-600">{systemStatus.currentModel || '—'}</span>
-                  <span className="text-primary-300">·</span>
-                  <span>{systemStatus.sessionCount} sessions</span>
-                  <span className="text-primary-300">·</span>
-                  <span className="truncate">Up {systemStatus.uptimeSeconds > 0 ? (() => { const d = Math.floor(systemStatus.uptimeSeconds / 86400); const h = Math.floor((systemStatus.uptimeSeconds % 86400) / 3600); const m = Math.floor((systemStatus.uptimeSeconds % 3600) / 60); return d > 0 ? `${d}d ${h}h` : h > 0 ? `${h}h ${m}m` : `${m}m` })() : '—'}</span>
+                  <span className="text-primary-500">{systemStatus.currentModel || '—'}</span>
                 </p>
               </div>
             </div>
