@@ -126,7 +126,7 @@ export function HeaderAmbientStatus() {
   return (
     <div className="relative hidden sm:block">
       {/* Pill — matches Studio Overview border style */}
-      <div className="inline-flex items-center gap-2 rounded-full border border-primary-200 bg-primary-100/60 px-3 py-1 text-xs text-primary-600 tabular-nums">
+      <div className="inline-flex items-center gap-2 px-1 text-[11px] text-primary-400 tabular-nums">
         <span>{timeStr}</span>
         <span className="text-primary-300">·</span>
         <span>{dateStr}</span>
