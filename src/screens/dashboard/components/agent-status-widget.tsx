@@ -249,9 +249,9 @@ export function AgentStatusWidget({ draggable = false }: AgentStatusWidgetProps)
                     <span
                       className={cn(
                         'rounded-md px-1.5 py-0.5 text-xs text-pretty',
-                        agent.status === 'validating' && 'bg-amber-100 text-amber-800',
-                        agent.status === 'running' && 'bg-amber-100 text-amber-700',
-                        agent.status === 'indexing' && 'bg-amber-50 text-amber-700',
+                        agent.status === 'validating' && 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-400',
+                        agent.status === 'running' && 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400',
+                        agent.status === 'indexing' && 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
                         agent.status !== 'validating' &&
                           agent.status !== 'running' &&
                           agent.status !== 'indexing' &&

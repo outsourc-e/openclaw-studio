@@ -276,7 +276,7 @@ export function CostTrackerWidget({ draggable = false }: CostTrackerWidgetProps)
           {queryResult.message}
         </div>
       ) : queryResult?.kind === 'error' ? (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600 text-pretty">
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600 dark:border-red-800 dark:bg-red-950/40 dark:text-red-400 text-pretty">
           {queryResult.message}
         </div>
       ) : !costData ? (

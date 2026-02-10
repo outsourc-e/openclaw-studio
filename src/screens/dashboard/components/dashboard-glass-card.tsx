@@ -30,7 +30,7 @@ export function DashboardGlassCard({
       role="region"
       aria-label={title}
       className={cn(
-        'group flex h-full flex-col overflow-hidden rounded-2xl border border-primary-200 bg-primary-50/85 p-4 shadow-sm backdrop-blur-xl transition-all duration-200 hover:border-primary-300 md:p-5',
+        'group flex h-full flex-col overflow-hidden rounded-2xl border border-primary-200 bg-primary-50/85 p-4 shadow-sm backdrop-blur-xl transition-all duration-200 hover:border-primary-300 dark:bg-primary-50/95 md:p-5',
         className,
       )}
     >
@@ -46,7 +46,7 @@ export function DashboardGlassCard({
                 <span className="ml-2 inline-flex align-middle">{titleAccessory}</span>
               ) : null}
               {badge ? (
-                <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-700">
+                <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:bg-amber-900/50 dark:text-amber-400">
                   {badge}
                 </span>
               ) : null}

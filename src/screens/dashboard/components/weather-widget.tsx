@@ -192,7 +192,7 @@ export function WeatherWidget({ draggable = false }: WeatherWidgetProps) {
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') handleSaveLocation() }}
               placeholder="e.g. 33101 or Miami"
-              className="flex-1 rounded-lg border border-primary-200 bg-white px-2.5 py-1.5 text-sm text-ink placeholder:text-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400"
+              className="flex-1 rounded-lg border border-primary-200 bg-white px-2.5 py-1.5 text-sm text-ink placeholder:text-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400 dark:bg-primary-100"
               autoFocus
             />
             <button

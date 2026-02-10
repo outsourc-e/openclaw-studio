@@ -33,9 +33,9 @@ function formatUptime(seconds: number): string {
 }
 
 const accentColors = {
-  green: 'border-emerald-200 bg-emerald-50/60',
-  amber: 'border-amber-200 bg-amber-50/60',
-  blue: 'border-blue-200 bg-blue-50/60',
+  green: 'border-emerald-200 bg-emerald-50/60 dark:border-emerald-800 dark:bg-emerald-950/40',
+  amber: 'border-amber-200 bg-amber-50/60 dark:border-amber-800 dark:bg-amber-950/40',
+  blue: 'border-blue-200 bg-blue-50/60 dark:border-blue-800 dark:bg-blue-950/40',
   default: 'border-primary-200 bg-primary-50/60',
 } as const
 
@@ -80,7 +80,7 @@ export function HeroMetricsRow({
           key={m.label}
           className={`flex items-center gap-3 rounded-xl border p-3 backdrop-blur-sm transition-colors ${accentColors[m.accent ?? 'default']}`}
         >
-          <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg border border-primary-200/50 bg-white/70 text-primary-600">
+          <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg border border-primary-200/50 bg-white/70 text-primary-600 dark:bg-primary-100/50">
             <HugeiconsIcon icon={m.icon} size={16} strokeWidth={1.5} />
           </span>
           <div className="min-w-0">

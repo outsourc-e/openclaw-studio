@@ -33,20 +33,20 @@
 
 .dark {
   color-scheme: dark;
-  --color-primary-50: oklch(0.1244 0 89.88);
-  --color-primary-100: oklch(0.1584 0 89.88);
-  --color-primary-200: oklch(0.2078 0 89.88);
-  --color-primary-300: oklch(0.3 0.006 80);
-  --color-primary-400: oklch(0.4 0.006 80);
-  --color-primary-500: oklch(0.52 0.006 80);
-  --color-primary-600: oklch(0.65 0.006 80);
-  --color-primary-700: oklch(0.73 0.006 80);
-  --color-primary-800: oklch(0.83 0.005 80);
-  --color-primary-900: oklch(0.895 0.004 80);
-  --color-primary-950: oklch(0.945 0.003 80);
+  --color-primary-50: oklch(0.14 0.005 80);
+  --color-primary-100: oklch(0.18 0.005 80);
+  --color-primary-200: oklch(0.26 0.006 80);
+  --color-primary-300: oklch(0.34 0.006 80);
+  --color-primary-400: oklch(0.44 0.006 80);
+  --color-primary-500: oklch(0.55 0.006 80);
+  --color-primary-600: oklch(0.68 0.006 80);
+  --color-primary-700: oklch(0.76 0.005 80);
+  --color-primary-800: oklch(0.84 0.004 80);
+  --color-primary-900: oklch(0.90 0.003 80);
+  --color-primary-950: oklch(0.95 0.002 80);
 
-  --color-surface: var(--color-black);
-  --color-ink: var(--color-white);
+  --color-surface: oklch(0.11 0.005 80);
+  --color-ink: oklch(0.95 0.002 80);
 }
 
 .light {
@@ -60,20 +60,20 @@
 @media (prefers-color-scheme: dark) {
   .system {
     color-scheme: dark;
-    --color-primary-50: oklch(0.1244 0 89.88);
-    --color-primary-100: oklch(0.1584 0 89.88);
-    --color-primary-200: oklch(0.2078 0 89.88);
-    --color-primary-300: oklch(0.3 0.006 80);
-    --color-primary-400: oklch(0.4 0.006 80);
-    --color-primary-500: oklch(0.52 0.006 80);
-    --color-primary-600: oklch(0.65 0.006 80);
-    --color-primary-700: oklch(0.73 0.006 80);
-    --color-primary-800: oklch(0.83 0.005 80);
-    --color-primary-900: oklch(0.895 0.004 80);
-    --color-primary-950: oklch(0.945 0.003 80);
-    --color-surface: var(--color-black);
-    --color-ink: var(--color-white);
-    --color-surface-deep: oklch(0.18 0 0);
+    --color-primary-50: oklch(0.14 0.005 80);
+    --color-primary-100: oklch(0.18 0.005 80);
+    --color-primary-200: oklch(0.26 0.006 80);
+    --color-primary-300: oklch(0.34 0.006 80);
+    --color-primary-400: oklch(0.44 0.006 80);
+    --color-primary-500: oklch(0.55 0.006 80);
+    --color-primary-600: oklch(0.68 0.006 80);
+    --color-primary-700: oklch(0.76 0.005 80);
+    --color-primary-800: oklch(0.84 0.004 80);
+    --color-primary-900: oklch(0.90 0.003 80);
+    --color-primary-950: oklch(0.95 0.002 80);
+    --color-surface: oklch(0.11 0.005 80);
+    --color-ink: oklch(0.95 0.002 80);
+    --color-surface-deep: oklch(0.08 0.005 80);
   }
 }
 

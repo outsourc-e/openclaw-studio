@@ -311,7 +311,7 @@ export function DashboardScreen() {
                 key={action.id}
                 type="button"
                 onClick={() => navigate({ to: action.to })}
-                className="flex items-center gap-2.5 rounded-lg border border-primary-200 bg-white/70 px-3 py-2 text-left text-sm transition-colors hover:border-primary-300 hover:bg-white"
+                className="flex items-center gap-2.5 rounded-lg border border-primary-200 bg-white/70 px-3 py-2 text-left text-sm transition-colors hover:border-primary-300 hover:bg-white dark:bg-primary-100/50 dark:hover:bg-primary-200/50"
               >
                 <HugeiconsIcon icon={action.icon} size={16} strokeWidth={1.5} className="shrink-0 text-primary-600" />
                 <span className="font-medium text-ink">{action.label}</span>

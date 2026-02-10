@@ -42,7 +42,7 @@ export function ActivityLogWidget({ draggable = false }: ActivityLogWidgetProps)
           className={cn(
             'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] tabular-nums',
             isConnected
-              ? 'border-emerald-200 bg-emerald-100/70 text-emerald-700'
+              ? 'border-emerald-200 bg-emerald-100/70 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-400'
               : 'border-red-200 bg-red-100/70 text-red-700',
           )}
         >
