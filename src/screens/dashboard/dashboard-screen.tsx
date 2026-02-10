@@ -7,6 +7,7 @@ import {
   Settings01Icon,
 } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
+import { OpenClawStudioIcon } from '@/components/icons/openclaw-studio'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -272,10 +273,6 @@ export function DashboardScreen() {
       <section className="mx-auto w-full max-w-[1600px]">
         <header className="mb-6 rounded-2xl border border-primary-200 bg-primary-50/85 p-4 backdrop-blur-xl md:mb-7 md:p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="inline-flex items-center gap-2 rounded-full border border-primary-200 bg-primary-100/60 px-3 py-1 text-xs text-primary-600 tabular-nums">
-              <img src="/logo-studio-bold.svg" alt="OpenClaw" className="size-5 rounded" />
-              <span>Studio Overview</span>
-            </div>
             <div className="flex items-center gap-2">
               <HeaderAmbientStatus />
               <ThemeToggle />
@@ -309,10 +306,10 @@ export function DashboardScreen() {
             </div>
           </div>
           <div className="mt-3 flex items-center gap-3">
-            <img src="/logo-studio-bold.svg" alt="" className="size-10 rounded-xl shadow-sm md:size-12" aria-hidden="true" />
+            <OpenClawStudioIcon className="size-10 rounded-xl shadow-sm md:size-12" />
             <div>
-              <h1 className="text-2xl font-medium text-ink text-balance md:text-3xl">
-                OpenClaw <span className="text-primary-500">Studio</span>
+              <h1 className="text-2xl font-semibold text-ink text-balance md:text-3xl">
+                OpenClaw <span className="font-medium text-primary-500">Studio</span>
               </h1>
               <p className="mt-0.5 max-w-3xl text-sm text-primary-500 text-pretty">
                 Design, orchestrate, and monitor AI agent systems.
