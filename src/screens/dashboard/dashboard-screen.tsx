@@ -2,7 +2,6 @@ import {
   Add01Icon,
   AiBookIcon,
   ComputerTerminal02Icon,
-  DashboardSquare01Icon,
   RefreshIcon,
   Search01Icon,
   Settings01Icon,
@@ -274,7 +273,7 @@ export function DashboardScreen() {
         <header className="mb-6 rounded-2xl border border-primary-200 bg-primary-50/85 p-4 backdrop-blur-xl md:mb-7 md:p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="inline-flex items-center gap-2 rounded-full border border-primary-200 bg-primary-100/60 px-3 py-1 text-xs text-primary-600 tabular-nums">
-              <HugeiconsIcon icon={DashboardSquare01Icon} size={20} strokeWidth={1.5} />
+              <img src="/logo-studio-bold.svg" alt="OpenClaw" className="size-5 rounded" />
               <span>Studio Overview</span>
             </div>
             <div className="flex items-center gap-2">
@@ -309,12 +308,17 @@ export function DashboardScreen() {
               </button>
             </div>
           </div>
-          <h1 className="mt-3 text-2xl font-medium text-ink text-balance md:text-3xl">
-            OpenClaw Dashboard
-          </h1>
-          <p className="mt-1 max-w-3xl text-sm text-primary-600 text-pretty md:text-base">
-            Design, orchestrate, and monitor AI agent systems from a single command center.
-          </p>
+          <div className="mt-3 flex items-center gap-3">
+            <img src="/logo-studio-bold.svg" alt="" className="size-10 rounded-xl shadow-sm md:size-12" aria-hidden="true" />
+            <div>
+              <h1 className="text-2xl font-medium text-ink text-balance md:text-3xl">
+                OpenClaw <span className="text-primary-500">Studio</span>
+              </h1>
+              <p className="mt-0.5 max-w-3xl text-sm text-primary-500 text-pretty">
+                Design, orchestrate, and monitor AI agent systems.
+              </p>
+            </div>
+          </div>
           {/* Quick Actions — persistent in header, not draggable */}
           <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
             {quickActions.map((action) => (
