@@ -11,14 +11,20 @@ import { cn } from '@/lib/utils'
 type ProviderUsage = {
   provider: string
   total: number
+  inputOutput: number
+  cached: number
   cost: number
+  directCost: number
   percentUsed?: number
 }
 
 type UsageMeterData = {
   usagePercent?: number
   totalCost: number
+  totalDirectCost: number
   totalUsage: number
+  totalInputOutput: number
+  totalCached: number
   providers: Array<ProviderUsage>
 }
 
@@ -57,10 +63,21 @@ function parseProviderUsage(
   value: unknown,
 ): ProviderUsage {
   const source = toRecord(value)
+  const input = readNumber(source.input)
+  const output = readNumber(source.output)
+  const cacheRead = readNumber(source.cacheRead)
+  const cacheWrite = readNumber(source.cacheWrite)
+  const inputOutput = input + output
+  const cached = cacheRead + cacheWrite
+  const inputCost = readNumber(source.inputCost)
+  const outputCost = readNumber(source.outputCost)
   return {
     provider,
     total: readNumber(source.total),
+    inputOutput,
+    cached,
     cost: readNumber(source.cost),
+    directCost: inputCost + outputCost,
     percentUsed: readNumber(source.percentUsed) || undefined,
   }
 }
@@ -86,6 +103,14 @@ function parseUsagePayload(payload: unknown): UsageMeterData {
           return total + provider.total
         }, 0)
 
+  const totalInputOutput = providers.reduce(function sumIO(total, provider) {
+    return total + provider.inputOutput
+  }, 0)
+
+  const totalCached = providers.reduce(function sumCached(total, provider) {
+    return total + provider.cached
+  }, 0)
+
   const totalCostRaw = readNumber(totalSource.cost)
   const totalCost =
     totalCostRaw > 0
@@ -93,6 +118,10 @@ function parseUsagePayload(payload: unknown): UsageMeterData {
       : providers.reduce(function sumCost(total, provider) {
           return total + provider.cost
         }, 0)
+
+  const totalDirectCost = providers.reduce(function sumDirectCost(total, provider) {
+    return total + provider.directCost
+  }, 0)
 
   const totalPercent = readNumber(totalSource.percentUsed)
   const maxProviderPercent = providers.reduce(function readMaxPercent(
@@ -112,7 +141,10 @@ function parseUsagePayload(payload: unknown): UsageMeterData {
   return {
     usagePercent,
     totalCost,
+    totalDirectCost,
     totalUsage,
+    totalInputOutput,
+    totalCached,
     providers,
   }
 }
@@ -159,6 +191,12 @@ function formatTokens(tokens: number): string {
   return `${new Intl.NumberFormat().format(tokens)}`
 }
 
+function formatCompactTokens(tokens: number): string {
+  if (tokens >= 1_000_000) return `${(tokens / 1_000_000).toFixed(1)}M`
+  if (tokens >= 1_000) return `${(tokens / 1_000).toFixed(1)}K`
+  return `${tokens}`
+}
+
 function formatUsd(amount: number): string {
   return new Intl.NumberFormat(undefined, {
     style: 'currency',
@@ -182,7 +220,7 @@ export function UsageMeterWidget() {
 
   const maxUsage = useMemo(function computeMaxUsage() {
     return rows.reduce(function reduceMax(currentMax, row) {
-      return row.total > currentMax ? row.total : currentMax
+      return row.inputOutput > currentMax ? row.inputOutput : currentMax
     }, 0)
   }, [rows])
 
@@ -255,25 +293,33 @@ export function UsageMeterWidget() {
                   </span>
                 ) : (
                   <span className="text-sm font-medium text-ink tabular-nums">
-                    {formatTokens(usageData.totalUsage)}
+                    {formatCompactTokens(usageData.totalInputOutput)}
                   </span>
                 )}
                 <span className="text-xs text-primary-600 text-pretty">
-                  {usageData.usagePercent !== undefined ? 'used' : 'total usage'}
+                  {usageData.usagePercent !== undefined ? 'used' : 'in/out tokens'}
                 </span>
               </div>
             </div>
-            <div className="mt-3 w-full rounded-lg border border-primary-200 bg-primary-50/80 px-3 py-2">
-              <p className="text-xs text-primary-600 text-pretty">All-Time Cost</p>
-              <p className="text-lg font-medium text-ink tabular-nums">
-                {formatUsd(usageData.totalCost)}
-              </p>
+            <div className="mt-3 w-full space-y-1.5">
+              <div className="rounded-lg border border-primary-200 bg-primary-50/80 px-3 py-2">
+                <p className="text-xs text-primary-600 text-pretty">Direct Cost</p>
+                <p className="text-lg font-medium text-ink tabular-nums">
+                  {formatUsd(usageData.totalDirectCost)}
+                </p>
+              </div>
+              <div className="rounded-lg border border-primary-200 bg-primary-50/60 px-3 py-1.5">
+                <p className="text-[11px] text-primary-500 text-pretty">+ Cache Cost</p>
+                <p className="text-sm text-primary-600 tabular-nums">
+                  {formatUsd(usageData.totalCost - usageData.totalDirectCost)}
+                </p>
+              </div>
             </div>
           </div>
 
           <div className="space-y-3">
             {rows.map(function mapRow(row, index) {
-              const widthPercent = maxUsage > 0 ? (row.total / maxUsage) * 100 : 0
+              const widthPercent = maxUsage > 0 ? (row.inputOutput / maxUsage) * 100 : 0
 
               return (
                 <div key={row.provider} className="space-y-1.5">
@@ -282,7 +328,12 @@ export function UsageMeterWidget() {
                       {row.provider}
                     </span>
                     <span className="shrink-0 text-xs text-primary-600 tabular-nums">
-                      {formatTokens(row.total)}
+                      {formatCompactTokens(row.inputOutput)}
+                      {row.cached > 0 ? (
+                        <span className="ml-1 text-primary-400" title={`${formatTokens(row.cached)} cached`}>
+                          +cache
+                        </span>
+                      ) : null}
                     </span>
                   </div>
                   <div className="h-2.5 overflow-hidden rounded-full bg-primary-200/80">
