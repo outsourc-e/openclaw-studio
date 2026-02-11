@@ -178,7 +178,7 @@ function ModeSelector({ navigate }: { navigate: ReturnType<typeof useNavigate> }
         onClick={() => setOpen(!open)}
         className="inline-flex items-center gap-1 rounded-md border border-primary-200 bg-primary-50 px-2 py-0.5 text-[11px] font-medium text-primary-600 transition-colors hover:border-primary-300 hover:text-ink dark:border-primary-300 dark:bg-transparent dark:hover:text-primary-200"
       >
-        Studio
+        Dashboard
         <HugeiconsIcon icon={ArrowDown01Icon} size={12} strokeWidth={1.5} />
       </button>
       {open ? (
@@ -188,17 +188,17 @@ function ModeSelector({ navigate }: { navigate: ReturnType<typeof useNavigate> }
             className="w-full px-3 py-1.5 text-left text-xs font-medium text-ink"
             onClick={() => setOpen(false)}
           >
-            Studio
+            Dashboard
           </button>
           <button
             type="button"
             className="w-full px-3 py-1.5 text-left text-xs text-primary-600 hover:text-ink"
             onClick={() => {
               setOpen(false)
-              navigate({ to: '/dashboard' })
+              navigate({ to: '/chat/$sessionKey', params: { sessionKey: 'main' } })
             }}
           >
-            Dashboard
+            Studio
           </button>
         </div>
       ) : null}
