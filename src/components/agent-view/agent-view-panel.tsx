@@ -53,6 +53,16 @@ function formatRelativeMs(msAgo: number): string {
   return `${minutes}m ago`
 }
 
+const AGENT_NAME_KEY = 'clawsuite-agent-name'
+
+function getStoredAgentName(): string {
+  try {
+    const v = localStorage.getItem(AGENT_NAME_KEY)
+    if (v && v.trim()) return v.trim()
+  } catch { /* noop */ }
+  return ''
+}
+
 const STATE_GLOW: Record<string, string> = {
   idle: 'border-primary-300/70',
   reading: 'border-blue-400/50 shadow-[0_0_8px_rgba(59,130,246,0.15)]',
@@ -66,6 +76,45 @@ function OrchestratorCard() {
   const { state, label } = useOrchestratorState()
   const glowClass = STATE_GLOW[state] ?? STATE_GLOW.idle
 
+  const [agentName, setAgentName] = useState(getStoredAgentName)
+  const [isEditing, setIsEditing] = useState(false)
+  const [editValue, setEditValue] = useState('')
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  // Fetch model from gateway
+  const [model, setModel] = useState('')
+  useEffect(() => {
+    let cancelled = false
+    async function fetchModel() {
+      try {
+        const res = await fetch('/api/session-status')
+        if (!res.ok) return
+        const data = await res.json()
+        const payload = data.payload ?? data
+        const m = payload.model ?? payload.currentModel ?? ''
+        if (!cancelled && m) setModel(String(m))
+      } catch { /* noop */ }
+    }
+    void fetchModel()
+    const timer = setInterval(fetchModel, 30_000)
+    return () => { cancelled = true; clearInterval(timer) }
+  }, [])
+
+  const displayName = agentName || 'Agent'
+
+  function startEdit() {
+    setEditValue(agentName)
+    setIsEditing(true)
+    setTimeout(() => inputRef.current?.focus(), 50)
+  }
+
+  function commitEdit() {
+    const trimmed = editValue.trim()
+    setAgentName(trimmed)
+    setIsEditing(false)
+    try { localStorage.setItem(AGENT_NAME_KEY, trimmed) } catch { /* noop */ }
+  }
+
   return (
     <div
       className={cn(
@@ -73,7 +122,6 @@ function OrchestratorCard() {
         glowClass,
       )}
     >
-      {/* Subtle animated bg gradient for active states */}
       {state !== 'idle' && (
         <div className="pointer-events-none absolute inset-0 animate-pulse rounded-2xl bg-gradient-to-br from-orange-500/[0.03] to-transparent" />
       )}
@@ -83,7 +131,30 @@ function OrchestratorCard() {
 
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
-            <span className="text-xs font-semibold text-primary-900">Aurora</span>
+            {isEditing ? (
+              <input
+                ref={inputRef}
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                onBlur={commitEdit}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') commitEdit()
+                  if (e.key === 'Escape') setIsEditing(false)
+                }}
+                placeholder="Agent name..."
+                className="w-24 rounded border border-primary-300/70 bg-primary-50 px-1.5 py-0.5 text-xs font-semibold text-primary-900 outline-none focus:border-orange-400"
+                maxLength={20}
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={startEdit}
+                className="text-xs font-semibold text-primary-900 hover:text-orange-600 transition-colors"
+                title="Click to rename"
+              >
+                {displayName}
+              </button>
+            )}
             <span className="rounded-full bg-orange-500/15 px-1.5 py-0.5 text-[9px] font-medium text-orange-600">
               Main Agent
             </span>
@@ -91,9 +162,11 @@ function OrchestratorCard() {
           <p className="mt-0.5 text-[10px] text-primary-600">
             {label}
           </p>
-          <p className="mt-0.5 truncate text-[9px] font-mono text-primary-500">
-            claude-opus-4-6
-          </p>
+          {model && (
+            <p className="mt-0.5 truncate text-[9px] font-mono text-primary-500">
+              {model}
+            </p>
+          )}
         </div>
       </div>
     </div>
