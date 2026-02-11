@@ -30,7 +30,7 @@ export function ManageModesModal({
       }
 
       if (event.key === 'Tab') {
-        const focusable = modal.querySelectorAll<HTMLElement>(
+        const focusable = modal!.querySelectorAll<HTMLElement>(
           'button, [tabindex]:not([tabindex="-1"])'
         );
         const first = focusable[0];

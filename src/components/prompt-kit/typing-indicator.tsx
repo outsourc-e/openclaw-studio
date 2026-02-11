@@ -1,29 +1,24 @@
 'use client'
 
-import { TextShimmer } from './text-shimmer'
-import { LoadingIndicator } from '@/components/loading-indicator'
 import { cn } from '@/lib/utils'
+import { AssistantAvatar } from '@/components/avatars'
 
 export type TypingIndicatorProps = {
   className?: string
 }
 
+/**
+ * iMessage-style typing indicator with bouncing dots + assistant avatar.
+ */
 function TypingIndicator({ className }: TypingIndicatorProps) {
   return (
-    <div className={cn('flex items-center gap-2', className)}>
-      <div className="relative flex size-1.5">
-        <span className="animate-ping absolute inline-flex size-full rounded-full bg-primary-400 opacity-75" />
-        <span
-          className="relative inline-flex size-1.5 rounded-full bg-size-[200%_auto] animate-[shimmer_2s_infinite_linear]"
-          style={{
-            backgroundImage: `linear-gradient(to right, var(--color-primary-600) 0%, var(--color-primary-950) 50%, var(--color-primary-600) 100%)`,
-          }}
-        />
+    <div className={cn('flex items-start gap-2', className)}>
+      <AssistantAvatar size={24} className="mt-0.5" />
+      <div className="rounded-2xl bg-primary-100 px-4 py-3 flex items-center gap-1">
+        <span className="size-2 rounded-full bg-primary-400 animate-[typing-bounce_1.4s_ease-in-out_infinite]" />
+        <span className="size-2 rounded-full bg-primary-400 animate-[typing-bounce_1.4s_ease-in-out_0.2s_infinite]" />
+        <span className="size-2 rounded-full bg-primary-400 animate-[typing-bounce_1.4s_ease-in-out_0.4s_infinite]" />
       </div>
-      <LoadingIndicator ariaLabel="Toggle loading indicator" />
-      <TextShimmer className="text-sm text-pretty" duration={2}>
-        Generating response...
-      </TextShimmer>
     </div>
   )
 }

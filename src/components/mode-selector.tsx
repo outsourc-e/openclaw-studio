@@ -43,12 +43,15 @@ export function ModeSelector({
     ? appliedMode.name
     : 'Mode';
 
-  // Close menu on outside click
+  // Close menu on outside click (skip if dialog is open)
   useEffect(() => {
     if (!isMenuOpen) return;
     function handleOutsideClick(event: MouseEvent) {
       if (!selectorRef.current) return;
       if (selectorRef.current.contains(event.target as Node)) return;
+      // Don't close if clicking inside a dialog/modal overlay
+      const target = event.target as HTMLElement;
+      if (target.closest('[role="dialog"]') || target.closest('.fixed')) return;
       setIsMenuOpen(false);
     }
 
