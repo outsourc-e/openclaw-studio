@@ -194,7 +194,7 @@ function ChatContainerScrollAnchor({
 }: ChatContainerScrollAnchorProps) {
   return (
     <div
-      className="h-px w-full shrink-0 scroll-mt-4 pt-6"
+      className="h-px w-full shrink-0 scroll-mt-4 pt-8 pb-4"
       aria-hidden="true"
       {...props}
     />

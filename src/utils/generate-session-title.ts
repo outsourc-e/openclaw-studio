@@ -1,11 +1,17 @@
 const DEFAULT_MAX_LENGTH = 40
 const DEFAULT_MAX_WORDS = 7
 
+const NOISE_PREFIXES = /^(hey|hi|hello|ok|okay|so|well|please|can you|could you|i want to|i need to|let's|lets|i also|also)\s+/i
+
 function cleanText(raw: string): string {
-  return raw
+  let text = raw
+    .replace(/[#*`_~[\]()]/g, ' ')  // strip markdown
     .replace(/[^\p{L}\p{N}\s-]/gu, ' ')
     .replace(/\s+/g, ' ')
     .trim()
+  // Strip conversational noise
+  text = text.replace(NOISE_PREFIXES, '').trim()
+  return text
 }
 
 function truncateToLength(text: string, maxLength: number): string {
