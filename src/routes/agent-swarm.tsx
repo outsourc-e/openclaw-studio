@@ -2,13 +2,15 @@ import { useEffect, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { BotIcon, Rocket01Icon } from '@hugeicons/core-free-icons'
-import { motion, AnimatePresence } from 'motion/react'
+import { AnimatePresence, motion } from 'motion/react'
+import type {SwarmSession} from '@/stores/agent-swarm-store';
 import { usePageTitle } from '@/hooks/use-page-title'
-import { useSwarmStore, type SwarmSession } from '@/stores/agent-swarm-store'
+import {  useSwarmStore } from '@/stores/agent-swarm-store'
 import { cn } from '@/lib/utils'
 import { assignPersona } from '@/lib/agent-personas'
 import { IsometricOffice } from '@/components/agent-swarm/isometric-office'
 import { ActivityPanel } from '@/components/agent-swarm/activity-panel'
+import { OrchestratorAvatar } from '@/components/orchestrator-avatar'
 import { useSounds } from '@/hooks/use-sounds'
 
 export const Route = createFileRoute('/agent-swarm')({
@@ -126,17 +128,20 @@ function AgentSwarmRoute() {
         {/* Page Header */}
         <header className="mb-6 rounded-2xl border border-primary-200 bg-primary-50/85 p-4 shadow-sm backdrop-blur-xl sm:p-6">
           <div className="flex items-center justify-between">
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-primary-200 bg-primary-100/70 px-3 py-1 text-xs text-primary-600 tabular-nums">
-                <HugeiconsIcon icon={BotIcon} size={16} strokeWidth={1.5} />
-                <span>Orchestration</span>
+            <div className="flex items-center gap-4">
+              <OrchestratorAvatar size={56} />
+              <div>
+                <div className="inline-flex items-center gap-2 rounded-full border border-primary-200 bg-primary-100/70 px-3 py-1 text-xs text-primary-600 tabular-nums">
+                  <HugeiconsIcon icon={BotIcon} size={16} strokeWidth={1.5} />
+                  <span>Orchestration</span>
+                </div>
+                <h1 className="mt-2 text-xl font-semibold text-balance text-primary-900 sm:text-2xl">
+                  Agent Swarm
+                </h1>
+                <p className="mt-1 text-sm text-pretty text-primary-600">
+                  Real-time monitoring of all active agent sessions.
+                </p>
               </div>
-              <h1 className="mt-2 text-xl font-semibold text-balance text-primary-900 sm:text-2xl">
-                Agent Swarm
-              </h1>
-              <p className="mt-1 text-sm text-pretty text-primary-600">
-                Real-time monitoring of all active agent sessions.
-              </p>
             </div>
 
             {/* View Toggle + Connection Status */}
