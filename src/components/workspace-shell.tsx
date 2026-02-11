@@ -19,6 +19,8 @@ import { chatQueryKeys } from '@/screens/chat/chat-queries'
 import { cn } from '@/lib/utils'
 import { useWorkspaceStore } from '@/stores/workspace-store'
 import { SIDEBAR_TOGGLE_EVENT } from '@/hooks/use-global-shortcuts'
+import { ChatPanel } from '@/components/chat-panel'
+import { ChatPanelToggle } from '@/components/chat-panel-toggle'
 import type { SessionMeta } from '@/screens/chat/types'
 
 type SessionsListResponse = Array<SessionMeta>
@@ -45,6 +47,7 @@ export function WorkspaceShell() {
   // Derive active session from URL
   const chatMatch = pathname.match(/^\/chat\/(.+)$/)
   const activeFriendlyId = chatMatch ? chatMatch[1] : 'main'
+  const isOnChatRoute = Boolean(chatMatch) || pathname === '/new'
 
   // Sessions query — shared across sidebar and chat
   const sessionsQuery = useQuery({
@@ -99,7 +102,7 @@ export function WorkspaceShell() {
       <div
         className={cn(
           'h-full overflow-hidden',
-          'grid grid-cols-[auto_1fr]',
+          isOnChatRoute ? 'grid grid-cols-[auto_1fr]' : 'grid grid-cols-[auto_1fr_auto]',
         )}
       >
         {/* Persistent sidebar */}
@@ -122,7 +125,13 @@ export function WorkspaceShell() {
         <main className="h-full min-h-0 min-w-0 overflow-hidden">
           <Outlet />
         </main>
+
+        {/* Chat panel — visible on non-chat routes */}
+        {!isOnChatRoute && <ChatPanel />}
       </div>
+
+      {/* Floating chat toggle — visible on non-chat routes */}
+      {!isOnChatRoute && <ChatPanelToggle />}
     </div>
   )
 }

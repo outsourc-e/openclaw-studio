@@ -5,6 +5,7 @@
 import { useEffect } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useSearchModal } from '@/hooks/use-search-modal'
+import { useWorkspaceStore } from '@/stores/workspace-store'
 
 function isInputFocused(): boolean {
   const active = document.activeElement
@@ -27,6 +28,7 @@ export function useGlobalShortcuts() {
   const navigate = useNavigate()
   const openModal = useSearchModal((state) => state.openModal)
   const setScope = useSearchModal((state) => state.setScope)
+  const toggleChatPanel = useWorkspaceStore((s) => s.toggleChatPanel)
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -49,6 +51,13 @@ export function useGlobalShortcuts() {
         return
       }
 
+      // Cmd/Ctrl+J — Toggle chat panel
+      if (mod && event.key.toLowerCase() === 'j' && !event.shiftKey) {
+        event.preventDefault()
+        toggleChatPanel()
+        return
+      }
+
       // Cmd/Ctrl+Shift+L — Focus activity log
       if (mod && event.shiftKey && event.key.toLowerCase() === 'l') {
         event.preventDefault()
@@ -59,5 +68,5 @@ export function useGlobalShortcuts() {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [navigate, openModal, setScope])
+  }, [navigate, openModal, setScope, toggleChatPanel])
 }
