@@ -878,7 +878,7 @@ export function ChatScreen({
               noticePosition="end"
               waitingForResponse={waitingForResponse}
               sessionKey={activeCanonicalKey}
-              pinToTop={pinToTop}
+              pinToTop={false}
               pinGroupMinHeight={pinGroupMinHeight}
               headerHeight={headerHeight}
               contentStyle={stableContentStyle}

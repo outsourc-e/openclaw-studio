@@ -391,7 +391,7 @@ function MessageItemComponent({
         !isUser && isNew && 'animate-[message-fade-in_0.4s_ease-out]',
       )}
     >
-      {thinking && (
+      {thinking && !hasText && (
         <div className="w-full max-w-[900px]">
           <Collapsible defaultOpen={false}>
             <CollapsibleTrigger className="w-fit">
@@ -485,8 +485,8 @@ function MessageItemComponent({
         </Message>
       )}
 
-      {/* Render tool calls - either expanded or as compact indicator */}
-      {hasToolCalls && (
+      {/* Render tool calls - only when message is tool-call-only (no text) */}
+      {hasToolCalls && !hasText && (
         <div className="w-full max-w-[900px] mt-2">
           <Collapsible open={toolCallsOpen} onOpenChange={setToolCallsOpen}>
             <CollapsibleTrigger className="w-full justify-between bg-primary-50/50 hover:bg-primary-100/80 data-panel-open:bg-primary-100/80">
@@ -525,7 +525,7 @@ function MessageItemComponent({
         </div>
       )}
 
-      {!hasToolCalls && (
+      {(!hasToolCalls || hasText) && (
         <MessageActionsBar
           text={fullText}
           timestamp={timestamp}
