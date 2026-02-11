@@ -129,12 +129,15 @@ function ChatMessageListComponent({
     {
       const nearBottom = distanceFromBottom <= NEAR_BOTTOM_THRESHOLD
       stickToBottomRef.current = nearBottom
-      setIsNearBottom(nearBottom)
+      // Only update state when value changes to avoid re-render loops
+      setIsNearBottom(prev => prev === nearBottom ? prev : nearBottom)
       if (nearBottom) {
-        setUnreadCount(0)
+        setUnreadCount(prev => prev === 0 ? prev : 0)
       }
     }
-    setScrollMetrics(metrics)
+    // Don't call setScrollMetrics — it causes re-renders on every scroll event
+    // which triggers useLayoutEffect → scrollToAnchor → scroll → infinite loop.
+    // scrollMetrics is only used for virtualization which is disabled.
   }, [])
 
   const setProgrammaticScroll = useCallback(function setProgrammaticScroll(
