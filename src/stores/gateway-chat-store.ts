@@ -228,9 +228,16 @@ export const useGatewayChatStore = create<GatewayChatState>((set, get) => ({
     // Find messages in realtime that aren't in history yet
     const newRealtimeMessages = realtimeMessages.filter((rtMsg) => {
       const rtTimestamp = getMessageTimestamp(rtMsg)
+      const rtId = (rtMsg as { id?: string }).id
       
       return !historyMessages.some((histMsg) => {
-        // Match by timestamp proximity and role
+        // First check: match by message id if both have one
+        const histId = (histMsg as { id?: string }).id
+        if (rtId && histId && rtId === histId) {
+          return true
+        }
+        
+        // Second check: match by timestamp proximity (2s window) and role
         if (histMsg.role !== rtMsg.role) return false
         const histTimestamp = getMessageTimestamp(histMsg)
         return Math.abs(histTimestamp - rtTimestamp) < 2000

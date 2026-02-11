@@ -66,7 +66,7 @@ export function useChatHistory({
       Boolean(activeFriendlyId) &&
       !isRedirecting &&
       (!sessionsReady || activeExists),
-    refetchInterval: 15000, // Backup polling - SSE is primary source for new messages
+    refetchInterval: 350, // Fast polling (350ms) - matches upstream webclaw for reliability
     placeholderData: function useCachedHistory(): HistoryResponse | undefined {
       return queryClient.getQueryData(historyKey)
     },
