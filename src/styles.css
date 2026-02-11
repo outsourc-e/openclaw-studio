@@ -239,18 +239,7 @@ code {
   }
 }
 
-/* Chat panel: force chat content to respect panel width */
+/* Chat panel: prevent horizontal overflow in narrow panel */
 .chat-panel-content [data-chat-scroll-viewport] {
   overflow-x: hidden !important;
-}
-.chat-panel-content [data-chat-scroll-viewport] > div {
-  max-width: 100% !important;
-  overflow: hidden;
-}
-.chat-panel-content .mx-auto {
-  max-width: 100% !important;
-}
-.chat-panel-content pre {
-  overflow-x: auto !important;
-  max-width: 100% !important;
 }

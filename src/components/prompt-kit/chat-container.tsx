@@ -182,7 +182,7 @@ function ChatContainerContent({
       className={cn('flex w-full flex-col min-h-full', className)}
       {...props}
     >
-      <div className="mx-auto w-full max-w-full px-3 sm:px-5 sm:max-w-[768px] flex flex-col flex-1 min-h-full">
+      <div className="mx-auto w-full px-3 sm:px-5 flex flex-col flex-1 min-h-full" style={{ maxWidth: 'min(768px, 100%)' }}>
         <div className="flex flex-col space-y-6">{children}</div>
       </div>
     </div>
