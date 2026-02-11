@@ -83,61 +83,52 @@ function ChatMessageListComponent({
   const releaseProgrammaticScrollTimerRef = useRef<number | null>(null)
   const prevDisplayMessageCountRef = useRef(0)
   const prevUnreadSessionKeyRef = useRef<string | undefined>(sessionKey)
+  const isNearBottomRef = useRef(true)
   const [isNearBottom, setIsNearBottom] = useState(true)
   const [unreadCount, setUnreadCount] = useState(0)
   const [expandAllToolSections, setExpandAllToolSections] = useState(false)
-  const [scrollMetrics, setScrollMetrics] = useState({
+  const [scrollMetrics] = useState({
     scrollTop: 0,
     scrollHeight: 0,
     clientHeight: 0,
   })
+
+  // Debounced state sync — update React state at most every 200ms
+  const nearBottomSyncTimer = useRef<number | null>(null)
 
   const handleUserScroll = useCallback(function handleUserScroll(metrics: {
     scrollTop: number
     scrollHeight: number
     clientHeight: number
   }) {
-    const prevScrollTop = lastScrollTopRef.current
-    const isUserScrollingUp = metrics.scrollTop < prevScrollTop - 2
+    const isUserScrollingUp = metrics.scrollTop < lastScrollTopRef.current - 2
     lastScrollTopRef.current = metrics.scrollTop
+
+    // Skip during programmatic scrolls
+    if (programmaticScroll.current) return
 
     const distanceFromBottom =
       metrics.scrollHeight - metrics.scrollTop - metrics.clientHeight
-
-    // Debug: log scroll jumps
-    const jumped = Math.abs(metrics.scrollTop - prevScrollTop) > 100
-    if (jumped) {
-      console.warn('[SCROLL DEBUG] Jump detected:', {
-        from: prevScrollTop,
-        to: metrics.scrollTop,
-        delta: metrics.scrollTop - prevScrollTop,
-        distanceFromBottom,
-        scrollHeight: metrics.scrollHeight,
-        clientHeight: metrics.clientHeight,
-        programmatic: programmaticScroll.current,
-        stickToBottom: stickToBottomRef.current,
-      })
-    }
-
-    // Only process scroll changes from user interaction, not programmatic scrolls
-    if (programmaticScroll.current) return
+    const nearBottom = distanceFromBottom <= NEAR_BOTTOM_THRESHOLD
 
     if (isUserScrollingUp) {
       stickToBottomRef.current = false
+    } else {
+      stickToBottomRef.current = nearBottom
     }
 
-    {
-      const nearBottom = distanceFromBottom <= NEAR_BOTTOM_THRESHOLD
-      stickToBottomRef.current = nearBottom
-      // Only update state when value changes to avoid re-render loops
-      setIsNearBottom(prev => prev === nearBottom ? prev : nearBottom)
-      if (nearBottom) {
-        setUnreadCount(prev => prev === 0 ? prev : 0)
-      }
+    isNearBottomRef.current = nearBottom
+
+    // Debounce React state updates to avoid re-render loops
+    if (nearBottomSyncTimer.current === null) {
+      nearBottomSyncTimer.current = window.setTimeout(() => {
+        nearBottomSyncTimer.current = null
+        setIsNearBottom(isNearBottomRef.current)
+        if (isNearBottomRef.current) {
+          setUnreadCount(0)
+        }
+      }, 200)
     }
-    // Don't call setScrollMetrics — it causes re-renders on every scroll event
-    // which triggers useLayoutEffect → scrollToAnchor → scroll → infinite loop.
-    // scrollMetrics is only used for virtualization which is disabled.
   }, [])
 
   const setProgrammaticScroll = useCallback(function setProgrammaticScroll(
@@ -378,14 +369,6 @@ function ChatMessageListComponent({
   }
 
   useLayoutEffect(() => {
-    console.log('[SCROLL DEBUG] useLayoutEffect triggered:', {
-      loading,
-      pinToTop,
-      displayMessagesLength: displayMessages.length,
-      sessionKey,
-      stickToBottom: stickToBottomRef.current,
-      lastUserIndex,
-    })
     if (loading) return
     if (pinToTop) {
       const shouldPin =
