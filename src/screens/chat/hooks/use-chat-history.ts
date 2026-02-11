@@ -66,7 +66,10 @@ export function useChatHistory({
       Boolean(activeFriendlyId) &&
       !isRedirecting &&
       (!sessionsReady || activeExists),
-    // No auto-polling here — chat-screen.tsx uses streamStart() for 350ms polling during streaming
+    // Baseline 3s polling ensures responses appear even when streaming detection
+    // misses (e.g. tool-call-heavy sessions where idle detection fires early).
+    // During active streaming, chat-screen.tsx adds 350ms polling on top.
+    refetchInterval: 3000,
     placeholderData: function useCachedHistory(): HistoryResponse | undefined {
       return queryClient.getQueryData(historyKey)
     },

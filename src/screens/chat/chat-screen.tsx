@@ -187,22 +187,41 @@ export function ChatScreen({
     void historyQuery.refetch()
   }
 
-  // Idle detection: when latest assistant message is stable for 4s, finish
+  // Idle detection: when latest displayable assistant message is stable for 4s, finish.
+  // Uses displayMessages (filtered) instead of historyMessages so that tool calls
+  // (which arrive after the text response) don't prevent completion detection.
   useEffect(() => {
-    if (historyMessages.length === 0) return
-    const latestMessage = historyMessages[historyMessages.length - 1]
-    if (latestMessage.role !== 'assistant') return
-    const signature = `${historyMessages.length}:${textFromMessage(latestMessage).slice(-64)}`
-    if (signature !== lastAssistantSignature.current) {
-      lastAssistantSignature.current = signature
-      if (streamIdleTimer.current) {
-        window.clearTimeout(streamIdleTimer.current)
+    if (displayMessages.length === 0) return
+    const latestDisplay = displayMessages[displayMessages.length - 1]
+    // Check both display messages and raw history for assistant completion
+    if (latestDisplay.role === 'assistant') {
+      const signature = `${displayMessages.length}:${textFromMessage(latestDisplay).slice(-64)}`
+      if (signature !== lastAssistantSignature.current) {
+        lastAssistantSignature.current = signature
+        if (streamIdleTimer.current) {
+          window.clearTimeout(streamIdleTimer.current)
+        }
+        streamIdleTimer.current = window.setTimeout(() => {
+          streamFinish()
+        }, 4000)
       }
-      streamIdleTimer.current = window.setTimeout(() => {
-        streamFinish()
-      }, 4000)
+    } else if (latestDisplay.role === 'user' && waitingForResponse) {
+      // User message is last displayable message — check raw history for
+      // assistant responses that were filtered out (e.g. tool-call-only messages).
+      // If raw history has grown since we sent, the agent is actively responding.
+      const lastRaw = historyMessages[historyMessages.length - 1]
+      if (lastRaw && lastRaw.role !== 'user') {
+        // Agent is working (tool calls in progress). Reset idle timer so we
+        // keep polling, but also set a longer timeout to eventually finish.
+        if (streamIdleTimer.current) {
+          window.clearTimeout(streamIdleTimer.current)
+        }
+        streamIdleTimer.current = window.setTimeout(() => {
+          streamFinish()
+        }, 8000)
+      }
     }
-  }, [historyMessages, streamFinish])
+  }, [displayMessages, historyMessages, waitingForResponse, streamFinish])
 
   useAutoSessionTitle({
     friendlyId: activeFriendlyId,
