@@ -55,7 +55,8 @@ function ChatContainerRoot({
     <div className={cn('relative flex-1 min-h-0', className)}>
       <div
         ref={scrollRef}
-        className="absolute inset-0 overflow-y-auto"
+        className="absolute inset-0 overflow-y-auto overscroll-contain"
+        style={{ overflowAnchor: 'none' }}
         data-chat-scroll-viewport
         {...props}
       >
@@ -89,6 +90,7 @@ function ChatContainerScrollAnchor({
   return (
     <div
       className="h-px w-full shrink-0 scroll-mt-4 pt-8 pb-4"
+      style={{ overflowAnchor: 'auto' }}
       aria-hidden="true"
       {...props}
     />

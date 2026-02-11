@@ -97,8 +97,27 @@ function ChatMessageListComponent({
     scrollHeight: number
     clientHeight: number
   }) {
-    const isUserScrollingUp = metrics.scrollTop < lastScrollTopRef.current - 2
+    const prevScrollTop = lastScrollTopRef.current
+    const isUserScrollingUp = metrics.scrollTop < prevScrollTop - 2
     lastScrollTopRef.current = metrics.scrollTop
+
+    const distanceFromBottom =
+      metrics.scrollHeight - metrics.scrollTop - metrics.clientHeight
+
+    // Debug: log scroll jumps
+    const jumped = Math.abs(metrics.scrollTop - prevScrollTop) > 100
+    if (jumped) {
+      console.warn('[SCROLL DEBUG] Jump detected:', {
+        from: prevScrollTop,
+        to: metrics.scrollTop,
+        delta: metrics.scrollTop - prevScrollTop,
+        distanceFromBottom,
+        scrollHeight: metrics.scrollHeight,
+        clientHeight: metrics.clientHeight,
+        programmatic: programmaticScroll.current,
+        stickToBottom: stickToBottomRef.current,
+      })
+    }
 
     // Only process scroll changes from user interaction, not programmatic scrolls
     if (programmaticScroll.current) return
@@ -108,8 +127,6 @@ function ChatMessageListComponent({
     }
 
     {
-      const distanceFromBottom =
-        metrics.scrollHeight - metrics.scrollTop - metrics.clientHeight
       const nearBottom = distanceFromBottom <= NEAR_BOTTOM_THRESHOLD
       stickToBottomRef.current = nearBottom
       setIsNearBottom(nearBottom)
@@ -358,6 +375,14 @@ function ChatMessageListComponent({
   }
 
   useLayoutEffect(() => {
+    console.log('[SCROLL DEBUG] useLayoutEffect triggered:', {
+      loading,
+      pinToTop,
+      displayMessagesLength: displayMessages.length,
+      sessionKey,
+      stickToBottom: stickToBottomRef.current,
+      lastUserIndex,
+    })
     if (loading) return
     if (pinToTop) {
       const shouldPin =
