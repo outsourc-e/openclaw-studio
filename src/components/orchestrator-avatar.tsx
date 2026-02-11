@@ -172,7 +172,7 @@ function OrchestratorAvatarComponent({
   waitingForResponse = false,
   isStreaming = false,
 }: OrchestratorAvatarProps) {
-  const { state, label, activeAgentCount } = useOrchestratorState({
+  const { state, activeAgentCount } = useOrchestratorState({
     waitingForResponse,
     isStreaming,
   })

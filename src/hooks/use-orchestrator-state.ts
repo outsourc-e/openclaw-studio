@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { useAgentSwarmStore } from '@/stores/agent-swarm-store'
+import { useSwarmStore } from '@/stores/agent-swarm-store'
 
 export type OrchestratorState = 'idle' | 'thinking' | 'working' | 'orchestrating' | 'listening'
 
@@ -13,7 +13,7 @@ export function useOrchestratorState(opts: {
   waitingForResponse?: boolean
   isStreaming?: boolean
 }): OrchestratorInfo {
-  const sessions = useAgentSwarmStore((s) => s.sessions)
+  const sessions = useSwarmStore((s) => s.sessions)
 
   return useMemo(() => {
     const activeAgents = sessions.filter(
