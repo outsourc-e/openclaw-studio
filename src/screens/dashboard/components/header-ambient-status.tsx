@@ -119,10 +119,6 @@ export function HeaderAmbientStatus() {
     setEditing(false)
   }
 
-  function _handleToggleClock() {
-    update({ clockFormat: is12h ? '24h' : '12h' })
-  }
-
   return (
     <div className="relative hidden sm:block">
       {/* Pill — matches Studio Overview border style */}

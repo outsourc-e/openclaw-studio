@@ -420,7 +420,11 @@ export function UsageMeter() {
   const [providerUpdatedAt, setProviderUpdatedAt] = useState<number | null>(null)
   const [open, setOpen] = useState(false)
   const [statsView, setStatsView] = useState<StatsView>(getStoredStatsView)
-  const [agentActivity, setAgentActivity] = useState<AgentActivity>({ activeAgents: 0, totalSpawned: 0, totalAgentCost: 0 })
+  const [agentActivity] = useState<AgentActivity>({
+    activeAgents: 0,
+    totalSpawned: 0,
+    totalAgentCost: 0,
+  })
   const [contextAlert, setContextAlert] = useState<{ open: boolean; threshold: number }>({ open: false, threshold: 0 })
   const alertStateRef = useRef(getAlertState())
 

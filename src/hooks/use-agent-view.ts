@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type {GatewaySession, GatewaySessionStatusResponse} from '@/lib/gateway-api';
+import type {
+  GatewaySession,
+  GatewaySessionStatusResponse,
+} from '@/lib/gateway-api'
 import {
-  
-  
-  fetchSessionStatus,
-  fetchSessions
+  fetchSessions,
 } from '@/lib/gateway-api'
 import { assignPersona } from '@/lib/agent-personas'
 

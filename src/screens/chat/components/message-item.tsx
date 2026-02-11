@@ -1,8 +1,8 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ArrowDown01Icon,
-  Wrench01Icon,
   Idea01Icon,
+  Wrench01Icon,
 } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
@@ -31,6 +31,67 @@ import { cn } from '@/lib/utils'
 // Streaming cursor component
 function StreamingCursor() {
   return <LoadingIndicator ariaLabel="Assistant is streaming" />
+}
+
+const WORDS_PER_TICK = 10
+
+function isWhitespaceCharacter(value: string): boolean {
+  return /\s/.test(value)
+}
+
+function countWords(text: string): number {
+  let count = 0
+  let inWord = false
+
+  for (const character of text) {
+    if (isWhitespaceCharacter(character)) {
+      if (inWord) {
+        count += 1
+        inWord = false
+      }
+      continue
+    }
+    inWord = true
+  }
+
+  if (inWord) {
+    count += 1
+  }
+
+  return count
+}
+
+function getWordBoundaryIndex(text: string, wordCount: number): number {
+  if (text.length === 0 || wordCount <= 0) return 0
+
+  let count = 0
+  let index = 0
+  let inWord = false
+
+  while (index < text.length) {
+    const character = text[index] ?? ''
+    if (isWhitespaceCharacter(character)) {
+      if (inWord) {
+        count += 1
+        if (count >= wordCount) {
+          return index
+        }
+        inWord = false
+      }
+    } else {
+      inWord = true
+    }
+    index += 1
+  }
+
+  if (inWord) {
+    count += 1
+    if (count >= wordCount) {
+      return text.length
+    }
+  }
+
+  return text.length
 }
 
 type MessageItemProps = {
@@ -192,7 +253,7 @@ function MessageItemComponent({
   streamingText,
   streamingThinking,
   simulateStreaming: _simulateStreaming = false,
-  streamingKey,
+  streamingKey: _streamingKey,
   expandAllToolSections = false,
 }: MessageItemProps) {
   const role = message.role || 'assistant'
@@ -217,17 +278,22 @@ function MessageItemComponent({
     isStreaming === true
 
   const fullText = useMemo(() => textFromMessage(message), [message])
+  const initialDisplayText =
+    remoteStreamingActive ? remoteStreamingText ?? fullText : fullText
   const [displayText, setDisplayText] = useState(() =>
-    remoteStreamingActive ? remoteStreamingText ?? fullText : fullText,
+    initialDisplayText,
   )
-  const [isLocalStreaming, setIsLocalStreaming] = useState(false)
-  const animationKeyRef = useRef<string | null>(null)
-  const animationTimeoutRef = useRef<number | null>(null)
-  const animationIndexRef = useRef(0)
+  const [revealedWordCount, setRevealedWordCount] = useState(() =>
+    remoteStreamingActive ? 0 : countWords(initialDisplayText),
+  )
+  const [revealedText, setRevealedText] = useState(() =>
+    remoteStreamingActive ? '' : initialDisplayText,
+  )
+  const revealFrameRef = useRef<number | null>(null)
+  const targetWordCountRef = useRef(countWords(initialDisplayText))
+  const previousTextRef = useRef(initialDisplayText)
+  const previousTextLengthRef = useRef(initialDisplayText.length)
 
-  // Disable fake streaming — using CSS fade-in + shimmer instead
-  const shouldFakeStream = false
-  
   // Track if this is a newly appeared message (for fade-in animation)
   const isNewRef = useRef(true)
   const [isNew, setIsNew] = useState(true)
@@ -240,96 +306,96 @@ function MessageItemComponent({
 
   useEffect(() => {
     if (remoteStreamingActive) {
-      setIsLocalStreaming(false)
-      animationKeyRef.current = null
-      if (animationTimeoutRef.current) {
-        window.clearTimeout(animationTimeoutRef.current)
-        animationTimeoutRef.current = null
-      }
       setDisplayText(remoteStreamingText ?? fullText)
       return
     }
 
-    if (!shouldFakeStream) {
-      setDisplayText((current) =>
-        current === fullText ? current : fullText,
-      )
-      setIsLocalStreaming(false)
-      animationKeyRef.current = null
-      if (animationTimeoutRef.current) {
-        window.clearTimeout(animationTimeoutRef.current)
-        animationTimeoutRef.current = null
-      }
-    }
-  }, [remoteStreamingActive, remoteStreamingText, fullText, shouldFakeStream])
-
-  useEffect(() => {
-    if (!shouldFakeStream) {
-      return
-    }
-
-    const key = streamingKey ?? `${fullText.length}:${fullText.slice(-24)}`
-    if (animationKeyRef.current === key) {
-      return
-    }
-    animationKeyRef.current = key
-
-    if (animationTimeoutRef.current) {
-      window.clearTimeout(animationTimeoutRef.current)
-      animationTimeoutRef.current = null
-    }
-
-    animationIndexRef.current = 0
-    setIsLocalStreaming(true)
-    setDisplayText('')
-
-    if (fullText.length === 0) {
-      setIsLocalStreaming(false)
-      return
-    }
-
-    const targetDuration = Math.min(4200, Math.max(900, fullText.length * 26))
-    const stepDelay = 18
-    const totalSteps = Math.max(1, Math.round(targetDuration / stepDelay))
-    const chunkSize = Math.max(1, Math.ceil(fullText.length / totalSteps))
-
-    const tick = () => {
-      const nextIndex = Math.min(
-        fullText.length,
-        animationIndexRef.current + chunkSize,
-      )
-      animationIndexRef.current = nextIndex
-      setDisplayText(fullText.slice(0, nextIndex))
-
-      if (nextIndex >= fullText.length) {
-        setIsLocalStreaming(false)
-        animationTimeoutRef.current = null
-        return
-      }
-
-      animationTimeoutRef.current = window.setTimeout(tick, stepDelay)
-    }
-
-    animationTimeoutRef.current = window.setTimeout(tick, stepDelay)
-
-    return () => {
-      if (animationTimeoutRef.current) {
-        window.clearTimeout(animationTimeoutRef.current)
-        animationTimeoutRef.current = null
-      }
-    }
-  }, [shouldFakeStream, streamingKey, fullText])
+    setDisplayText((current) =>
+      current === fullText ? current : fullText,
+    )
+  }, [remoteStreamingActive, remoteStreamingText, fullText])
 
   useEffect(() => {
     return () => {
-      if (animationTimeoutRef.current) {
-        window.clearTimeout(animationTimeoutRef.current)
+      if (revealFrameRef.current !== null) {
+        window.cancelAnimationFrame(revealFrameRef.current)
       }
     }
   }, [])
 
-  const effectiveIsStreaming =
-    remoteStreamingActive || isLocalStreaming
+  const effectiveIsStreaming = remoteStreamingActive
+  const assistantDisplayText = effectiveIsStreaming ? revealedText : displayText
+
+  useEffect(() => {
+    const totalWords = countWords(displayText)
+    const previousText = previousTextRef.current
+    const previousLength = previousTextLengthRef.current
+    const textGrew =
+      displayText.length > previousLength && displayText.startsWith(previousText)
+    const textChanged = displayText !== previousText
+
+    targetWordCountRef.current = totalWords
+    previousTextRef.current = displayText
+    previousTextLengthRef.current = displayText.length
+
+    if (!effectiveIsStreaming) {
+      if (revealFrameRef.current !== null) {
+        window.cancelAnimationFrame(revealFrameRef.current)
+        revealFrameRef.current = null
+      }
+      setRevealedWordCount(totalWords)
+      return
+    }
+
+    if (textChanged && !textGrew) {
+      setRevealedWordCount(totalWords)
+      return
+    }
+
+    if (revealFrameRef.current !== null) {
+      return
+    }
+
+    function tick() {
+      setRevealedWordCount((currentWordCount) => {
+        const targetWordCount = targetWordCountRef.current
+        if (currentWordCount >= targetWordCount) {
+          revealFrameRef.current = null
+          return currentWordCount
+        }
+
+        const nextWordCount = Math.min(
+          targetWordCount,
+          currentWordCount + WORDS_PER_TICK,
+        )
+
+        if (nextWordCount < targetWordCount) {
+          revealFrameRef.current = window.requestAnimationFrame(tick)
+        } else {
+          revealFrameRef.current = null
+        }
+
+        return nextWordCount
+      })
+    }
+
+    revealFrameRef.current = window.requestAnimationFrame(tick)
+  }, [displayText, effectiveIsStreaming])
+
+  useEffect(() => {
+    if (!effectiveIsStreaming) {
+      setRevealedText((currentText) =>
+        currentText === displayText ? currentText : displayText,
+      )
+      return
+    }
+
+    const boundaryIndex = getWordBoundaryIndex(displayText, revealedWordCount)
+    const nextRevealedText = displayText.slice(0, boundaryIndex)
+    setRevealedText((currentText) =>
+      currentText === nextRevealedText ? currentText : nextRevealedText,
+    )
+  }, [displayText, effectiveIsStreaming, revealedWordCount])
 
   const thinking =
     remoteStreamingActive && remoteStreamingThinking !== undefined
@@ -470,7 +536,7 @@ function MessageItemComponent({
                       effectiveIsStreaming && 'chat-streaming-content',
                     )}
                   >
-                    {displayText}
+                    {assistantDisplayText}
                   </MessageContent>
                   {effectiveIsStreaming && <StreamingCursor />}
                 </div>

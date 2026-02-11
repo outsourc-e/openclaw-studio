@@ -25,7 +25,6 @@ import {
   updateHistoryMessageByClientId,
   updateSessionLastMessage,
 } from './chat-queries'
-import { chatUiQueryKey, getChatUiState, setChatUiState } from './chat-ui'
 import { ChatHeader } from './components/chat-header'
 import { ChatMessageList } from './components/chat-message-list'
 import { ChatEmptyState } from './components/chat-empty-state'
@@ -95,9 +94,6 @@ export function ChatScreen({
   const { headerRef, composerRef, mainRef, pinGroupMinHeight, headerHeight } =
     useChatMeasurements()
   const [waitingForResponse, setWaitingForResponse] = useState(
-    () => hasPendingSend() || hasPendingGeneration(),
-  )
-  const [pinToTop, setPinToTop] = useState(
     () => hasPendingSend() || hasPendingGeneration(),
   )
   const streamTimer = useRef<number | null>(null)
@@ -185,7 +181,6 @@ export function ChatScreen({
     streamStop()
     setPendingGeneration(false)
     setWaitingForResponse(false)
-    setPinToTop(false)
   }, [streamStop])
 
   const streamStart = useCallback(() => {
@@ -316,8 +311,10 @@ export function ChatScreen({
         dismiss()
         // Optionally show success toast or update UI
       }
-    } catch (error) {
-      console.error('Failed to switch model:', error)
+    } catch (err) {
+      setError(
+        `Failed to switch model. ${err instanceof Error ? err.message : String(err)}`,
+      )
     }
   }, [suggestion, resolvedSessionKey, dismiss])
 
@@ -331,16 +328,6 @@ export function ChatScreen({
     }
   }, [waitingForResponse, setLocalActivity])
 
-  const _uiQuery = useQuery({
-    queryKey: chatUiQueryKey,
-    queryFn: function readUiState() {
-      return getChatUiState(queryClient)
-    },
-    initialData: function initialUiState() {
-      return getChatUiState(queryClient)
-    },
-    staleTime: Infinity,
-  })
   const gatewayStatusQuery = useQuery({
     queryKey: ['gateway', 'status'],
     queryFn: fetchGatewayStatus,
@@ -361,13 +348,6 @@ export function ChatScreen({
     void gatewayStatusQuery.refetch()
   }, [gatewayStatusQuery])
    
-  const _isSidebarCollapsed = useWorkspaceStore((s) => s.sidebarCollapsed)
-  const _handleActiveSessionDelete = useCallback(() => {
-    setError(null)
-    setIsRedirecting(true)
-    navigate({ to: '/new', replace: true })
-  }, [navigate])
-
   const terminalPanelInset =
     !isMobile && isTerminalPanelOpen ? terminalPanelHeight : 0
   // Composer is in normal flex flow (shrink-0), so scroll area naturally stops above it.
@@ -475,13 +455,11 @@ export function ChatScreen({
     }
     if (hasPendingSend() || hasPendingGeneration()) {
       setWaitingForResponse(true)
-      setPinToTop(true)
       return
     }
     streamStop()
     lastAssistantSignature.current = ''
     setWaitingForResponse(false)
-    setPinToTop(false)
   }, [activeFriendlyId, isNewChat, streamStop])
 
   useLayoutEffect(() => {
@@ -521,7 +499,6 @@ export function ChatScreen({
       )
     }
     setWaitingForResponse(true)
-    setPinToTop(true)
     sendMessage(
       pending.sessionKey,
       pending.friendlyId,
@@ -580,7 +557,6 @@ export function ChatScreen({
     setSending(true)
     setError(null)
     setWaitingForResponse(true)
-    setPinToTop(true)
 
     const payloadAttachments = normalizedAttachments.map((attachment) => ({
       id: attachment.id,
@@ -626,7 +602,6 @@ export function ChatScreen({
         setError(`Failed to send message. ${messageText}`)
         setPendingGeneration(false)
         setWaitingForResponse(false)
-        setPinToTop(false)
       })
       .finally(() => {
         setSending(false)
@@ -691,7 +666,6 @@ export function ChatScreen({
         setPendingGeneration(true)
         setSending(true)
         setWaitingForResponse(true)
-        setPinToTop(true)
 
         createSessionForMessage()
           .then(({ sessionKey, friendlyId }) => {
@@ -728,7 +702,6 @@ export function ChatScreen({
             )
             setPendingGeneration(false)
             setWaitingForResponse(false)
-            setPinToTop(false)
             setSending(false)
           })
         return
@@ -756,29 +729,12 @@ export function ChatScreen({
     ],
   )
 
-  const _startNewChat = useCallback(() => {
-    setWaitingForResponse(false)
-    setPinToTop(false)
-    clearHistoryMessages(queryClient, 'new', 'new')
-    navigate({ to: '/new' })
-    if (isMobile) {
-      setChatUiState(queryClient, function collapse(state) {
-        return { ...state, isSidebarCollapsed: true }
-      })
-    }
-  }, [isMobile, navigate, queryClient])
-
   const toggleSidebar = useWorkspaceStore((s) => s.toggleSidebar)
   const setSidebarCollapsed = useWorkspaceStore((s) => s.setSidebarCollapsed)
 
   const handleToggleSidebarCollapse = useCallback(() => {
     toggleSidebar()
   }, [toggleSidebar])
-
-  const _handleSelectSession = useCallback(() => {
-    if (!isMobile) return
-    setSidebarCollapsed(true)
-  }, [isMobile, setSidebarCollapsed])
 
   const handleOpenSidebar = useCallback(() => {
     setSidebarCollapsed(false)

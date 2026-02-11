@@ -2,7 +2,6 @@ import {
   memo,
   useCallback,
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -71,18 +70,11 @@ function ChatMessageListComponent({
 }: ChatMessageListProps) {
   const anchorRef = useRef<HTMLDivElement | null>(null)
   const lastUserRef = useRef<HTMLDivElement | null>(null)
-  const programmaticScroll = useRef(false)
-  const prevPinRef = useRef(pinToTop)
-  const prevUserIndexRef = useRef<number | undefined>(undefined)
   const prevSessionKeyRef = useRef<string | undefined>(sessionKey)
   const stickToBottomRef = useRef(true)
   const messageSignatureRef = useRef<Map<string, string>>(new Map())
   const initialRenderRef = useRef(true)
   const lastScrollTopRef = useRef(0)
-  const smoothScrollFrameRef = useRef<number | null>(null)
-  const releaseProgrammaticScrollTimerRef = useRef<number | null>(null)
-  const prevDisplayMessageCountRef = useRef(0)
-  const prevUnreadSessionKeyRef = useRef<string | undefined>(sessionKey)
   const isNearBottomRef = useRef(true)
   const [isNearBottom, setIsNearBottom] = useState(true)
   const [unreadCount, setUnreadCount] = useState(0)
@@ -380,6 +372,7 @@ function ChatMessageListComponent({
   // Simple: scroll to bottom when messages change and we should stick
   useEffect(() => {
     if (loading) return
+    let frameId: number | null = null
     const sessionChanged = prevSessionKeyRef.current !== sessionKey
     prevSessionKeyRef.current = sessionKey
 
@@ -387,13 +380,19 @@ function ChatMessageListComponent({
     if (sessionChanged) {
       stickToBottomRef.current = true
       // Use requestAnimationFrame to ensure DOM has updated
-      requestAnimationFrame(() => scrollToBottom('auto'))
-      return
+      frameId = window.requestAnimationFrame(() => scrollToBottom('auto'))
+      return () => {
+        if (frameId !== null) window.cancelAnimationFrame(frameId)
+      }
     }
 
     // Scroll to bottom if sticking
     if (stickToBottomRef.current) {
-      requestAnimationFrame(() => scrollToBottom('auto'))
+      frameId = window.requestAnimationFrame(() => scrollToBottom('auto'))
+    }
+
+    return () => {
+      if (frameId !== null) window.cancelAnimationFrame(frameId)
     }
   }, [loading, displayMessages.length, sessionKey, scrollToBottom])
 
@@ -430,17 +429,6 @@ function ChatMessageListComponent({
     isNearBottom,
     unreadCount,
   ])
-
-  useEffect(() => {
-    return () => {
-      if (smoothScrollFrameRef.current !== null) {
-        window.cancelAnimationFrame(smoothScrollFrameRef.current)
-      }
-      if (releaseProgrammaticScrollTimerRef.current !== null) {
-        window.clearTimeout(releaseProgrammaticScrollTimerRef.current)
-      }
-    }
-  }, [])
 
   return (
     // mt-2 is to fix the prompt-input cut off

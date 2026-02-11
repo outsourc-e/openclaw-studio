@@ -20,11 +20,6 @@ interface DiscountCode {
   minPurchase?: number;
 }
 
-interface Cart {
-  items: CartItem[];
-  discountCode: DiscountCode | null;
-}
-
 // Mock Cart Implementation (replace with actual import)
 class ShoppingCart {
   private items: CartItem[] = [];

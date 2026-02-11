@@ -25,8 +25,8 @@ function loadModes(): Mode[] {
 function saveModes(modes: Mode[]): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(modes));
-  } catch (error) {
-    console.error('Failed to save modes:', error);
+  } catch {
+    // Ignore storage write failures (private mode/quota)
   }
 }
 
