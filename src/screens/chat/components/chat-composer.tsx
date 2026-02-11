@@ -721,7 +721,7 @@ function ChatComposerComponent({
 
   return (
     <div
-      className="sticky bottom-0 z-30 mx-auto w-full bg-surface/95 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-2 backdrop-blur sm:px-5"
+      className="shrink-0 z-30 mx-auto w-full bg-surface/95 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-2 backdrop-blur sm:px-5"
       style={{ maxWidth: 'min(768px, 100%)' }}
       ref={setWrapperRefs}
     >
