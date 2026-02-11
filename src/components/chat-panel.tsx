@@ -117,7 +117,18 @@ export function ChatPanel() {
   return (
     <AnimatePresence>
       {isOpen && (
-        <motion.div
+        <>
+          {/* Backdrop for narrow screens */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="fixed inset-0 bg-black/20 z-10 min-[1200px]:hidden"
+            onClick={handleClose}
+            aria-hidden
+          />
+          <motion.div
           initial={{ width: 0, opacity: 0 }}
           animate={{ width: 420, opacity: 1 }}
           exit={{ width: 0, opacity: 0 }}
@@ -243,6 +254,7 @@ export function ChatPanel() {
             </div>
           </div>
         </motion.div>
+        </>
       )}
     </AnimatePresence>
   )
