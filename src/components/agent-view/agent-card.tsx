@@ -22,6 +22,8 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { AgentAvatar } from '@/components/agent-avatar'
+import { PERSONA_COLORS, PixelAvatar } from '@/components/agent-swarm/pixel-avatar'
+import { assignPersona } from '@/lib/agent-personas'
 import { formatCost, formatRuntime } from '@/hooks/use-agent-view'
 import { cn } from '@/lib/utils'
 
@@ -116,6 +118,41 @@ function getBubbleClassName(type: AgentStatusBubbleType): string {
   return 'border-red-500/45 bg-red-500/15 text-red-200'
 }
 
+/**
+ * Extract persona name from agent name format "emoji Name — Role".
+ * Returns the name portion or the full string if format doesn't match.
+ */
+function extractPersonaName(agentName: string): string {
+  // Remove leading emoji (if any) and extract name before " — "
+  const withoutEmoji = agentName.replace(/^[\p{Emoji}\s]+/u, '').trim()
+  const dashIndex = withoutEmoji.indexOf(' — ')
+  if (dashIndex > 0) {
+    return withoutEmoji.slice(0, dashIndex)
+  }
+  return withoutEmoji || agentName
+}
+
+/**
+ * Get persona colors for an agent based on its name.
+ * Falls back to default blue/cyan if persona not found.
+ */
+function getPersonaColors(agentName: string, agentId: string): { body: string; accent: string } {
+  const personaName = extractPersonaName(agentName)
+  // Try direct match from PERSONA_COLORS
+  const directMatch = PERSONA_COLORS[personaName] as { body: string; accent: string } | undefined
+  if (directMatch) {
+    return { body: directMatch.body, accent: directMatch.accent }
+  }
+  // Fallback: use assignPersona to get colors based on id
+  const persona = assignPersona(agentId, agentName)
+  const personaMatch = PERSONA_COLORS[persona.name] as { body: string; accent: string } | undefined
+  if (personaMatch) {
+    return { body: personaMatch.body, accent: personaMatch.accent }
+  }
+  // Default fallback
+  return { body: '#3b82f6', accent: '#93c5fd' }
+}
+
 export function AgentCard({
   node,
   layoutId,
@@ -202,7 +239,16 @@ export function AgentCard({
               />
             </svg>
             <div className="flex size-7 items-center justify-center rounded-full border border-primary-300/70 bg-primary-200/80">
-              <AgentAvatar size="sm" />
+              {node.isMain ? (
+                <AgentAvatar size="sm" />
+              ) : (
+                <PixelAvatar
+                  color={getPersonaColors(node.name, node.id).body}
+                  accentColor={getPersonaColors(node.name, node.id).accent}
+                  size={24}
+                  status={node.status}
+                />
+              )}
             </div>
           </div>
         ) : (
@@ -226,7 +272,16 @@ export function AgentCard({
               />
             ) : null}
             <div className="absolute inset-2 inline-flex items-center justify-center rounded-full border border-primary-300/70 bg-primary-200/80">
-              <AgentAvatar size="lg" />
+              {node.isMain ? (
+                <AgentAvatar size="lg" />
+              ) : (
+                <PixelAvatar
+                  color={getPersonaColors(node.name, node.id).body}
+                  accentColor={getPersonaColors(node.name, node.id).accent}
+                  size={40}
+                  status={node.status}
+                />
+              )}
             </div>
           </>
         )}

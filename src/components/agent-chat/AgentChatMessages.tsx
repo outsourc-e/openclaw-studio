@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { MessageTimestamp } from '@/screens/chat/components/message-timestamp'
+import { MessageContent } from '@/components/prompt-kit/message'
 import { cn } from '@/lib/utils'
 
 export type AgentChatMessage = {
@@ -77,7 +78,16 @@ export function AgentChatMessages({
                     message.status === 'error' ? 'border-red-500/60 bg-red-500/15 text-red-200' : '',
                   )}
                 >
-                  {message.text}
+                  {isUser ? (
+                    <span className="whitespace-pre-wrap">{message.text}</span>
+                  ) : (
+                    <MessageContent
+                      markdown
+                      className="text-inherit bg-transparent w-full text-pretty [&_pre]:rounded-lg [&_pre]:bg-primary-200/50 [&_pre]:p-2 [&_code]:text-xs"
+                    >
+                      {message.text}
+                    </MessageContent>
+                  )}
                 </div>
                 <div
                   className={cn(

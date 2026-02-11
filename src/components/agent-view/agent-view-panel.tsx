@@ -9,7 +9,6 @@ import {
   Link01Icon,
 } from '@hugeicons/core-free-icons'
 import { useNavigate } from '@tanstack/react-router'
-import { useSounds } from '@/hooks/use-sounds'
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from 'motion/react'
 import { AgentCard } from './agent-card'
 import { SwarmConnectionOverlay } from './swarm-connection-overlay'
@@ -25,13 +24,6 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
 import {
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogRoot,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import {
   ScrollAreaCorner,
   ScrollAreaRoot,
   ScrollAreaScrollbar,
@@ -42,6 +34,7 @@ import {
   formatCost,
   useAgentView,
 } from '@/hooks/use-agent-view'
+import { useSounds } from '@/hooks/use-sounds'
 import { cn } from '@/lib/utils'
 
 function getLastUserMessageBubbleElement(): HTMLElement | null {
@@ -105,22 +98,6 @@ function getStatusBubble(status: AgentNodeStatus, progress: number): AgentStatus
   return { type: 'checkpoint', text: `${clampedProgress}% complete` }
 }
 
-function buildTranscriptText(agent: {
-  name: string
-  description: string
-  model: string
-}): string {
-  return [
-    `$ agent.start --name ${agent.name}`,
-    `[info] model=${agent.model}`,
-    `[info] task=${agent.description}`,
-    '[step] collecting requirements and constraints',
-    '[step] generating implementation plan',
-    '[step] writing files and validating output',
-    '[result] completed with artifacts attached',
-  ].join('\n')
-}
-
 export function AgentViewPanel() {
   // Sound notifications for agent events
   useSounds({ autoPlay: true })
@@ -148,10 +125,7 @@ export function AgentViewPanel() {
 
   const navigate = useNavigate()
 
-  const [selectedTranscript, setSelectedTranscript] = useState<{
-    title: string
-    content: string
-  } | null>(null)
+  // Transcript modal removed — View button now navigates to /agent-swarm
   const [selectedAgentChat, setSelectedAgentChat] = useState<{
     sessionKey: string
     agentName: string
@@ -380,39 +354,10 @@ export function AgentViewPanel() {
     )
   }, [visibleActiveNodes])
 
-  function handleView(agent: ActiveAgent) {
-    setSelectedTranscript({
-      title: agent.name,
-      content: buildTranscriptText({
-        name: agent.name,
-        description: agent.task,
-        model: agent.model,
-      }),
-    })
-  }
-
-  function handleViewByNodeId(nodeId: string) {
-    const activeMatch = activeAgents.find(function findActiveNode(agent) {
-      return agent.id === nodeId
-    })
-    if (activeMatch) {
-      handleView(activeMatch)
-      return
-    }
-
-    const historyMatch = historyAgents.find(function findHistoryNode(item) {
-      return item.id === nodeId
-    })
-    if (!historyMatch) return
-
-    setSelectedTranscript({
-      title: historyMatch.name,
-      content: buildTranscriptText({
-        name: historyMatch.name,
-        description: historyMatch.description,
-        model: historyMatch.model,
-      }),
-    })
+  function handleViewByNodeId(_nodeId: string) {
+    // Close sidebar and navigate to the full agent swarm view
+    setOpen(false)
+    navigate({ to: '/agent-swarm' })
   }
 
   function handleChatByNodeId(nodeId: string) {
@@ -629,9 +574,9 @@ export function AgentViewPanel() {
                           layout
                           transition={{ layout: { type: 'spring', stiffness: 360, damping: 34 } }}
                           className={cn(
-                            'grid gap-1.5',
+                            'grid gap-1.5 items-start',
                             viewMode === 'compact'
-                              ? 'grid-cols-[repeat(auto-fit,minmax(120px,1fr))]'
+                              ? 'grid-cols-2'
                               : 'grid-cols-1',
                           )}
                         >
@@ -645,6 +590,7 @@ export function AgentViewPanel() {
                                   animate={{ y: 0, opacity: 1, scale: 1 }}
                                   exit={{ y: 10, opacity: 0, scale: 0.88 }}
                                   transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                                  className="w-full"
                                 >
                                   <AgentCard
                                     node={node}
@@ -677,22 +623,23 @@ export function AgentViewPanel() {
                           <motion.div
                             layout
                             className={cn(
-                              'grid gap-1.5',
+                              'grid gap-1.5 items-start',
                               viewMode === 'compact'
-                                ? 'grid-cols-[repeat(auto-fit,minmax(120px,1fr))]'
+                                ? 'grid-cols-2'
                                 : 'grid-cols-1',
                             )}
                           >
                             {queuedNodes.map(function renderQueuedNode(node) {
                               return (
-                                <AgentCard
-                                  key={node.id}
-                                  node={node}
-                                  layoutId={agentSpawn.getCardLayoutId(node.id)}
-                                  viewMode={viewMode}
-                                  onChat={handleChatByNodeId}
-                                  onCancel={cancelQueueTask}
-                                />
+                                <div key={node.id} className="w-full">
+                                  <AgentCard
+                                    node={node}
+                                    layoutId={agentSpawn.getCardLayoutId(node.id)}
+                                    viewMode={viewMode}
+                                    onChat={handleChatByNodeId}
+                                    onCancel={cancelQueueTask}
+                                  />
+                                </div>
                               )
                             })}
                           </motion.div>
@@ -784,32 +731,6 @@ export function AgentViewPanel() {
           </motion.button>
         ) : null}
       </AnimatePresence>
-
-      <DialogRoot
-        open={selectedTranscript !== null}
-        onOpenChange={function handleTranscriptOpenChange(open) {
-          if (!open) {
-            setSelectedTranscript(null)
-          }
-        }}
-      >
-        <DialogContent className="w-[min(640px,92vw)] bg-primary-100">
-          <div className="space-y-3 p-4">
-            <DialogTitle className="text-base text-balance">
-              {selectedTranscript ? `${selectedTranscript.title} Transcript` : 'Transcript'}
-            </DialogTitle>
-            <DialogDescription className="text-pretty text-primary-700">
-              Recent execution trace and summarized tool activity.
-            </DialogDescription>
-            <pre className="max-h-[360px] overflow-auto rounded-lg border border-primary-300/70 bg-primary-200/40 p-3 text-xs text-primary-900">
-              {selectedTranscript?.content}
-            </pre>
-            <div className="flex justify-end">
-              <DialogClose className="h-8">Close</DialogClose>
-            </div>
-          </div>
-        </DialogContent>
-      </DialogRoot>
 
       <AgentChatModal
         open={selectedAgentChat !== null}
