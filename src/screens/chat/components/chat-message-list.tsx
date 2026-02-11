@@ -623,12 +623,12 @@ function getMessageSpacingClass(
   const currentRole = messages[index]?.role ?? 'assistant'
   const previousRole = messages[index - 1]?.role ?? 'assistant'
   if (currentRole === previousRole) {
-    return 'mt-3'
+    return 'mt-1.5'
   }
   if (currentRole === 'assistant') {
-    return 'mt-4 pt-1'
+    return 'mt-2.5'
   }
-  return 'mt-4'
+  return 'mt-2.5'
 }
 
 function getToolGroupClass(

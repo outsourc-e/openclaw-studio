@@ -183,7 +183,7 @@ function ChatContainerContent({
       {...props}
     >
       <div className="mx-auto w-full px-3 sm:px-5 flex flex-col flex-1 min-h-full" style={{ maxWidth: 'min(768px, 100%)' }}>
-        <div className="flex flex-col space-y-6">{children}</div>
+        <div className="flex flex-col space-y-3">{children}</div>
       </div>
     </div>
   )
