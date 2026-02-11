@@ -44,6 +44,7 @@ import {
 } from './pending-send'
 import { useChatMeasurements } from './hooks/use-chat-measurements'
 import { useChatHistory } from './hooks/use-chat-history'
+import { useRealtimeChatHistory } from './hooks/use-realtime-chat-history'
 import { useChatMobile } from './hooks/use-chat-mobile'
 import { useChatSessions } from './hooks/use-chat-sessions'
 import { useAutoSessionTitle } from './hooks/use-auto-session-title'
@@ -186,6 +187,23 @@ export function ChatScreen({
     sessionsReady: sessionsQuery.isSuccess,
     queryClient,
   })
+
+  // Real-time streaming integration - enhances polling with live updates
+  const {
+    messages: realtimeEnhancedMessages,
+    connectionState: realtimeConnectionState,
+    isRealtimeStreaming,
+    realtimeStreamingText,
+    realtimeStreamingThinking,
+  } = useRealtimeChatHistory({
+    sessionKey: resolvedSessionKey || activeSessionKey || activeFriendlyId,
+    friendlyId: activeFriendlyId,
+    historyMessages: displayMessages,
+    enabled: !isNewChat && !isRedirecting,
+  })
+
+  // Use realtime-enhanced messages for display
+  const finalDisplayMessages = realtimeEnhancedMessages
 
   useAutoSessionTitle({
     friendlyId: activeFriendlyId,
@@ -1069,7 +1087,7 @@ export function ChatScreen({
   const showGatewayNotice =
     showGatewayDown &&
     gatewayStatusQuery.errorUpdatedAt > gatewayStatusMountRef.current
-  const historyEmpty = !historyLoading && displayMessages.length === 0
+  const historyEmpty = !historyLoading && finalDisplayMessages.length === 0
   const gatewayNotice = useMemo(() => {
     if (!showGatewayNotice) return null
     if (!gatewayError) return null
@@ -1124,7 +1142,7 @@ export function ChatScreen({
 
           {hideUi ? null : (
             <ChatMessageList
-              messages={displayMessages}
+              messages={finalDisplayMessages}
               loading={historyLoading}
               empty={historyEmpty}
               emptyState={<ChatEmptyState compact={compact} />}
@@ -1137,10 +1155,10 @@ export function ChatScreen({
               headerHeight={headerHeight}
               contentStyle={stableContentStyle}
               bottomOffset={terminalPanelInset}
-              isStreaming={streaming.isStreaming || hasActiveStreamPlaceholder}
+              isStreaming={streaming.isStreaming || hasActiveStreamPlaceholder || isRealtimeStreaming}
               streamingMessageId={streamingMessageId}
-              streamingText={streamingText}
-              streamingThinking={streamingThinking}
+              streamingText={streamingText || realtimeStreamingText}
+              streamingThinking={streamingThinking || realtimeStreamingThinking}
             />
           )}
           {showComposer ? (

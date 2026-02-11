@@ -635,9 +635,14 @@ export function AgentViewPanel() {
                       <p className="text-[10px] text-primary-600 tabular-nums">
                         {isLoading
                           ? 'syncing...'
-                          : statusCounts.running === 0 && statusCounts.thinking === 0
+                          : statusCounts.running === 0 && statusCounts.thinking === 0 && statusCounts.failed === 0 && statusCounts.complete === 0
                             ? 'No subagents'
-                            : `${statusCounts.running} running · ${statusCounts.thinking} thinking`}
+                            : [
+                                statusCounts.running > 0 && `${statusCounts.running} running`,
+                                statusCounts.thinking > 0 && `${statusCounts.thinking} thinking`,
+                                statusCounts.failed > 0 && `${statusCounts.failed} failed`,
+                                statusCounts.complete > 0 && `${statusCounts.complete} complete`,
+                              ].filter(Boolean).join(' · ')}
                       </p>
                       {errorMessage ? (
                         <p className="line-clamp-1 text-[10px] text-red-300 tabular-nums">
@@ -782,45 +787,47 @@ export function AgentViewPanel() {
                   </LayoutGroup>
                 </section>
 
-                {/* History */}
-                <Collapsible open={historyOpen} onOpenChange={setHistoryOpen}>
-                  <div className="flex items-center justify-between">
-                    <CollapsibleTrigger className="h-7 px-0 text-xs font-medium hover:bg-transparent">
-                      <HugeiconsIcon
-                        icon={historyOpen ? ArrowDown01Icon : ArrowRight01Icon}
-                        size={20}
-                        strokeWidth={1.5}
-                      />
-                      History
-                    </CollapsibleTrigger>
-                    <span className="rounded-full bg-primary-300/70 px-2 py-0.5 text-[11px] text-primary-800 tabular-nums">
-                      {historyAgents.length}
-                    </span>
-                  </div>
-                  <CollapsiblePanel contentClassName="pt-1">
-                    <div className="flex flex-wrap gap-2">
-                      {historyAgents.slice(0, 10).map(function renderHistoryPill(item) {
-                        return (
-                          <button
-                            key={item.id}
-                            type="button"
-                            className={cn(
-                              'inline-flex max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] tabular-nums',
-                              getHistoryPillClassName(item.status),
-                            )}
-                            onClick={function handleHistoryView() {
-                              handleViewByNodeId(item.id)
-                            }}
-                          >
-                            <HugeiconsIcon icon={Link01Icon} size={20} strokeWidth={1.5} />
-                            <span className="truncate">{item.name}</span>
-                            <span className="opacity-80">{formatCost(item.cost)}</span>
-                          </button>
-                        )
-                      })}
+                {/* History — only show when there are entries */}
+                {historyAgents.length > 0 ? (
+                  <Collapsible open={historyOpen} onOpenChange={setHistoryOpen}>
+                    <div className="flex items-center justify-between">
+                      <CollapsibleTrigger className="h-7 px-0 text-xs font-medium hover:bg-transparent">
+                        <HugeiconsIcon
+                          icon={historyOpen ? ArrowDown01Icon : ArrowRight01Icon}
+                          size={20}
+                          strokeWidth={1.5}
+                        />
+                        History
+                      </CollapsibleTrigger>
+                      <span className="rounded-full bg-primary-300/70 px-2 py-0.5 text-[11px] text-primary-800 tabular-nums">
+                        {historyAgents.length}
+                      </span>
                     </div>
-                  </CollapsiblePanel>
-                </Collapsible>
+                    <CollapsiblePanel contentClassName="pt-1">
+                      <div className="flex flex-wrap gap-2">
+                        {historyAgents.slice(0, 10).map(function renderHistoryPill(item) {
+                          return (
+                            <button
+                              key={item.id}
+                              type="button"
+                              className={cn(
+                                'inline-flex max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] tabular-nums',
+                                getHistoryPillClassName(item.status),
+                              )}
+                              onClick={function handleHistoryView() {
+                                handleViewByNodeId(item.id)
+                              }}
+                            >
+                              <HugeiconsIcon icon={Link01Icon} size={20} strokeWidth={1.5} />
+                              <span className="truncate">{item.name}</span>
+                              <span className="opacity-80">{formatCost(item.cost)}</span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </CollapsiblePanel>
+                  </Collapsible>
+                ) : null}
               </div>
             </ScrollAreaViewport>
             <ScrollAreaScrollbar>
