@@ -27,6 +27,7 @@ import { ProviderIcon } from './provider-icon'
 
 type WizardStep = 'provider' | 'auth' | 'instructions' | 'verify'
 type CopyState = 'idle' | 'copied' | 'failed'
+type SaveState = 'idle' | 'saving' | 'saved' | 'error'
 
 type ProviderWizardProps = {
   open: boolean
@@ -87,6 +88,10 @@ export function ProviderWizard({ open, onOpenChange }: ProviderWizardProps) {
   const [selectedAuthType, setSelectedAuthType] =
     useState<ProviderAuthType | null>(null)
   const [copyState, setCopyState] = useState<CopyState>('idle')
+  const [saveState, setSaveState] = useState<SaveState>('idle')
+  const [saveError, setSaveError] = useState('')
+  const [apiKeyInput, setApiKeyInput] = useState('')
+  const [showManualSnippet, setShowManualSnippet] = useState(false)
   const [verificationMessage, setVerificationMessage] = useState('')
 
   const currentStepIndex = getStepIndex(step)
@@ -103,6 +108,10 @@ export function ProviderWizard({ open, onOpenChange }: ProviderWizardProps) {
     setSelectedProviderId(null)
     setSelectedAuthType(null)
     setCopyState('idle')
+    setSaveState('idle')
+    setSaveError('')
+    setApiKeyInput('')
+    setShowManualSnippet(false)
     setVerificationMessage('')
   }
 
@@ -136,6 +145,53 @@ export function ProviderWizard({ open, onOpenChange }: ProviderWizardProps) {
       setCopyState('copied')
     } catch {
       setCopyState('failed')
+    }
+  }
+
+  async function handleSaveApiKey() {
+    if (!selectedProvider || !apiKeyInput.trim()) return
+
+    setSaveState('saving')
+    setSaveError('')
+
+    const profileKey = `${selectedProvider.id}:default`
+    const patch = {
+      auth: {
+        profiles: {
+          [profileKey]: {
+            provider: selectedProvider.id,
+            apiKey: apiKeyInput.trim(),
+          },
+        },
+      },
+    }
+
+    try {
+      const res = await fetch('/api/config-patch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          raw: JSON.stringify(patch, null, 2),
+          reason: `Studio: add ${selectedProvider.name} API key`,
+        }),
+      })
+
+      const data = await res.json() as { ok: boolean; error?: string }
+
+      if (!data.ok) {
+        setSaveState('error')
+        setSaveError(data.error || 'Failed to save config')
+        return
+      }
+
+      setSaveState('saved')
+      setVerificationMessage(
+        `${selectedProvider.name} API key saved to config. Gateway will restart to apply changes.`,
+      )
+      setStep('verify')
+    } catch (err) {
+      setSaveState('error')
+      setSaveError(err instanceof Error ? err.message : 'Network error')
     }
   }
 
@@ -343,57 +399,133 @@ export function ProviderWizard({ open, onOpenChange }: ProviderWizardProps) {
           {step === 'instructions' && selectedProvider && selectedAuthType ? (
             <section className="mt-5">
               <h3 className="text-base font-medium text-primary-900 text-balance">
-                Step 3: Configuration Instructions
+                Step 3: Add API Key
               </h3>
-              <p className="mt-1 text-sm text-primary-600 text-pretty">
-                Add the snippet below to <code className="font-mono">{OPENCLAW_CONFIG_PATH}</code>{' '}
-                using placeholder-safe values.
-              </p>
 
-              <div className="mt-3 flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={function onCopyConfig() {
-                    void handleCopyConfig()
-                  }}
-                >
-                  <HugeiconsIcon icon={Copy01Icon} size={20} strokeWidth={1.5} />
-                  Copy snippet
-                </Button>
-                {copyState === 'copied' ? (
-                  <span className="inline-flex items-center gap-1 text-xs text-green-600">
-                    <HugeiconsIcon icon={Tick02Icon} size={20} strokeWidth={1.5} />
-                    Copied
-                  </span>
-                ) : null}
-                {copyState === 'failed' ? (
-                  <span className="text-xs text-primary-700 text-pretty">
-                    Clipboard unavailable. Copy manually.
-                  </span>
-                ) : null}
-              </div>
+              {selectedAuthType === 'api-key' ? (
+                <>
+                  <p className="mt-1 text-sm text-primary-600 text-pretty">
+                    Paste your {selectedProvider.name} API key below. It will be saved directly to your local config file.
+                  </p>
 
-              <pre className="mt-3 overflow-x-auto rounded-2xl border border-primary-200 bg-primary-100/80 p-3 text-xs text-primary-900">
-                <code className="font-mono tabular-nums">{configExample}</code>
-              </pre>
+                  <div className="mt-4 flex flex-col gap-3">
+                    <div className="flex gap-2">
+                      <input
+                        type="password"
+                        value={apiKeyInput}
+                        onChange={function onInputChange(e) { setApiKeyInput(e.target.value) }}
+                        placeholder={`sk-... or your ${selectedProvider.name} API key`}
+                        className="flex-1 rounded-xl border border-primary-300 bg-white px-3 py-2 text-sm text-primary-900 placeholder:text-primary-400 focus:border-orange-400 focus:outline-none focus:ring-1 focus:ring-orange-400/50"
+                        autoFocus
+                      />
+                      <Button
+                        size="sm"
+                        disabled={!apiKeyInput.trim() || saveState === 'saving'}
+                        onClick={function onSave() { void handleSaveApiKey() }}
+                      >
+                        {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved ✓' : 'Save & Connect'}
+                      </Button>
+                    </div>
 
-              <div className="mt-4 rounded-xl border border-primary-200 bg-primary-100/70 px-3 py-2">
-                <p className="text-xs text-primary-700 text-pretty">
-                  API keys are stored locally in your OpenClaw config file,
-                  never sent to Studio.
-                </p>
-              </div>
+                    {saveState === 'error' ? (
+                      <p className="text-xs text-red-600">{saveError}</p>
+                    ) : null}
 
-              <a
-                href={selectedProvider.docsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-3 inline-flex items-center gap-1 text-sm text-primary-700 underline decoration-primary-400 hover:text-primary-900"
-              >
-                <HugeiconsIcon icon={Link01Icon} size={20} strokeWidth={1.5} />
-                Open {selectedProvider.name} API key page
-              </a>
+                    {saveState === 'saved' ? (
+                      <p className="text-xs text-green-600">
+                        <HugeiconsIcon icon={Tick02Icon} size={14} strokeWidth={1.5} className="inline mr-1" />
+                        Key saved! Gateway is restarting to apply changes.
+                      </p>
+                    ) : null}
+                  </div>
+
+                  <a
+                    href={selectedProvider.docsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-3 inline-flex items-center gap-1 text-sm text-primary-700 underline decoration-primary-400 hover:text-primary-900"
+                  >
+                    <HugeiconsIcon icon={Link01Icon} size={20} strokeWidth={1.5} />
+                    Get your {selectedProvider.name} API key
+                  </a>
+
+                  <div className="mt-4 rounded-xl border border-primary-200 bg-primary-100/70 px-3 py-2">
+                    <p className="text-xs text-primary-700 text-pretty">
+                      API keys are stored locally in <code className="font-mono">{OPENCLAW_CONFIG_PATH}</code>, never sent to Studio.
+                    </p>
+                  </div>
+
+                  {/* Manual fallback */}
+                  <button
+                    type="button"
+                    onClick={function toggleManual() { setShowManualSnippet(!showManualSnippet) }}
+                    className="mt-3 text-xs text-primary-500 hover:text-primary-700 underline"
+                  >
+                    {showManualSnippet ? 'Hide' : 'Show'} manual config snippet
+                  </button>
+
+                  {showManualSnippet ? (
+                    <div className="mt-2">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={function onCopyConfig() { void handleCopyConfig() }}
+                        >
+                          <HugeiconsIcon icon={Copy01Icon} size={20} strokeWidth={1.5} />
+                          Copy snippet
+                        </Button>
+                        {copyState === 'copied' ? (
+                          <span className="inline-flex items-center gap-1 text-xs text-green-600">
+                            <HugeiconsIcon icon={Tick02Icon} size={20} strokeWidth={1.5} />
+                            Copied
+                          </span>
+                        ) : null}
+                      </div>
+                      <pre className="overflow-x-auto rounded-2xl border border-primary-200 bg-primary-100/80 p-3 text-xs text-primary-900">
+                        <code className="font-mono tabular-nums">{configExample}</code>
+                      </pre>
+                    </div>
+                  ) : null}
+                </>
+              ) : (
+                <>
+                  <p className="mt-1 text-sm text-primary-600 text-pretty">
+                    Add the snippet below to <code className="font-mono">{OPENCLAW_CONFIG_PATH}</code>.
+                  </p>
+
+                  <div className="mt-3 flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={function onCopyConfig() { void handleCopyConfig() }}
+                    >
+                      <HugeiconsIcon icon={Copy01Icon} size={20} strokeWidth={1.5} />
+                      Copy snippet
+                    </Button>
+                    {copyState === 'copied' ? (
+                      <span className="inline-flex items-center gap-1 text-xs text-green-600">
+                        <HugeiconsIcon icon={Tick02Icon} size={20} strokeWidth={1.5} />
+                        Copied
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <pre className="mt-3 overflow-x-auto rounded-2xl border border-primary-200 bg-primary-100/80 p-3 text-xs text-primary-900">
+                    <code className="font-mono tabular-nums">{configExample}</code>
+                  </pre>
+
+                  <a
+                    href={selectedProvider.docsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-3 inline-flex items-center gap-1 text-sm text-primary-700 underline decoration-primary-400 hover:text-primary-900"
+                  >
+                    <HugeiconsIcon icon={Link01Icon} size={20} strokeWidth={1.5} />
+                    Open {selectedProvider.name} docs
+                  </a>
+                </>
+              )}
 
               <div className="mt-5 flex flex-wrap items-center gap-2">
                 <Button
@@ -410,14 +542,16 @@ export function ProviderWizard({ open, onOpenChange }: ProviderWizardProps) {
                   />
                   Back
                 </Button>
-                <Button
-                  size="sm"
-                  onClick={function onUpdatedConfig() {
-                    handleStartVerification()
-                  }}
-                >
-                  I've updated my config
-                </Button>
+                {selectedAuthType !== 'api-key' ? (
+                  <Button
+                    size="sm"
+                    onClick={function onUpdatedConfig() {
+                      handleStartVerification()
+                    }}
+                  >
+                    I've updated my config
+                  </Button>
+                ) : null}
               </div>
             </section>
           ) : null}

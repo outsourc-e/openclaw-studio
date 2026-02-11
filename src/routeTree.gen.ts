@@ -59,6 +59,7 @@ import { Route as ApiFilesRouteImport } from './routes/api/files'
 import { Route as ApiEventsRouteImport } from './routes/api/events'
 import { Route as ApiCostRouteImport } from './routes/api/cost'
 import { Route as ApiContextUsageRouteImport } from './routes/api/context-usage'
+import { Route as ApiConfigPatchRouteImport } from './routes/api/config-patch'
 import { Route as ApiSessionsSendRouteImport } from './routes/api/sessions/send'
 import { Route as ApiGatewayUsageRouteImport } from './routes/api/gateway/usage'
 import { Route as ApiGatewaySessionsRouteImport } from './routes/api/gateway/sessions'
@@ -325,6 +326,11 @@ const ApiContextUsageRoute = ApiContextUsageRouteImport.update({
   path: '/api/context-usage',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiConfigPatchRoute = ApiConfigPatchRouteImport.update({
+  id: '/api/config-patch',
+  path: '/api/config-patch',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiSessionsSendRoute = ApiSessionsSendRouteImport.update({
   id: '/send',
   path: '/send',
@@ -425,6 +431,7 @@ export interface FileRoutesByFullPath {
   '/tasks': typeof TasksRoute
   '/terminal': typeof TerminalRoute
   '/usage': typeof UsageRoute
+  '/api/config-patch': typeof ApiConfigPatchRoute
   '/api/context-usage': typeof ApiContextUsageRoute
   '/api/cost': typeof ApiCostRoute
   '/api/events': typeof ApiEventsRouteWithChildren
@@ -491,6 +498,7 @@ export interface FileRoutesByTo {
   '/tasks': typeof TasksRoute
   '/terminal': typeof TerminalRoute
   '/usage': typeof UsageRoute
+  '/api/config-patch': typeof ApiConfigPatchRoute
   '/api/context-usage': typeof ApiContextUsageRoute
   '/api/cost': typeof ApiCostRoute
   '/api/events': typeof ApiEventsRouteWithChildren
@@ -559,6 +567,7 @@ export interface FileRoutesById {
   '/tasks': typeof TasksRoute
   '/terminal': typeof TerminalRoute
   '/usage': typeof UsageRoute
+  '/api/config-patch': typeof ApiConfigPatchRoute
   '/api/context-usage': typeof ApiContextUsageRoute
   '/api/cost': typeof ApiCostRoute
   '/api/events': typeof ApiEventsRouteWithChildren
@@ -628,6 +637,7 @@ export interface FileRouteTypes {
     | '/tasks'
     | '/terminal'
     | '/usage'
+    | '/api/config-patch'
     | '/api/context-usage'
     | '/api/cost'
     | '/api/events'
@@ -694,6 +704,7 @@ export interface FileRouteTypes {
     | '/tasks'
     | '/terminal'
     | '/usage'
+    | '/api/config-patch'
     | '/api/context-usage'
     | '/api/cost'
     | '/api/events'
@@ -761,6 +772,7 @@ export interface FileRouteTypes {
     | '/tasks'
     | '/terminal'
     | '/usage'
+    | '/api/config-patch'
     | '/api/context-usage'
     | '/api/cost'
     | '/api/events'
@@ -829,6 +841,7 @@ export interface RootRouteChildren {
   TasksRoute: typeof TasksRoute
   TerminalRoute: typeof TerminalRoute
   UsageRoute: typeof UsageRoute
+  ApiConfigPatchRoute: typeof ApiConfigPatchRoute
   ApiContextUsageRoute: typeof ApiContextUsageRoute
   ApiCostRoute: typeof ApiCostRoute
   ApiEventsRoute: typeof ApiEventsRouteWithChildren
@@ -1221,6 +1234,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiContextUsageRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/config-patch': {
+      id: '/api/config-patch'
+      path: '/api/config-patch'
+      fullPath: '/api/config-patch'
+      preLoaderRoute: typeof ApiConfigPatchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/sessions/send': {
       id: '/api/sessions/send'
       path: '/send'
@@ -1391,6 +1411,7 @@ const rootRouteChildren: RootRouteChildren = {
   TasksRoute: TasksRoute,
   TerminalRoute: TerminalRoute,
   UsageRoute: UsageRoute,
+  ApiConfigPatchRoute: ApiConfigPatchRoute,
   ApiContextUsageRoute: ApiContextUsageRoute,
   ApiCostRoute: ApiCostRoute,
   ApiEventsRoute: ApiEventsRouteWithChildren,
