@@ -45,7 +45,8 @@ function ChatContainerRoot({
       })
     }
 
-    handleScroll()
+    // Don't fire initial handleScroll() on mount — it reports scrollTop=0
+    // which would set stickToBottomRef=false before the initial scroll-to-bottom.
     element.addEventListener('scroll', handleScroll, { passive: true })
     return () => element.removeEventListener('scroll', handleScroll)
   }, [onUserScroll])

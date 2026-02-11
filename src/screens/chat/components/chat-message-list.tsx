@@ -100,11 +100,14 @@ function ChatMessageListComponent({
     const isUserScrollingUp = metrics.scrollTop < lastScrollTopRef.current - 2
     lastScrollTopRef.current = metrics.scrollTop
 
+    // Only process scroll changes from user interaction, not programmatic scrolls
+    if (programmaticScroll.current) return
+
     if (isUserScrollingUp) {
       stickToBottomRef.current = false
     }
 
-    if (!programmaticScroll.current) {
+    {
       const distanceFromBottom =
         metrics.scrollHeight - metrics.scrollTop - metrics.clientHeight
       const nearBottom = distanceFromBottom <= NEAR_BOTTOM_THRESHOLD
