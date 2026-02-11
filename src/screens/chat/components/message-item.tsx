@@ -372,7 +372,8 @@ function MessageItemComponent({
           : undefined
       }
       className={cn(
-        'group flex flex-col gap-1',
+        'group flex flex-col',
+        hasText || hasAttachments ? 'gap-1' : 'gap-0',
         wrapperClassName,
         isUser ? 'items-end' : 'items-start',
       )}

@@ -263,7 +263,7 @@ function ChatMessageListComponent({
   // Pin the last user+assistant group without adding bottom padding.
   const groupStartIndex = typeof lastUserIndex === 'number' ? lastUserIndex : -1
   const hasGroup = pinToTop && groupStartIndex >= 0
-  const shouldVirtualize = !hasGroup && displayMessages.length > 80
+  const shouldVirtualize = false // Disabled — causes scroll glitches
 
   const virtualRange = useMemo(() => {
     if (!shouldVirtualize || scrollMetrics.clientHeight <= 0) {

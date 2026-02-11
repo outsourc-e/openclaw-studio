@@ -45,6 +45,15 @@ function cleanUserText(raw: string): string {
   // Remove <media:audio> / <media:image> / <media:video> tags
   text = text.replace(/<media:\w+>/gi, '')
 
+  // Remove System: [...] prefix messages (exec completions, heartbeat prompts)
+  text = text.replace(/^System:\s*\[[^\]]*\]\s*/i, '')
+
+  // Remove heartbeat prompt text
+  text = text.replace(
+    /Read HEARTBEAT\.md if it exists.*?reply HEARTBEAT_OK\.\s*/gs,
+    '',
+  )
+
   return text.trim()
 }
 
