@@ -18,6 +18,24 @@ export function deriveFriendlyIdFromKey(key: string | undefined): string {
 }
 
 /**
+ * Strip channel prefixes like "[2026-02-11 14:00 Telegram]" from messages.
+ * These are added by the gateway for multi-channel routing.
+ */
+const CHANNEL_PREFIX_REGEX = /^\[([^\]]+)\]\s*/
+const KNOWN_CHANNELS = ['WebChat', 'WhatsApp', 'Telegram', 'Signal', 'Slack', 'Discord', 'iMessage', 'Teams', 'GoogleChat']
+
+function stripChannelPrefix(text: string): string {
+  const match = text.match(CHANNEL_PREFIX_REGEX)
+  if (!match) return text
+  const bracket = match[1] ?? ''
+  // Strip if it contains a timestamp or known channel name
+  const hasTimestamp = /\d{4}-\d{2}-\d{2}/.test(bracket) || /\d{2}:\d{2}/.test(bracket)
+  const hasChannel = KNOWN_CHANNELS.some(ch => bracket.includes(ch))
+  if (hasTimestamp || hasChannel) return text.slice(match[0].length)
+  return text
+}
+
+/**
  * Strip OpenClaw system metadata from user messages.
  * Removes [media attached: ...] blocks, image-send instructions,
  * and [Telegram/Signal/etc ...] headers, leaving just the user's text.
@@ -66,11 +84,12 @@ export function textFromMessage(msg: GatewayMessage): string {
 
   // Clean user messages (strip system metadata)
   if (msg.role === 'user') {
-    return cleanUserText(raw)
+    return stripChannelPrefix(cleanUserText(raw))
   }
 
-  // Clean assistant messages (strip reply tags)
-  return raw.replace(/\[\[reply_to(?:_current|:\d+)\]\]/g, '').trim()
+  // Clean assistant messages (strip reply tags and channel prefixes)
+  const cleaned = raw.replace(/\[\[reply_to(?:_current|:\d+)\]\]/g, '').trim()
+  return stripChannelPrefix(cleaned)
 }
 
 export function getToolCallsFromMessage(

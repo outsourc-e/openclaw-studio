@@ -61,6 +61,7 @@ import { Route as ApiCostRouteImport } from './routes/api/cost'
 import { Route as ApiContextUsageRouteImport } from './routes/api/context-usage'
 import { Route as ApiConfigPatchRouteImport } from './routes/api/config-patch'
 import { Route as ApiChatEventsRouteImport } from './routes/api/chat-events'
+import { Route as ApiChatAbortRouteImport } from './routes/api/chat-abort'
 import { Route as ApiSessionsSendRouteImport } from './routes/api/sessions/send'
 import { Route as ApiGatewayUsageRouteImport } from './routes/api/gateway/usage'
 import { Route as ApiGatewaySessionsRouteImport } from './routes/api/gateway/sessions'
@@ -337,6 +338,11 @@ const ApiChatEventsRoute = ApiChatEventsRouteImport.update({
   path: '/api/chat-events',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiChatAbortRoute = ApiChatAbortRouteImport.update({
+  id: '/api/chat-abort',
+  path: '/api/chat-abort',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiSessionsSendRoute = ApiSessionsSendRouteImport.update({
   id: '/send',
   path: '/send',
@@ -437,6 +443,7 @@ export interface FileRoutesByFullPath {
   '/tasks': typeof TasksRoute
   '/terminal': typeof TerminalRoute
   '/usage': typeof UsageRoute
+  '/api/chat-abort': typeof ApiChatAbortRoute
   '/api/chat-events': typeof ApiChatEventsRoute
   '/api/config-patch': typeof ApiConfigPatchRoute
   '/api/context-usage': typeof ApiContextUsageRoute
@@ -505,6 +512,7 @@ export interface FileRoutesByTo {
   '/tasks': typeof TasksRoute
   '/terminal': typeof TerminalRoute
   '/usage': typeof UsageRoute
+  '/api/chat-abort': typeof ApiChatAbortRoute
   '/api/chat-events': typeof ApiChatEventsRoute
   '/api/config-patch': typeof ApiConfigPatchRoute
   '/api/context-usage': typeof ApiContextUsageRoute
@@ -575,6 +583,7 @@ export interface FileRoutesById {
   '/tasks': typeof TasksRoute
   '/terminal': typeof TerminalRoute
   '/usage': typeof UsageRoute
+  '/api/chat-abort': typeof ApiChatAbortRoute
   '/api/chat-events': typeof ApiChatEventsRoute
   '/api/config-patch': typeof ApiConfigPatchRoute
   '/api/context-usage': typeof ApiContextUsageRoute
@@ -646,6 +655,7 @@ export interface FileRouteTypes {
     | '/tasks'
     | '/terminal'
     | '/usage'
+    | '/api/chat-abort'
     | '/api/chat-events'
     | '/api/config-patch'
     | '/api/context-usage'
@@ -714,6 +724,7 @@ export interface FileRouteTypes {
     | '/tasks'
     | '/terminal'
     | '/usage'
+    | '/api/chat-abort'
     | '/api/chat-events'
     | '/api/config-patch'
     | '/api/context-usage'
@@ -783,6 +794,7 @@ export interface FileRouteTypes {
     | '/tasks'
     | '/terminal'
     | '/usage'
+    | '/api/chat-abort'
     | '/api/chat-events'
     | '/api/config-patch'
     | '/api/context-usage'
@@ -853,6 +865,7 @@ export interface RootRouteChildren {
   TasksRoute: typeof TasksRoute
   TerminalRoute: typeof TerminalRoute
   UsageRoute: typeof UsageRoute
+  ApiChatAbortRoute: typeof ApiChatAbortRoute
   ApiChatEventsRoute: typeof ApiChatEventsRoute
   ApiConfigPatchRoute: typeof ApiConfigPatchRoute
   ApiContextUsageRoute: typeof ApiContextUsageRoute
@@ -1261,6 +1274,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiChatEventsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/chat-abort': {
+      id: '/api/chat-abort'
+      path: '/api/chat-abort'
+      fullPath: '/api/chat-abort'
+      preLoaderRoute: typeof ApiChatAbortRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/sessions/send': {
       id: '/api/sessions/send'
       path: '/send'
@@ -1431,6 +1451,7 @@ const rootRouteChildren: RootRouteChildren = {
   TasksRoute: TasksRoute,
   TerminalRoute: TerminalRoute,
   UsageRoute: UsageRoute,
+  ApiChatAbortRoute: ApiChatAbortRoute,
   ApiChatEventsRoute: ApiChatEventsRoute,
   ApiConfigPatchRoute: ApiConfigPatchRoute,
   ApiContextUsageRoute: ApiContextUsageRoute,

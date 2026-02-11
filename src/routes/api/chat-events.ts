@@ -2,6 +2,29 @@ import { createFileRoute } from '@tanstack/react-router'
 import { createGatewayStreamConnection } from '../../server/gateway-stream'
 
 /**
+ * Extract text content from a gateway message.
+ * Message format: { role: "assistant", content: [{ type: "text", text: "..." }, ...] }
+ */
+function extractTextFromMessage(message: any): string {
+  if (!message?.content) return ''
+  
+  // Handle array content format
+  if (Array.isArray(message.content)) {
+    return message.content
+      .filter((block: any) => block?.type === 'text' && block?.text)
+      .map((block: any) => block.text)
+      .join('')
+  }
+  
+  // Handle string content format
+  if (typeof message.content === 'string') {
+    return message.content
+  }
+  
+  return ''
+}
+
+/**
  * SSE endpoint that streams all chat events from the gateway.
  * This allows the client to receive real-time updates for:
  * - User messages from external channels (Telegram, Discord, etc.)
@@ -60,18 +83,6 @@ export const Route = createFileRoute('/api/chat-events')({
                 sessionKey: sessionKeyParam || 'all',
               })
 
-              // Subscribe to chat events for the session if specified
-              if (sessionKeyParam) {
-                try {
-                  await conn.request('node.event', {
-                    event: 'chat.subscribe',
-                    payload: { sessionKey: sessionKeyParam },
-                  })
-                } catch {
-                  // Subscription may not be supported, continue anyway
-                }
-              }
-
               // Listen for agent events (streaming responses)
               conn.on('agent', (payload: any) => {
                 const eventSessionKey = payload?.sessionKey || payload?.context?.sessionKey
@@ -110,6 +121,8 @@ export const Route = createFileRoute('/api/chat-events')({
               })
 
               // Listen for chat events (messages, state changes)
+              // Protocol: state = "delta" | "final" | "error" | "aborted"
+              // CRITICAL: delta sends FULL accumulated text, not incremental
               conn.on('chat', (payload: any) => {
                 const eventSessionKey = payload?.sessionKey || payload?.context?.sessionKey
                 
@@ -119,37 +132,78 @@ export const Route = createFileRoute('/api/chat-events')({
                 }
 
                 const state = payload?.state
+                const message = payload?.message
+                const runId = payload?.runId
                 const targetSessionKey = eventSessionKey || sessionKeyParam || 'main'
 
+                // Handle streaming delta - extract full text and send as chunk
+                if (state === 'delta' && message) {
+                  const text = extractTextFromMessage(message)
+                  if (text) {
+                    sendEvent('chunk', {
+                      text,
+                      runId,
+                      sessionKey: targetSessionKey,
+                      fullReplace: true, // Delta sends full accumulated text
+                    })
+                  }
+                  return
+                }
+
+                // Handle terminal states
+                if (state === 'final') {
+                  sendEvent('done', {
+                    state: 'final',
+                    runId,
+                    sessionKey: targetSessionKey,
+                    message,
+                  })
+                  return
+                }
+                
+                if (state === 'error') {
+                  sendEvent('done', {
+                    state: 'error',
+                    errorMessage: payload?.errorMessage,
+                    runId,
+                    sessionKey: targetSessionKey,
+                  })
+                  return
+                }
+                
+                if (state === 'aborted') {
+                  sendEvent('done', {
+                    state: 'aborted',
+                    runId,
+                    sessionKey: targetSessionKey,
+                  })
+                  return
+                }
+
                 // Check for incoming user message from external channels
-                if (payload?.message && payload.message.role === 'user') {
+                if (message && message.role === 'user') {
                   sendEvent('user_message', {
-                    message: payload.message,
+                    message,
                     sessionKey: targetSessionKey,
                     source: payload?.source || payload?.channel || 'external',
                   })
+                  return
                 }
 
-                // Check for assistant message delivery
-                if (payload?.message && payload.message.role === 'assistant') {
+                // Check for complete assistant message (non-streaming)
+                if (message && message.role === 'assistant' && !state) {
                   sendEvent('message', {
-                    message: payload.message,
+                    message,
                     sessionKey: targetSessionKey,
                   })
+                  return
                 }
 
-                // State transitions
-                if (state === 'final' || state === 'aborted' || state === 'error') {
-                  sendEvent('done', {
-                    state,
-                    errorMessage: payload?.errorMessage,
-                    runId: payload?.runId,
-                    sessionKey: targetSessionKey,
-                  })
-                } else if (state === 'started' || state === 'thinking') {
+                // Other state transitions
+                if (state === 'started' || state === 'thinking') {
                   sendEvent('state', {
                     state,
-                    runId: payload?.runId,
+                    runId,
                     sessionKey: targetSessionKey,
                   })
                 }

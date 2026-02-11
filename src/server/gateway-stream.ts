@@ -152,11 +152,15 @@ class GatewayStreamConnection extends EventEmitter {
         }
         return
       }
-      if (frame.type === 'event') {
+      // Handle both 'evt' (protocol v3) and 'event' (legacy) frame types
+      if (frame.type === 'evt' || frame.type === 'event') {
         const payload = parsePayload(frame)
-        if (frame.event === 'agent' || frame.event === 'chat') {
-          this.emit(frame.event, payload)
-        } else {
+        // Emit by specific event name (chat, agent, etc.)
+        this.emit(frame.event, payload)
+        // Also emit generic 'event' for catch-all listeners
+        this.emit('event', frame)
+        // Legacy: emit 'other' for unrecognized events
+        if (frame.event !== 'agent' && frame.event !== 'chat') {
           this.emit('other', frame.event, payload)
         }
       }

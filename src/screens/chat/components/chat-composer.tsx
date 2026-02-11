@@ -7,6 +7,7 @@ import {
   GlobeIcon,
   Mic01Icon,
   SourceCodeIcon,
+  StopIcon,
 } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { useMutation, useQuery } from '@tanstack/react-query'
@@ -641,6 +642,18 @@ function ChatComposerComponent({
   const submitDisabled =
     disabled || (value.trim().length === 0 && attachments.length === 0)
 
+  const handleAbort = useCallback(async function handleAbort() {
+    try {
+      await fetch('/api/chat-abort', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ sessionKey }),
+      })
+    } catch {
+      // Ignore abort errors
+    }
+  }, [sessionKey])
+
   const handleOpenAttachmentPicker = useCallback(
     function handleOpenAttachmentPicker(
       event: React.MouseEvent<HTMLButtonElement>,
@@ -1025,17 +1038,31 @@ function ChatComposerComponent({
                 <HugeiconsIcon icon={Mic01Icon} size={20} strokeWidth={1.5} />
               </Button>
             </PromptInputAction>
-            <PromptInputAction tooltip="Send message">
-              <Button
-                onClick={handleSubmit}
-                disabled={submitDisabled}
-                size="icon-sm"
-                className="rounded-full"
-                aria-label="Send message"
-              >
-                <HugeiconsIcon icon={ArrowUp02Icon} size={20} strokeWidth={1.5} />
-              </Button>
-            </PromptInputAction>
+            {isLoading ? (
+              <PromptInputAction tooltip="Stop generation">
+                <Button
+                  onClick={handleAbort}
+                  size="icon-sm"
+                  variant="destructive"
+                  className="rounded-md"
+                  aria-label="Stop generation"
+                >
+                  <HugeiconsIcon icon={StopIcon} size={16} strokeWidth={2} />
+                </Button>
+              </PromptInputAction>
+            ) : (
+              <PromptInputAction tooltip="Send message">
+                <Button
+                  onClick={handleSubmit}
+                  disabled={submitDisabled}
+                  size="icon-sm"
+                  className="rounded-full"
+                  aria-label="Send message"
+                >
+                  <HugeiconsIcon icon={ArrowUp02Icon} size={20} strokeWidth={1.5} />
+                </Button>
+              </PromptInputAction>
+            )}
           </div>
         </PromptInputActions>
       </PromptInput>

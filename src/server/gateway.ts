@@ -12,6 +12,7 @@ export type GatewayFrame =
       error?: { code: string; message: string; details?: unknown }
     }
   | { type: 'event'; event: string; payload?: unknown; seq?: number }
+  | { type: 'evt'; event: string; payload?: unknown; payloadJSON?: string; seq?: number }
 
 type ConnectParams = {
   minProtocol: number
@@ -244,7 +245,7 @@ class GatewayClient {
       return
     }
 
-    if (frame.type === 'event') {
+    if (frame.type === 'event' || frame.type === 'evt') {
       for (const listener of this.eventListeners) {
         try {
           listener(frame)

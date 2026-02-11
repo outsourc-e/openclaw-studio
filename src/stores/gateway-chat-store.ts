@@ -3,10 +3,10 @@ import type { GatewayMessage, MessageContent, ToolCallContent, ThinkingContent, 
 
 export type ChatStreamEvent =
   | { type: 'message'; message: GatewayMessage; sessionKey: string }
-  | { type: 'chunk'; text: string; runId?: string; sessionKey: string }
+  | { type: 'chunk'; text: string; runId?: string; sessionKey: string; fullReplace?: boolean }
   | { type: 'thinking'; text: string; runId?: string; sessionKey: string }
   | { type: 'tool'; phase: string; name: string; toolCallId?: string; args?: unknown; runId?: string; sessionKey: string }
-  | { type: 'done'; state: string; errorMessage?: string; runId?: string; sessionKey: string }
+  | { type: 'done'; state: string; errorMessage?: string; runId?: string; sessionKey: string; message?: GatewayMessage }
   | { type: 'user_message'; message: GatewayMessage; sessionKey: string; source?: string }
 
 export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'error'
@@ -97,7 +97,13 @@ export const useGatewayChatStore = create<GatewayChatState>((set, get) => ({
         const streamingMap = new Map(state.streamingState)
         const streaming = streamingMap.get(sessionKey) ?? createEmptyStreamingState()
         
-        streaming.text = event.text
+        // Gateway sends full accumulated text with fullReplace=true
+        // Replace entire text (default), or append if fullReplace is explicitly false
+        if (event.fullReplace === false) {
+          streaming.text += event.text
+        } else {
+          streaming.text = event.text
+        }
         if (event.runId) streaming.runId = event.runId
         
         streamingMap.set(sessionKey, streaming)
