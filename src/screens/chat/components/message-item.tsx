@@ -465,7 +465,10 @@ function MessageItemComponent({
                 <div className="relative">
                   <MessageContent
                     markdown
-                    className="text-primary-900 bg-transparent w-full text-pretty"
+                    className={cn(
+                      'text-primary-900 bg-transparent w-full text-pretty',
+                      effectiveIsStreaming && 'chat-streaming-content',
+                    )}
                   >
                     {displayText}
                   </MessageContent>
