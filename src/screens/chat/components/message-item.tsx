@@ -18,6 +18,7 @@ import type {
 } from '../types'
 import type { ToolPart } from '@/components/prompt-kit/tool'
 import { Message, MessageContent } from '@/components/prompt-kit/message'
+import { AssistantAvatar, UserAvatar } from '@/components/avatars'
 import { Tool } from '@/components/prompt-kit/tool'
 import { LoadingIndicator } from '@/components/loading-indicator'
 import {
@@ -190,13 +191,12 @@ function MessageItemComponent({
   isStreaming = false,
   streamingText,
   streamingThinking,
-  simulateStreaming = false,
+  simulateStreaming: _simulateStreaming = false,
   streamingKey,
   expandAllToolSections = false,
 }: MessageItemProps) {
   const role = message.role || 'assistant'
 
-  const messageStreamingStatus = message.__streamingStatus
   const messageStreamingText =
     typeof message.__streamingText === 'string'
       ? message.__streamingText
@@ -333,7 +333,7 @@ function MessageItemComponent({
       )
     : []
   const hasAttachments = attachments.length > 0
-  const hasText = displayText.length > 0 || effectiveIsStreaming
+  const hasText = displayText.length > 0
 
   // Get tool calls from this message (for assistant messages)
   const toolCalls = role === 'assistant' ? getToolCallsFromMessage(message) : []
@@ -411,8 +411,13 @@ function MessageItemComponent({
           </Collapsible>
         </div>
       )}
-      {(hasText || hasAttachments) && (
+      {(hasText || hasAttachments || effectiveIsStreaming) && (
         <Message className={cn(isUser ? 'flex-row-reverse' : '')}>
+          {isUser ? (
+            <UserAvatar size={24} className="mt-0.5" />
+          ) : (
+            <AssistantAvatar size={24} className="mt-0.5" />
+          )}
           <div
             data-chat-message-bubble={isUser ? 'true' : undefined}
             className={cn(

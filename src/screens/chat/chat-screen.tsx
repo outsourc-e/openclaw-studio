@@ -309,6 +309,8 @@ export function ChatScreen({
       context: ActiveStreamContext,
       finalText: string,
     ) {
+      // If we have final text, mark complete; otherwise keep streaming status
+      // so the "Thinking" indicator remains visible during history polling
       updateHistoryMessageByClientId(
         queryClient,
         context.friendlyId,
@@ -317,7 +319,7 @@ export function ChatScreen({
         function markStreamComplete(message) {
           return {
             ...message,
-            __streamingStatus: 'complete',
+            __streamingStatus: finalText ? 'complete' : 'streaming',
             __streamingText: finalText,
           }
         },

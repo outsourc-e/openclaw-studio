@@ -2,7 +2,6 @@ import { memo } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Folder01Icon, Menu01Icon } from '@hugeicons/core-free-icons'
 import { Button } from '@/components/ui/button'
-import { UsageMeter } from '@/components/usage-meter'
 import {
   TooltipContent,
   TooltipProvider,
@@ -68,7 +67,6 @@ function ChatHeaderComponent({
         </TooltipProvider>
       ) : null}
       <div className="text-sm font-medium truncate">{activeTitle}</div>
-      <UsageMeter />
     </div>
   )
 }

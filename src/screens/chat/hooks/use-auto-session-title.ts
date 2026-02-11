@@ -10,8 +10,23 @@ import { textFromMessage } from '../utils'
 import type { GatewayMessage, SessionMeta } from '../types'
 import { generateSessionTitle } from '@/utils/generate-session-title'
 
-const MIN_MESSAGES_FOR_TITLE = 3
-const MAX_MESSAGES_FOR_TITLE = 5
+const MIN_MESSAGES_FOR_TITLE = 2
+const MAX_MESSAGES_FOR_TITLE = 50
+
+const GENERIC_TITLE_PATTERNS = [
+  /^a new session/i,
+  /^new session/i,
+  /^untitled/i,
+  /^session \d/i,
+  /^greet the/i,
+  /^\w{8} \(\d{4}-\d{2}-\d{2}\)$/, // hash-based titles like "17e7f569 (2026-02-10)"
+]
+
+function isGenericTitle(title: string): boolean {
+  const trimmed = title.trim()
+  if (!trimmed || trimmed === 'New Session') return true
+  return GENERIC_TITLE_PATTERNS.some(pattern => pattern.test(trimmed))
+}
 const MAX_PER_MESSAGE_CHARS = 400
 
 function buildSnippet(messages: Array<GatewayMessage>) {
@@ -117,7 +132,7 @@ export function useAutoSessionTitle({
     if (resolvedMessageCount < MIN_MESSAGES_FOR_TITLE) return false
     if (resolvedMessageCount > MAX_MESSAGES_FOR_TITLE) return false
     if (activeSession?.label || activeSession?.title) return false
-    if (activeSession?.derivedTitle && activeSession.titleSource === 'auto')
+    if (activeSession?.derivedTitle && activeSession.titleSource === 'auto' && !isGenericTitle(activeSession.derivedTitle))
       return false
     if (titleInfo.status === 'generating') return false
     if (titleInfo.status === 'ready' && titleInfo.title) return false
@@ -193,7 +208,7 @@ export function useAutoSessionTitle({
       return { payload, data }
     },
     onSuccess: ({ payload, data }) => {
-      applyTitle(payload.friendlyId, data.title, 'auto')
+      if (data.title) applyTitle(payload.friendlyId, data.title, 'auto')
     },
     onError: (error: unknown, payload) => {
       const fallbackTitle = generateSessionTitle(payload.snippet, {

@@ -1,9 +1,15 @@
 'use client'
 
-import { memo, useCallback, useEffect, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import { cn } from '@/lib/utils'
+import { DialogContent, DialogRoot, DialogTrigger } from '@/components/ui/dialog'
+import { UsageDetailsModal } from '@/components/usage-meter/usage-details-modal'
 
-const POLL_MS = 15_000
+const CONTEXT_POLL_MS = 15_000
+const PROVIDER_POLL_MS = 30_000
+const SESSION_POLL_MS = 10_000
+
+// ---------- types ----------
 
 type ContextData = {
   contextPercent: number
@@ -12,7 +18,35 @@ type ContextData = {
   usedTokens: number
 }
 
-const EMPTY: ContextData = { contextPercent: 0, model: '', maxTokens: 0, usedTokens: 0 }
+type ProviderLine = {
+  label: string
+  type: string
+  format?: string
+  used?: number
+  limit?: number
+}
+
+type ProviderEntry = {
+  provider: string
+  displayName: string
+  plan?: string
+  status: string
+  lines: ProviderLine[]
+}
+
+type SessionUsage = {
+  inputTokens: number
+  outputTokens: number
+  contextPercent: number
+  dailyCost: number
+  models: any[]
+  sessions: any[]
+}
+
+const EMPTY_CTX: ContextData = { contextPercent: 0, model: '', maxTokens: 0, usedTokens: 0 }
+const EMPTY_USAGE: SessionUsage = { inputTokens: 0, outputTokens: 0, contextPercent: 0, dailyCost: 0, models: [], sessions: [] }
+
+// ---------- helpers ----------
 
 function formatTokens(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
@@ -20,11 +54,41 @@ function formatTokens(n: number): string {
   return String(n)
 }
 
-function ContextBarComponent({ compact }: { compact?: boolean }) {
-  const [ctx, setCtx] = useState<ContextData>(EMPTY)
-  const [dismissed, setDismissed] = useState(false)
+function readNumber(v: unknown): number {
+  if (typeof v === 'number' && Number.isFinite(v)) return v
+  return 0
+}
 
-  const refresh = useCallback(async () => {
+function readPercent(v: unknown): number {
+  const n = readNumber(v)
+  return Math.max(0, Math.min(n, 100))
+}
+
+function parseSessionStatus(payload: unknown): SessionUsage {
+  const root = payload && typeof payload === 'object' ? (payload as any) : {}
+  const usage = root.today ?? root.usage ?? root.summary ?? root.totals ?? root
+  const tokensRoot = usage?.tokens ?? usage?.tokenUsage ?? usage
+  return {
+    inputTokens: readNumber(tokensRoot?.inputTokens ?? tokensRoot?.input_tokens ?? usage?.inputTokens),
+    outputTokens: readNumber(tokensRoot?.outputTokens ?? tokensRoot?.output_tokens ?? usage?.outputTokens),
+    contextPercent: readPercent(usage?.contextPercent ?? usage?.context_percent ?? root?.contextPercent),
+    dailyCost: readNumber(usage?.costUsd ?? usage?.dailyCost ?? usage?.cost ?? root?.costUsd ?? root?.dailyCost),
+    models: [],
+    sessions: [],
+  }
+}
+
+// ---------- component ----------
+
+function ContextBarComponent({ compact }: { compact?: boolean }) {
+  const [ctx, setCtx] = useState<ContextData>(EMPTY_CTX)
+  const [providers, setProviders] = useState<ProviderEntry[]>([])
+  const [sessionUsage, setSessionUsage] = useState<SessionUsage>(EMPTY_USAGE)
+  const [providerUpdatedAt, setProviderUpdatedAt] = useState<number | null>(null)
+  const [usageOpen, setUsageOpen] = useState(false)
+
+  // Fetch context %
+  const refreshContext = useCallback(async () => {
     try {
       const res = await fetch('/api/context-usage')
       if (!res.ok) return
@@ -40,15 +104,39 @@ function ContextBarComponent({ compact }: { compact?: boolean }) {
     } catch { /* ignore */ }
   }, [])
 
+  // Fetch provider usage (Claude MAX, etc.)
+  const refreshProviders = useCallback(async () => {
+    try {
+      const res = await fetch('/api/provider-usage')
+      const data = await res.json().catch(() => null)
+      if (data?.ok !== false) {
+        setProviders(data?.providers ?? [])
+        setProviderUpdatedAt(data?.updatedAt ?? Date.now())
+      }
+    } catch { /* ignore */ }
+  }, [])
+
+  // Fetch session usage (for the details modal)
+  const refreshSession = useCallback(async () => {
+    try {
+      const res = await fetch('/api/session-status')
+      if (!res.ok) return
+      const data = await res.json()
+      setSessionUsage(parseSessionStatus(data.payload ?? data))
+    } catch { /* ignore */ }
+  }, [])
+
   useEffect(() => {
-    void refresh()
-    const id = window.setInterval(refresh, POLL_MS)
-    return () => window.clearInterval(id)
-  }, [refresh])
+    void refreshContext()
+    void refreshProviders()
+    void refreshSession()
+    const c = window.setInterval(refreshContext, CONTEXT_POLL_MS)
+    const p = window.setInterval(refreshProviders, PROVIDER_POLL_MS)
+    const s = window.setInterval(refreshSession, SESSION_POLL_MS)
+    return () => { window.clearInterval(c); window.clearInterval(p); window.clearInterval(s) }
+  }, [refreshContext, refreshProviders, refreshSession])
 
   const pct = ctx.contextPercent
-  if (pct <= 0) return null
-
   const isDanger = pct >= 75
   const isWarning = pct >= 50
   const isCritical = pct >= 90
@@ -70,62 +158,112 @@ function ContextBarComponent({ compact }: { compact?: boolean }) {
         ? 'text-amber-600'
         : 'text-primary-500'
 
-  const bgColor = isCritical
-    ? 'bg-red-50'
-    : isDanger
-      ? 'bg-amber-50'
-      : 'bg-transparent'
+  // Provider pill (right side)
+  const primaryProvider = providers.find(p => p.status === 'ok' && p.lines.length > 0)
+  const progressLines = useMemo(() =>
+    primaryProvider?.lines.filter(l => l.type === 'progress').slice(0, 3) ?? [],
+    [primaryProvider],
+  )
 
-  // Only show expanded warning at thresholds
-  const showWarning = pct >= 50 && !dismissed
+  // Provider pill color
+  const providerAlertTone = useMemo(() => {
+    if (!primaryProvider) return 'text-emerald-600 bg-emerald-50 border-emerald-200'
+    const allProgress = primaryProvider.lines.filter(l => l.type === 'progress' && l.format === 'percent' && l.used !== undefined)
+    const maxPct = allProgress.reduce((max, l) => Math.max(max, l.used ?? 0), 0)
+    if (maxPct >= 75) return 'text-red-600 bg-red-50 border-red-200'
+    if (maxPct >= 50) return 'text-amber-600 bg-amber-50 border-amber-200'
+    return 'text-emerald-600 bg-emerald-50 border-emerald-200'
+  }, [primaryProvider])
+
+  const detailProps = useMemo(
+    () => ({
+      usage: sessionUsage,
+      error: null as string | null,
+      providerUsage: providers as any,
+      providerError: null as string | null,
+      providerUpdatedAt,
+    }),
+    [sessionUsage, providers, providerUpdatedAt],
+  )
+
+  // Don't render if no data at all
+  if (pct <= 0 && !primaryProvider) return null
 
   return (
-    <div
-      className={cn(
-        'flex items-center gap-2 px-3 transition-colors duration-300',
-        showWarning ? 'py-1.5' : 'py-0.5',
-        bgColor,
-        compact && 'px-2',
+    <div className={cn(
+      'flex items-center gap-2 px-3 py-1 border-b border-primary-100 bg-surface',
+      compact && 'px-2',
+    )}>
+      {/* Context progress bar (left side) */}
+      {pct > 0 && (
+        <>
+          <span className={cn('text-[10px] font-medium uppercase tracking-wide text-primary-400 shrink-0')}>
+            Ctx
+          </span>
+          <div className="flex-1 h-1 rounded-full bg-primary-100 overflow-hidden min-w-0 max-w-[200px]">
+            <div
+              className={cn('h-full rounded-full transition-all duration-700 ease-out', barColor)}
+              style={{ width: `${Math.min(pct, 100)}%` }}
+            />
+          </div>
+          <span className={cn('text-[10px] font-medium tabular-nums shrink-0', textColor)}>
+            {Math.round(pct)}%
+          </span>
+          {!compact && ctx.maxTokens > 0 && (
+            <span className="text-[10px] tabular-nums text-primary-400 shrink-0">
+              {formatTokens(ctx.usedTokens)}/{formatTokens(ctx.maxTokens)}
+            </span>
+          )}
+          {isCritical && (
+            <span className={cn('text-[10px] font-medium shrink-0', textColor)}>
+              Start new chat
+            </span>
+          )}
+        </>
       )}
-    >
-      {/* Thin progress bar */}
-      <div className="flex-1 h-1 rounded-full bg-primary-100 overflow-hidden min-w-0">
-        <div
-          className={cn('h-full rounded-full transition-all duration-700 ease-out', barColor)}
-          style={{ width: `${Math.min(pct, 100)}%` }}
-        />
-      </div>
 
-      {/* Percentage + token count */}
-      <div className={cn('flex items-center gap-1.5 shrink-0', textColor)}>
-        <span className="text-[10px] font-medium tabular-nums">
-          {Math.round(pct)}%
-        </span>
-        {!compact && ctx.maxTokens > 0 && (
-          <span className="text-[10px] tabular-nums text-primary-400">
-            {formatTokens(ctx.usedTokens)}/{formatTokens(ctx.maxTokens)}
+      {/* Spacer — subtle model name in the middle */}
+      <div className="flex-1 flex justify-center">
+        {ctx.model && (
+          <span className="text-[10px] text-primary-300 truncate max-w-[120px]">
+            {ctx.model}
           </span>
         )}
       </div>
 
-      {/* Warning message at thresholds */}
-      {showWarning && (
-        <div className={cn('flex items-center gap-1.5 shrink-0')}>
-          <span className={cn('text-[10px] font-medium', textColor)}>
-            {isCritical
-              ? 'Context almost full — start a new chat'
-              : isDanger
-                ? 'Context getting full'
-                : 'Context 50% used'}
-          </span>
-          <button
-            onClick={() => setDismissed(true)}
-            className="text-[10px] text-primary-400 hover:text-primary-600 transition-colors"
-            aria-label="Dismiss"
+      {/* Provider usage pill (right side) — opens details modal */}
+      {primaryProvider && (
+        <DialogRoot open={usageOpen} onOpenChange={setUsageOpen}>
+          <DialogTrigger
+            className={cn(
+              'rounded-full border px-2.5 py-0.5 text-[10px] font-medium',
+              'flex items-center gap-2 transition hover:opacity-80 cursor-pointer',
+              providerAlertTone,
+            )}
           >
-            ✕
-          </button>
-        </div>
+            <span className="uppercase tracking-wide">
+              {primaryProvider.displayName.split(' ')[0]}
+            </span>
+            {primaryProvider.plan && (
+              <span className="uppercase text-[9px] opacity-70">{primaryProvider.plan}</span>
+            )}
+            {progressLines.map((line, i) => (
+              <span key={`${line.label}-${i}`} className="flex items-center gap-0.5">
+                <span className="uppercase tracking-wide opacity-70">
+                  {line.label.replace('Session (5h)', 'Sess').replace('Weekly', 'Wk').replace('Sonnet', 'Son')}
+                </span>
+                <span className="tabular-nums">
+                  {line.format === 'dollars' && line.used !== undefined
+                    ? `$${line.used >= 1000 ? `${(line.used / 1000).toFixed(1)}k` : line.used.toFixed(0)}`
+                    : line.used !== undefined ? `${Math.round(line.used)}%` : '—'}
+                </span>
+              </span>
+            ))}
+          </DialogTrigger>
+          <DialogContent className="w-[min(720px,94vw)]">
+            <UsageDetailsModal {...detailProps} />
+          </DialogContent>
+        </DialogRoot>
       )}
     </div>
   )
