@@ -127,11 +127,11 @@ function OrchestratorCard({ compact = false }: { compact?: boolean }) {
         <div className="pointer-events-none absolute inset-0 animate-pulse rounded-2xl bg-gradient-to-br from-orange-500/[0.03] to-transparent" />
       )}
 
-      <div className={cn('relative flex items-center', compact ? 'gap-2' : 'gap-3')}>
+      <div className={cn('relative flex items-center', compact ? 'gap-2' : 'flex-col text-center gap-2')}>
         <OrchestratorAvatar size={compact ? 32 : 52} />
 
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5">
+          <div className={cn('flex items-center gap-1.5', !compact && 'justify-center')}>
             {isEditing ? (
               <input
                 ref={inputRef}
@@ -555,8 +555,20 @@ export function AgentViewPanel() {
               {/* Center — title */}
               <h2 className="text-sm font-semibold text-primary-900">Agent Hub</h2>
 
-              {/* Right — close */}
+              {/* Right — expand + close */}
               <div className="flex items-center gap-1">
+                <Button
+                  size="icon-sm"
+                  variant="ghost"
+                  onClick={function handleExpandHub() {
+                    setOpen(false)
+                    navigate({ to: '/agent-swarm' })
+                  }}
+                  aria-label="Open Agent Hub"
+                  title="Open Agent Hub"
+                >
+                  <HugeiconsIcon icon={ArrowExpand01Icon} size={16} strokeWidth={1.5} />
+                </Button>
                 <Button
                   size="icon-sm"
                   variant="ghost"
@@ -614,11 +626,10 @@ export function AgentViewPanel() {
                 <section className="rounded-2xl border border-primary-300/70 bg-primary-200/35 p-1.5">
                   <div className="mb-1.5 flex items-center justify-between">
                     <div>
-                      <h3 className="text-[11px] font-medium text-balance text-primary-900">Swarm</h3>
                       <p className="text-[10px] text-primary-600 tabular-nums">
                         {isLoading
                           ? 'syncing...'
-                          : `synced ${formatRelativeMs(nowMs - lastRefreshedMs)}`}
+                          : `${statusCounts.running} running · ${statusCounts.thinking} thinking`}
                       </p>
                       {errorMessage ? (
                         <p className="line-clamp-1 text-[10px] text-red-300 tabular-nums">
@@ -626,22 +637,8 @@ export function AgentViewPanel() {
                         </p>
                       ) : null}
                     </div>
-                    <div className="flex items-center gap-2">
-                      <div className="text-right text-[10px] text-primary-600 tabular-nums">
-                        <p>{statusCounts.running} running · {statusCounts.thinking} thinking</p>
-                      </div>
-                      <Button
-                        size="icon-sm"
-                        variant="ghost"
-                        onClick={function handleExpandHub() {
-                          setOpen(false)
-                          navigate({ to: '/agent-swarm' })
-                        }}
-                        aria-label="Open Agent Hub"
-                        title="Open Agent Hub"
-                      >
-                        <HugeiconsIcon icon={ArrowExpand01Icon} size={14} strokeWidth={1.5} />
-                      </Button>
+                    <div className="text-right text-[10px] text-primary-500 tabular-nums">
+                      <p>{isLoading ? '' : `synced ${formatRelativeMs(nowMs - lastRefreshedMs)}`}</p>
                     </div>
                   </div>
 
