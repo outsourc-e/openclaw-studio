@@ -32,6 +32,20 @@ function deriveSwarmStatus(session: GatewaySession): SwarmSession['swarmStatus']
   if (['failed', 'error', 'cancelled', 'canceled', 'killed'].includes(status)) return 'failed'
   if (['complete', 'completed', 'success', 'succeeded', 'done'].includes(status)) return 'complete'
   if (['idle', 'waiting', 'sleeping'].includes(status)) return 'idle'
+
+  // Heuristic: if no explicit status, use staleness to detect completion
+  // Sessions that haven't updated in 30s+ with tokens are likely done
+  const updatedAt = typeof session.updatedAt === 'number'
+    ? session.updatedAt
+    : typeof session.updatedAt === 'string'
+      ? new Date(session.updatedAt).getTime()
+      : Date.now()
+  const staleness = Date.now() - updatedAt
+  const hasTokens = (session.totalTokens ?? session.tokenCount ?? 0) > 0
+
+  if (hasTokens && staleness > 30_000) return 'complete'
+  if (!hasTokens && staleness > 60_000) return 'idle'
+
   return 'running'
 }
 
@@ -63,7 +77,26 @@ export const useSwarmStore = create<SwarmState>((set, get) => ({
       const json = await res.json()
 
       const rawSessions: GatewaySession[] = json?.data?.sessions ?? json?.sessions ?? []
-      const swarmSessions = rawSessions.map(toSwarmSession)
+
+      // Only show subagent sessions in the swarm (not main chat, cron, etc.)
+      const agentSessions = rawSessions.filter(s => {
+        const key = s.key ?? ''
+        // Must be a subagent session
+        if (!key.includes('subagent:')) return false
+        // Skip sessions with zero tokens and very old (never ran)
+        const tokens = s.totalTokens ?? s.tokenCount ?? 0
+        if (tokens === 0) {
+          const updatedAt = typeof s.updatedAt === 'number'
+            ? s.updatedAt
+            : typeof s.updatedAt === 'string'
+              ? new Date(s.updatedAt).getTime()
+              : 0
+          if (Date.now() - updatedAt > 120_000) return false
+        }
+        return true
+      })
+
+      const swarmSessions = agentSessions.map(toSwarmSession)
 
       // Sort: running/thinking first, then by updatedAt desc
       swarmSessions.sort((a, b) => {
