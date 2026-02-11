@@ -73,7 +73,13 @@ const STATE_GLOW: Record<string, string> = {
   orchestrating: 'border-orange-400/50 shadow-[0_0_8px_rgba(249,115,22,0.2)]',
 }
 
-function OrchestratorCard({ compact = false }: { compact?: boolean }) {
+function OrchestratorCard({
+  compact = false,
+  cardRef,
+}: {
+  compact?: boolean
+  cardRef?: (element: HTMLElement | null) => void
+}) {
   const { state, label } = useOrchestratorState()
   const glowClass = STATE_GLOW[state] ?? STATE_GLOW.idle
 
@@ -118,6 +124,7 @@ function OrchestratorCard({ compact = false }: { compact?: boolean }) {
 
   return (
     <div
+      ref={cardRef}
       className={cn(
         'relative rounded-2xl border bg-gradient-to-br from-primary-100/80 via-primary-100/60 to-primary-200/40 transition-all duration-500',
         compact ? 'p-2' : 'p-3',
@@ -270,6 +277,13 @@ export function AgentViewPanel() {
   } | null>(null)
   const [viewMode, setViewMode] = useState<'expanded' | 'compact'>('compact')
 
+  // Auto-expand history when there are entries
+  useEffect(() => {
+    if (historyAgents.length > 0 && !historyOpen) {
+      setHistoryOpen(true)
+    }
+  }, [historyAgents.length, historyOpen, setHistoryOpen])
+
   const totalCost = useMemo(function getTotalCost() {
     return activeAgents.reduce(function sumCost(total, agent) {
       return total + agent.estimatedCost
@@ -321,32 +335,7 @@ export function AgentViewPanel() {
     })
   }, [queuedAgents])
 
-  const swarmNode = useMemo(function buildSwarmNode() {
-    const avgProgress =
-      activeAgents.length > 0
-        ? Math.round(
-            activeAgents.reduce(function sumProgress(total, agent) {
-              return total + agent.progress
-            }, 0) / activeAgents.length,
-          )
-        : 0
-
-    return {
-      id: 'main-swarm-node',
-      name: 'main-orchestrator',
-      task: 'Coordinating sub-agents, routing tool calls, and monitoring execution.',
-      model: 'swarm',
-      progress: avgProgress,
-      runtimeSeconds: Math.max(1, Math.floor((nowMs - lastRefreshedMs + 240000) / 1000)),
-      tokenCount: activeAgents.reduce(function sumTokens(total, agent) {
-        return total + agent.tokenCount
-      }, 0),
-      cost: totalCost,
-      status: 'running',
-      statusBubble: getStatusBubble('running', avgProgress),
-      isMain: true,
-    } satisfies AgentNode
-  }, [activeAgents, lastRefreshedMs, nowMs, totalCost])
+  // Swarm node stats removed — OrchestratorCard now serves as the main agent representation
 
   const agentSpawn = useAgentSpawn(
     activeNodes.map(function mapActiveNodeId(node) {
@@ -630,23 +619,25 @@ export function AgentViewPanel() {
             <ScrollAreaViewport>
               <div className="space-y-3 p-3">
                 {/* Main Agent Card */}
-                <OrchestratorCard compact={viewMode === 'compact'} />
+                <OrchestratorCard compact={viewMode === 'compact'} cardRef={setMainCardElement} />
 
                 {/* Swarm — agent cards */}
-                <section className="rounded-2xl border border-primary-300/70 bg-primary-200/35 p-1.5">
+                <section className="rounded-2xl border border-primary-300/70 bg-primary-200/35 p-1">
                   {/* Centered Swarm pill */}
-                  <div className="mb-1.5 flex justify-center">
+                  <div className="mb-1 flex justify-center">
                     <span className="rounded-full border border-primary-300/70 bg-primary-100/80 px-3 py-0.5 text-[10px] font-medium text-primary-600 shadow-sm">
                       Swarm
                     </span>
                   </div>
 
-                  <div className="mb-1.5 flex items-center justify-between">
+                  <div className="mb-1 flex items-center justify-between">
                     <div>
                       <p className="text-[10px] text-primary-600 tabular-nums">
                         {isLoading
                           ? 'syncing...'
-                          : `${statusCounts.running} running · ${statusCounts.thinking} thinking`}
+                          : statusCounts.running === 0 && statusCounts.thinking === 0
+                            ? 'No subagents'
+                            : `${statusCounts.running} running · ${statusCounts.thinking} thinking`}
                       </p>
                       {errorMessage ? (
                         <p className="line-clamp-1 text-[10px] text-red-300 tabular-nums">
@@ -660,115 +651,57 @@ export function AgentViewPanel() {
                   </div>
 
                   <LayoutGroup id="agent-swarm-grid">
-                    <motion.div
-                      ref={networkLayerRef}
-                      layout
-                      transition={{ layout: { type: 'spring', stiffness: 320, damping: 30 } }}
-                      className="relative rounded-xl border border-primary-300/70 bg-linear-to-b from-primary-100 via-primary-100 to-primary-200/40 p-1.5"
-                    >
-                      <SwarmConnectionOverlay lines={connectionLines} centerX={connectionCenterX} />
+                    {activeNodes.length > 0 || spawningNodes.length > 0 || queuedNodes.length > 0 ? (
+                      <motion.div
+                        ref={networkLayerRef}
+                        layout
+                        transition={{ layout: { type: 'spring', stiffness: 320, damping: 30 } }}
+                        className="relative rounded-xl border border-primary-300/70 bg-linear-to-b from-primary-100 via-primary-100 to-primary-200/40 p-1"
+                      >
+                        <SwarmConnectionOverlay lines={connectionLines} centerX={connectionCenterX} />
 
-                      <motion.div layout className="mb-1.5">
-                        <AgentCard
-                          node={swarmNode}
-                          layoutId={agentSpawn.getSharedLayoutId(swarmNode.id)}
-                          cardRef={setMainCardElement}
-                          viewMode={viewMode}
-                          className="w-full opacity-70"
-                        />
-                      </motion.div>
+                        <AnimatePresence initial={false}>
+                          {spawningNodes.map(function renderSpawningGhost(node, index) {
+                            const fallbackLeft = 24 + index * 14
+                            const fallbackTop = 128 + index * 10
+                            const width = sourceBubbleRect ? Math.min(sourceBubbleRect.width, 152) : 124
+                            const height = sourceBubbleRect ? Math.min(sourceBubbleRect.height, 44) : 32
+                            const top = sourceBubbleRect ? sourceBubbleRect.top : fallbackTop
+                            const left = sourceBubbleRect
+                              ? sourceBubbleRect.left + sourceBubbleRect.width - width
+                              : fallbackLeft
 
-                      <AnimatePresence initial={false}>
-                        {spawningNodes.map(function renderSpawningGhost(node, index) {
-                          const fallbackLeft = 24 + index * 14
-                          const fallbackTop = 128 + index * 10
-                          const width = sourceBubbleRect ? Math.min(sourceBubbleRect.width, 152) : 124
-                          const height = sourceBubbleRect ? Math.min(sourceBubbleRect.height, 44) : 32
-                          const top = sourceBubbleRect ? sourceBubbleRect.top : fallbackTop
-                          const left = sourceBubbleRect
-                            ? sourceBubbleRect.left + sourceBubbleRect.width - width
-                            : fallbackLeft
+                            return (
+                              <motion.div
+                                key={`spawn-ghost-${node.id}`}
+                                layoutId={agentSpawn.getSharedLayoutId(node.id)}
+                                initial={
+                                  shouldReduceMotion
+                                    ? { opacity: 0, scale: 0.96 }
+                                    : { opacity: 0, scale: 0.9 }
+                                }
+                                animate={
+                                  shouldReduceMotion
+                                    ? { opacity: 0.65, scale: 1 }
+                                    : { opacity: [0.5, 0.85, 0.5], scale: [0.94, 1, 0.94] }
+                                }
+                                exit={{ opacity: 0, scale: 0.94 }}
+                                transition={
+                                  shouldReduceMotion
+                                    ? { duration: 0.12, ease: 'easeOut' }
+                                    : { duration: 0.42, ease: 'easeInOut' }
+                                }
+                                className="pointer-events-none fixed z-30 rounded-full border border-orange-500/40 bg-orange-500/20 shadow-sm backdrop-blur-sm"
+                                style={{ top, left, width, height }}
+                              />
+                            )
+                          })}
+                        </AnimatePresence>
 
-                          return (
-                            <motion.div
-                              key={`spawn-ghost-${node.id}`}
-                              layoutId={agentSpawn.getSharedLayoutId(node.id)}
-                              initial={
-                                shouldReduceMotion
-                                  ? { opacity: 0, scale: 0.96 }
-                                  : { opacity: 0, scale: 0.9 }
-                              }
-                              animate={
-                                shouldReduceMotion
-                                  ? { opacity: 0.65, scale: 1 }
-                                  : { opacity: [0.5, 0.85, 0.5], scale: [0.94, 1, 0.94] }
-                              }
-                              exit={{ opacity: 0, scale: 0.94 }}
-                              transition={
-                                shouldReduceMotion
-                                  ? { duration: 0.12, ease: 'easeOut' }
-                                  : { duration: 0.42, ease: 'easeInOut' }
-                              }
-                              className="pointer-events-none fixed z-30 rounded-full border border-orange-500/40 bg-orange-500/20 shadow-sm backdrop-blur-sm"
-                              style={{ top, left, width, height }}
-                            />
-                          )
-                        })}
-                      </AnimatePresence>
-
-                      {activeNodes.length > 0 || spawningNodes.length > 0 ? (
-                        <motion.div
-                          layout
-                          transition={{ layout: { type: 'spring', stiffness: 360, damping: 34 } }}
-                          className={cn(
-                            'grid gap-1.5 items-start',
-                            viewMode === 'compact'
-                              ? 'grid-cols-2'
-                              : 'grid-cols-1',
-                          )}
-                        >
-                          <AnimatePresence mode="popLayout" initial={false}>
-                            {visibleActiveNodes.map(function renderActiveNode(node) {
-                              return (
-                                <motion.div
-                                  key={node.id}
-                                  layout="position"
-                                  initial={{ y: -18, opacity: 0, scale: 0.96 }}
-                                  animate={{ y: 0, opacity: 1, scale: 1 }}
-                                  exit={{ y: 10, opacity: 0, scale: 0.88 }}
-                                  transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-                                  className="w-full"
-                                >
-                                  <AgentCard
-                                    node={node}
-                                    cardRef={function setNodeCardRef(element) {
-                                      setActiveCardElement(node.id, element)
-                                    }}
-                                    layoutId={agentSpawn.getSharedLayoutId(node.id)}
-                                    viewMode={viewMode}
-                                    onChat={handleChatByNodeId}
-                                    onView={handleViewByNodeId}
-                                    onKill={killAgent}
-                                    className={cn(
-                                      agentSpawn.isSpawning(node.id) ? 'ring-2 ring-orange-500/35' : '',
-                                    )}
-                                  />
-                                </motion.div>
-                              )
-                            })}
-                          </AnimatePresence>
-                        </motion.div>
-                      ) : (
-                        <p className="rounded-xl border border-primary-300/60 bg-primary-200/30 px-2 py-1.5 text-[11px] text-pretty text-primary-700">
-                          No active agents.
-                        </p>
-                      )}
-
-                      {queuedNodes.length > 0 ? (
-                        <motion.div layout className="mt-1.5 space-y-1">
-                          <p className="text-[10px] text-primary-600 tabular-nums">Queue</p>
+                        {activeNodes.length > 0 || spawningNodes.length > 0 ? (
                           <motion.div
                             layout
+                            transition={{ layout: { type: 'spring', stiffness: 360, damping: 34 } }}
                             className={cn(
                               'grid gap-1.5 items-start',
                               viewMode === 'compact'
@@ -776,23 +709,76 @@ export function AgentViewPanel() {
                                 : 'grid-cols-1',
                             )}
                           >
-                            {queuedNodes.map(function renderQueuedNode(node) {
-                              return (
-                                <div key={node.id} className="w-full">
-                                  <AgentCard
-                                    node={node}
-                                    layoutId={agentSpawn.getCardLayoutId(node.id)}
-                                    viewMode={viewMode}
-                                    onChat={handleChatByNodeId}
-                                    onCancel={cancelQueueTask}
-                                  />
-                                </div>
-                              )
-                            })}
+                            <AnimatePresence mode="popLayout" initial={false}>
+                              {visibleActiveNodes.map(function renderActiveNode(node) {
+                                return (
+                                  <motion.div
+                                    key={node.id}
+                                    layout="position"
+                                    initial={{ y: -18, opacity: 0, scale: 0.96 }}
+                                    animate={{ y: 0, opacity: 1, scale: 1 }}
+                                    exit={{ y: 10, opacity: 0, scale: 0.88 }}
+                                    transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                                    className="w-full"
+                                  >
+                                    <AgentCard
+                                      node={node}
+                                      cardRef={function setNodeCardRef(element) {
+                                        setActiveCardElement(node.id, element)
+                                      }}
+                                      layoutId={agentSpawn.getSharedLayoutId(node.id)}
+                                      viewMode={viewMode}
+                                      onChat={handleChatByNodeId}
+                                      onView={handleViewByNodeId}
+                                      onKill={killAgent}
+                                      className={cn(
+                                        agentSpawn.isSpawning(node.id) ? 'ring-2 ring-orange-500/35' : '',
+                                      )}
+                                    />
+                                  </motion.div>
+                                )
+                              })}
+                            </AnimatePresence>
                           </motion.div>
-                        </motion.div>
-                      ) : null}
-                    </motion.div>
+                        ) : null}
+
+                        {queuedNodes.length > 0 ? (
+                          <motion.div layout className="mt-1.5 space-y-1">
+                            <p className="text-[10px] text-primary-600 tabular-nums">Queue</p>
+                            <motion.div
+                              layout
+                              className={cn(
+                                'grid gap-1.5 items-start',
+                                viewMode === 'compact'
+                                  ? 'grid-cols-2'
+                                  : 'grid-cols-1',
+                              )}
+                            >
+                              {queuedNodes.map(function renderQueuedNode(node) {
+                                return (
+                                  <div key={node.id} className="w-full">
+                                    <AgentCard
+                                      node={node}
+                                      layoutId={agentSpawn.getCardLayoutId(node.id)}
+                                      viewMode={viewMode}
+                                      onChat={handleChatByNodeId}
+                                      onCancel={cancelQueueTask}
+                                    />
+                                  </div>
+                                )
+                              })}
+                            </motion.div>
+                          </motion.div>
+                        ) : null}
+                      </motion.div>
+                    ) : (
+                      <p
+                        ref={networkLayerRef as React.RefObject<HTMLParagraphElement>}
+                        className="text-[11px] text-pretty text-primary-600 py-1"
+                      >
+                        No active subagents. Spawn agents from chat to see them here.
+                      </p>
+                    )}
                   </LayoutGroup>
                 </section>
 

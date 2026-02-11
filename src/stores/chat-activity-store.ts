@@ -33,35 +33,58 @@ function resolveActivity(local: AgentActivity, gateway: AgentActivity): AgentAct
 
 async function pollGatewayState(): Promise<AgentActivity> {
   try {
-    const res = await fetch('/api/session-status')
+    const res = await fetch('/api/gateway/sessions')
     if (!res.ok) return 'idle'
     const data = await res.json()
-    const payload = data.payload ?? data
+    if (!data.ok) return 'idle'
 
-    // Check if main session was recently updated (within last 10s)
-    const sessions = payload.sessions?.active ?? []
-    const mainSession = sessions.find?.((s: Record<string, unknown>) =>
-      typeof s === 'object' && !String(s.key ?? '').includes('subagent:'),
+    // sessions.list returns { sessions: [...] } or just an array
+    const sessions: Array<Record<string, unknown>> = Array.isArray(data.data?.sessions)
+      ? data.data.sessions
+      : Array.isArray(data.data)
+        ? data.data
+        : []
+
+    if (sessions.length === 0) return 'idle'
+
+    const now = Date.now()
+
+    // Find main session (not a subagent)
+    const mainSession = sessions.find((s) =>
+      typeof s === 'object' && !String(s.key ?? s.id ?? '').includes('subagent:'),
     )
 
+    // Check for active subagents
+    const activeSubagents = sessions.filter((s) => {
+      const key = String(s.key ?? s.id ?? '')
+      if (!key.includes('subagent:')) return false
+      const status = String(s.status ?? '').toLowerCase()
+      return status === 'running' || status === 'active' || status === 'thinking'
+    })
+
+    if (activeSubagents.length > 0) {
+      return 'orchestrating'
+    }
+
+    // Check main session activity based on timestamps
     if (mainSession) {
-      const updatedAt = typeof mainSession.updatedAt === 'number' ? mainSession.updatedAt : 0
-      const staleness = Date.now() - updatedAt
-      if (staleness < 5000) return 'responding'
-      if (staleness < 15000) return 'thinking'
-    }
+      const updatedAt = typeof mainSession.updatedAt === 'number'
+        ? mainSession.updatedAt
+        : typeof mainSession.lastMessageAt === 'number'
+          ? mainSession.lastMessageAt
+          : 0
 
-    // Check message counts for activity
-    const msgCounts = payload.messageCounts
-    if (msgCounts && typeof msgCounts === 'object') {
-      const pending = msgCounts.pending ?? msgCounts.queued ?? 0
-      if (pending > 0) return 'thinking'
-    }
+      if (updatedAt > 0) {
+        const staleness = now - updatedAt
+        if (staleness < 5000) return 'responding'
+        if (staleness < 15000) return 'thinking'
+      }
 
-    // Check latency for recent activity
-    const latency = payload.latency
-    if (typeof latency === 'number' && latency > 0 && latency < 30000) {
-      return 'responding'
+      // Also check status field if available
+      const status = String(mainSession.status ?? '').toLowerCase()
+      if (status === 'responding' || status === 'streaming') return 'responding'
+      if (status === 'thinking' || status === 'processing') return 'thinking'
+      if (status === 'running' || status === 'active') return 'responding'
     }
 
     return 'idle'
