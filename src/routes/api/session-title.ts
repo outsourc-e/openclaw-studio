@@ -40,12 +40,41 @@ function toTitleCase(text: string): string {
 function fallbackTitle(messages: Array<{ role: string; text: string }>): string {
   const firstUser = messages.find((msg) => msg.role === 'user')
   if (!firstUser) return ''
-  const words = firstUser.text
+
+  let text = firstUser.text.trim()
+
+  // Strip common prefixes/noise
+  text = text
+    .replace(/^(hey|hi|hello|ok|okay|so|well|please|can you|could you|i want to|i need to|let's|lets)\s+/i, '')
+    .trim()
+
+  // If it's a question, try to capture the topic
+  const questionMatch = text.match(/(?:what|how|why|where|when|who|which|can|could|should|would|is|are|do|does)\s+(.+?)(?:\?|$)/i)
+  if (questionMatch) {
+    text = questionMatch[1].trim()
+  }
+
+  // If there's a code block or long text, extract the first meaningful line
+  if (text.includes('\n')) {
+    const firstLine = text.split('\n').find(line => line.trim().length > 5)
+    if (firstLine) text = firstLine.trim()
+  }
+
+  // Remove markdown formatting
+  text = text.replace(/[#*`_~[\]()]/g, '').trim()
+
+  // Take first 5-7 meaningful words
+  const words = text
     .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 5)
+    .filter(w => w.length > 1)
+    .slice(0, 6)
+
   if (!words.length) return ''
-  return toTitleCase(words.join(' '))
+
+  const title = toTitleCase(words.join(' '))
+
+  // Ensure it's not too long
+  return title.length > 45 ? title.slice(0, 45).trim() : title
 }
 
 type GatewayTitleResponse = {
