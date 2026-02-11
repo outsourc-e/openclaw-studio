@@ -1,4 +1,4 @@
-# Beta Execution Guide — OpenClaw Studio v2.1.2
+# Beta Execution Guide — ClawSuite v2.1.2
 
 **Version:** v2.1.2  
 **Phase:** 6 — Beta Execution & Hardening  
@@ -8,7 +8,7 @@
 
 ## Overview
 
-This guide explains how to execute the OpenClaw Studio v2.1.2 beta testing phase from start to finish.
+This guide explains how to execute the ClawSuite v2.1.2 beta testing phase from start to finish.
 
 ---
 
@@ -18,7 +18,7 @@ This guide explains how to execute the OpenClaw Studio v2.1.2 beta testing phase
 
 **Ideal testers:**
 - Mix of technical and non-technical users
-- Fresh users (never used OpenClaw Studio)
+- Fresh users (never used ClawSuite)
 - Power users (familiar with similar tools)
 - Diverse platforms (macOS, Windows, Linux)
 - Diverse browsers (Chrome, Firefox, Safari)
@@ -39,11 +39,11 @@ Send each tester:
 
 **Email template:**
 ```
-Subject: OpenClaw Studio v2.1.2 Beta Invitation
+Subject: ClawSuite v2.1.2 Beta Invitation
 
 Hi [Name],
 
-You're invited to test OpenClaw Studio v2.1.2 before public release!
+You're invited to test ClawSuite v2.1.2 before public release!
 
 What you'll need:
 - 45-60 minutes for full testing
@@ -57,7 +57,7 @@ Get started:
 
 Join #beta-testing on Discord: https://discord.com/invite/clawd
 
-Thank you for helping make OpenClaw Studio better!
+Thank you for helping make ClawSuite better!
 
 - Eric / OpenClaw Team
 ```

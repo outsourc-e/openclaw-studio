@@ -1,7 +1,7 @@
 # Phase 1.6 Codex Task — Gateway Debug Console
 
 ## Context
-OpenClaw Studio at `~/.openclaw/workspace/webclaw-ui/` (Vite + React + TanStack Router).
+ClawSuite at `~/.openclaw/workspace/webclaw-ui/` (Vite + React + TanStack Router).
 Gateway connection status is already tracked. Activity events stream exists (`src/server/activity-events.ts`, `src/server/activity-stream.ts`).
 The app already has a sidebar layout pattern — check `src/routes/__root.tsx` and existing screens.
 

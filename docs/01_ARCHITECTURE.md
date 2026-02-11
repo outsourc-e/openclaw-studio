@@ -1,4 +1,4 @@
-# OpenClaw Studio — Architecture
+# ClawSuite — Architecture
 
 ## Mandatory Data Flow
 

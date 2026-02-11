@@ -1,4 +1,4 @@
-# OpenClaw Studio - Complete Architecture
+# ClawSuite - Complete Architecture
 
 **Version:** 2.0.0  
 **Date:** 2026-02-06  
@@ -8,7 +8,7 @@
 
 ## 🎯 Vision
 
-Transform OpenClaw Studio from a "better ChatGPT UI" into a **complete AI agent development environment** — the VSCode for AI agents.
+Transform ClawSuite from a "better ChatGPT UI" into a **complete AI agent development environment** — the VSCode for AI agents.
 
 ### Product Positioning
 - **Target Audience:** Developers tired of ChatGPT's black box
@@ -22,7 +22,7 @@ Transform OpenClaw Studio from a "better ChatGPT UI" into a **complete AI agent 
 ### Layout Structure
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│ Header: [Logo] OpenClaw Studio    [Usage] [Settings] [User] │
+│ Header: [Logo] ClawSuite    [Usage] [Settings] [User] │
 ├──────────┬──────────────────────────────────────┬────────────┤
 │          │                                      │            │
 │  Left    │        Main Content Area            │   Right    │

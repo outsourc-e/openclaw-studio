@@ -1,4 +1,4 @@
-# OpenClaw Studio — Development Status
+# ClawSuite — Development Status
 **Date:** 2026-02-07 00:00 EST
 **Repo:** github.com/outsourc-e/openclaw-studio
 
@@ -11,7 +11,7 @@
 
 ```
 ┌─────────────────────────────────────────┐
-│  OpenClaw Studio (Tauri Desktop App)    │
+│  ClawSuite (Tauri Desktop App)    │
 │  React + TanStack Router + Tailwind     │
 │  Vite dev server on localhost:3000      │
 │                                         │
@@ -39,7 +39,7 @@
 |--------|------------|
 | `cf2b302` | ChatGPT-style composer (model switcher, voice btn, utility bar) |
 | `326f83b` | Dashboard redesign (8 widgets, command center layout) |
-| `e8a0805` | Repo cleanup (webclaw→OpenClaw Studio, license, remove sensitive docs) |
+| `e8a0805` | Repo cleanup (webclaw→ClawSuite, license, remove sensitive docs) |
 | `8069cf9` | Persistent WebSocket, chat UX fixes, 4 dashboard widgets, back nav |
 | `87aa0be` | Ship report for v1.0.0 |
 | `dd319e0` | README with install instructions |
@@ -159,7 +159,7 @@
 | Gateway token in .env | ✅ Gitignored | Never committed to git |
 | API keys in source | ✅ Clean | No hardcoded keys |
 | License | ✅ Fixed | MIT © Eric (outsourc-e) |
-| Webclaw references | ✅ Removed | All renamed to OpenClaw Studio |
+| Webclaw references | ✅ Removed | All renamed to ClawSuite |
 | Sensitive docs | ✅ Removed | SHIP-REPORT, BUG-REPORT, etc. gitignored |
 | Git history | ⚠️ | Old commits have removed docs (no actual secrets) |
 | PAT in remote URL | ⚠️ Local only | Not in repo, but visible in `git remote -v` |

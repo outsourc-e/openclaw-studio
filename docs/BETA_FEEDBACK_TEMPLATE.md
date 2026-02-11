@@ -1,4 +1,4 @@
-# Beta Feedback Template — OpenClaw Studio v2.1.2
+# Beta Feedback Template — ClawSuite v2.1.2
 
 **Instructions:** Copy this template and fill it out when reporting issues. Submit via Discord #beta-testing or GitHub Issues.
 
@@ -215,7 +215,7 @@ Before submitting, ensure:
 ## Example (Good Report)
 
 ```markdown
-# Beta Feedback Template — OpenClaw Studio v2.1.2
+# Beta Feedback Template — ClawSuite v2.1.2
 
 ## Issue Summary
 
@@ -306,4 +306,4 @@ IMPORTANT because:
 
 ---
 
-**Thank you for testing OpenClaw Studio!** Your feedback makes the product better. 🙏
+**Thank you for testing ClawSuite!** Your feedback makes the product better. 🙏

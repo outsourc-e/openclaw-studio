@@ -1,7 +1,7 @@
 'use client'
 
 import { useSyncExternalStore } from 'react'
-import { OpenClawStudioIcon } from '@/components/icons/openclaw-studio'
+import { OpenClawStudioIcon } from '@/components/icons/clawsuite'
 import {
   TooltipContent,
   TooltipProvider,
@@ -13,8 +13,8 @@ import { cn } from '@/lib/utils'
 export type AgentAvatarPreference = 'lobster' | 'logo'
 export type AgentAvatarSize = 'sm' | 'md' | 'lg'
 
-export const AGENT_AVATAR_STORAGE_KEY = 'openclaw-studio-loader-preference'
-const AGENT_AVATAR_EVENT = 'openclaw-studio-loader-preference-change'
+export const AGENT_AVATAR_STORAGE_KEY = 'clawsuite-loader-preference'
+const AGENT_AVATAR_EVENT = 'clawsuite-loader-preference-change'
 
 type AgentAvatarProps = {
   size?: AgentAvatarSize

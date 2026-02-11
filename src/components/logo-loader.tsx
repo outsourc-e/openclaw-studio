@@ -1,7 +1,7 @@
 'use client'
 
 import { cn } from '@/lib/utils'
-import { OpenClawStudioIcon } from '@/components/icons/openclaw-studio'
+import { OpenClawStudioIcon } from '@/components/icons/clawsuite'
 
 export type LogoLoaderProps = {
   className?: string

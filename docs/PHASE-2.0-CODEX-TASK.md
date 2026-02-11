@@ -1,7 +1,7 @@
 # Phase 2.0 Codex Task — Release Hardening & QA
 
 ## Context
-OpenClaw Studio at `~/.openclaw/workspace/webclaw-ui/` (Vite + React + TanStack Router).
+ClawSuite at `~/.openclaw/workspace/webclaw-ui/` (Vite + React + TanStack Router).
 All Phase 1.x features are merged: model switcher, usage/cost, activity log, debug console, provider wizard.
 
 ## Task
@@ -36,7 +36,7 @@ Fix any issues found. Every API route should:
 
 ### 3. README Update
 Update the root `README.md` to reflect the current state:
-- Project description: "OpenClaw Studio — Desktop control panel for OpenClaw AI agents"
+- Project description: "ClawSuite — Desktop control panel for OpenClaw AI agents"
 - Features list (model switcher, usage/cost dashboard, activity log, debug console, provider setup wizard)
 - Getting started: `npm install` → `npm run dev` → open localhost:5173
 - Architecture overview (Vite + React + TanStack Router, Gateway RPC via WebSocket)

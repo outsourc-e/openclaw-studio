@@ -10,7 +10,7 @@
 
 ## 🎯 Objective
 
-Integrate the existing terminal component into OpenClaw Studio as both a bottom panel (VSCode-style) and a dedicated route.
+Integrate the existing terminal component into ClawSuite as both a bottom panel (VSCode-style) and a dedicated route.
 
 **NOTE:** Terminal component already built (`terminal/` folder, 234k tokens). This spec is about **UI integration**, not building the terminal from scratch.
 

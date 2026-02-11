@@ -1,4 +1,4 @@
-# OpenClaw Studio — Security & Sanity Audit
+# ClawSuite — Security & Sanity Audit
 **Date:** 2026-02-07 00:30 EST
 **Auditor:** Aurora (AI COO)
 **Repo:** github.com/outsourc-e/openclaw-studio (PUBLIC)
@@ -26,7 +26,7 @@
 
 | File | Risk | Fix |
 |------|------|-----|
-| `.env.example` line 1 | Says "WebClaw" | Change to "OpenClaw Studio" |
+| `.env.example` line 1 | Says "WebClaw" | Change to "ClawSuite" |
 | `src/routes/connect.tsx:29` | Shows `ws://127.0.0.1:18789` example with `YOUR_TOKEN_HERE` | ✅ Safe — placeholder only |
 | `src/screens/chat/utils.ts:171` | Error message mentions `CLAWDBOT_GATEWAY_TOKEN` | ✅ Safe — env var name, not value |
 | `DEVELOPMENT-STATUS.md` | Contains architecture details | ✅ Intentional — public repo documentation |
@@ -133,7 +133,7 @@ Do NOT open a public GitHub issue for security vulnerabilities.
 
 ## Architecture
 
-OpenClaw Studio runs as a local desktop application. All communication with the OpenClaw Gateway happens through a server-side WebSocket proxy. No secrets are exposed to the browser.
+ClawSuite runs as a local desktop application. All communication with the OpenClaw Gateway happens through a server-side WebSocket proxy. No secrets are exposed to the browser.
 
 ## Secrets
 
@@ -163,7 +163,7 @@ OpenClaw Studio runs as a local desktop application. All communication with the 
 ### .env.example (fixed)
 
 ```
-# OpenClaw Studio → Gateway connection
+# ClawSuite → Gateway connection
 #
 # The Studio server connects to the OpenClaw Gateway via WebSocket.
 # Keep secrets here (never in the browser).
@@ -215,7 +215,7 @@ jobs:
 #### TICKET P0-002: Fix .env.example Branding
 - **Phase:** 0
 - **Files:** `.env.example`
-- **Steps:** Change "WebClaw" to "OpenClaw Studio"
+- **Steps:** Change "WebClaw" to "ClawSuite"
 - **Acceptance:** `grep -i webclaw .env.example` returns nothing
 
 #### TICKET P0-003: Create SECURITY.md

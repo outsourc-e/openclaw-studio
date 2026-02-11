@@ -1,6 +1,6 @@
 # Post-Merge Protocol
 
-Standard procedure for every PR merge or meaningful change to OpenClaw Studio.
+Standard procedure for every PR merge or meaningful change to ClawSuite.
 Execute strictly and in order. Do NOT expand scope.
 
 ## Phase A — Classify

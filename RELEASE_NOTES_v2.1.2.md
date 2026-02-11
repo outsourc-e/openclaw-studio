@@ -1,4 +1,4 @@
-# OpenClaw Studio v2.1.2 Release Notes
+# ClawSuite v2.1.2 Release Notes
 
 **Release Date:** 2026-02-08  
 **Branch:** main  

@@ -23,7 +23,7 @@ export type OnboardingStep = {
 export const ONBOARDING_STEPS: OnboardingStep[] = [
   {
     id: 'welcome',
-    title: 'Welcome to OpenClaw Studio',
+    title: 'Welcome to ClawSuite',
     description:
       "Your intelligent workspace for AI-powered automation. Let's take a quick tour of what you can do.",
     icon: Home01Icon,

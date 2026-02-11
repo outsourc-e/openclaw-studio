@@ -68,7 +68,7 @@ export function buildConnectParams(token: string, password: string): ConnectPara
     maxProtocol: 3,
     client: {
       id: 'gateway-client',
-      displayName: 'openclaw-studio',
+      displayName: 'clawsuite',
       version: 'dev',
       platform: process.platform,
       mode: 'ui',

@@ -1,4 +1,4 @@
-# Beta Readiness Report — OpenClaw Studio v2.1.2
+# Beta Readiness Report — ClawSuite v2.1.2
 
 **Date:** 2026-02-08  
 **Version:** v2.1.2  
@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-OpenClaw Studio v2.1.2 is ready for external beta testing. All deliverables completed:
+ClawSuite v2.1.2 is ready for external beta testing. All deliverables completed:
 
 - ✅ **Comprehensive test checklist** (30+ test cases)
 - ✅ **Tester instructions** (installation, troubleshooting, reporting)

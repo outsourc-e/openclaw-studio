@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "OpenClaw Studio",
+  "productName": "ClawSuite",
   "version": "1.0.0",
-  "identifier": "io.buildingthefuture.openclaw-studio",
+  "identifier": "io.buildingthefuture.clawsuite",
   "build": {
     "frontendDist": "../dist/client",
     "devUrl": "http://localhost:3000",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "OpenClaw Studio",
+        "title": "ClawSuite",
         "width": 1440,
         "height": 900,
         "minWidth": 800,

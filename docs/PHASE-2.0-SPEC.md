@@ -10,7 +10,7 @@ Depends on: All Phase 1.x merged
 
 \## Objective
 
-Prepare OpenClaw Studio for a 2.0 release.
+Prepare ClawSuite for a 2.0 release.
 
 \---
 

@@ -1,4 +1,4 @@
-# OpenClaw Studio
+# ClawSuite
 
 Desktop control panel for [OpenClaw](https://github.com/openclaw/openclaw) AI agents.
 

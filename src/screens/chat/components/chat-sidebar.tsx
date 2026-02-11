@@ -44,7 +44,7 @@ import {
 } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { Button, buttonVariants } from '@/components/ui/button'
-import { OpenClawStudioIcon } from '@/components/icons/openclaw-studio'
+import { OpenClawStudioIcon } from '@/components/icons/clawsuite'
 import {
   SEARCH_MODAL_EVENTS,
   useSearchModal,
@@ -771,7 +771,7 @@ function ChatSidebarComponent({
                 )}
               >
                 <OpenClawStudioIcon className="size-5 rounded-sm" />
-                OpenClaw Studio
+                ClawSuite
               </Link>
             </motion.div>
           ) : null}

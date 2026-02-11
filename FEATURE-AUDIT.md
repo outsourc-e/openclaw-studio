@@ -1,4 +1,4 @@
-# OpenClaw Studio — Feature Audit Report
+# ClawSuite — Feature Audit Report
 
 **Audit Date:** 2026-02-11  
 **Auditor:** Sub-agent (feature-audit)  

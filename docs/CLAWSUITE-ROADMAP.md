@@ -1,4 +1,4 @@
-# OpenClaw Studio - Development Roadmap
+# ClawSuite - Development Roadmap
 
 **Created:** 2026-02-06 02:00 EST  
 **Status:** Architecture Complete → Awaiting Approval → Prototype Phase
@@ -98,7 +98,7 @@ All architecture and agent specs are ready:
    - Mobile responsive testing
    - **Est:** 4-6 hours, ~$0
 
-**Deliverable:** Production-ready OpenClaw Studio
+**Deliverable:** Production-ready ClawSuite
 
 ---
 
@@ -121,7 +121,7 @@ All architecture and agent specs are ready:
 
 ## 📋 What Needs Forking
 
-### Mission Control → OpenClaw Studio
+### Mission Control → ClawSuite
 **Source:** `~/.openclaw/workspace/skills/mission-control/`
 
 **What to Fork:**

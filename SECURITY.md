@@ -7,7 +7,7 @@ Do NOT open a public GitHub issue for security vulnerabilities.
 
 ## Architecture
 
-OpenClaw Studio runs as a local desktop application. All communication with the OpenClaw Gateway happens through a server-side WebSocket proxy (`src/server/gateway.ts`). No secrets are exposed to the browser.
+ClawSuite runs as a local desktop application. All communication with the OpenClaw Gateway happens through a server-side WebSocket proxy (`src/server/gateway.ts`). No secrets are exposed to the browser.
 
 ```
 Browser UI → /api/* routes → Server-side Gateway Client → OpenClaw Gateway (loopback only)

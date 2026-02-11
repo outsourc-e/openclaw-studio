@@ -1,4 +1,4 @@
-# Beta Test Checklist — OpenClaw Studio v2.1.2
+# Beta Test Checklist — ClawSuite v2.1.2
 
 **Version:** v2.1.2  
 **Purpose:** External beta testing validation  

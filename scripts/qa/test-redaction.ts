@@ -112,7 +112,7 @@ if (redactedObject.gatewayUrl === 'ws://127.0.0.1:18789') {
 console.log('\n🔒 Testing folder name extraction...\n')
 
 const pathTests = [
-  { input: '/Users/eric/projects/openclaw-studio', expected: 'openclaw-studio' },
+  { input: '/Users/eric/projects/clawsuite', expected: 'clawsuite' },
   { input: 'C:\\Users\\Eric\\Desktop\\project', expected: 'project' },
   { input: null, expected: 'Not set' },
   { input: '', expected: 'Not set' },

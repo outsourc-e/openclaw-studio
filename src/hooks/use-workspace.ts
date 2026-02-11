@@ -4,7 +4,7 @@
  */
 import { useCallback, useEffect, useState } from 'react'
 
-const STORAGE_KEY = 'openclaw-studio-workspace'
+const STORAGE_KEY = 'clawsuite-workspace'
 
 export type WorkspaceState = {
   /** Current workspace folder path (server-side) */

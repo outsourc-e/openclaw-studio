@@ -49,7 +49,7 @@ function buildConnectParams(token: string, password: string): ConnectParams {
     maxProtocol: 3,
     client: {
       id: 'gateway-client-stream',
-      displayName: 'openclaw-studio-stream',
+      displayName: 'clawsuite-stream',
       version: 'dev',
       platform: process.platform,
       mode: 'ui',

@@ -8,7 +8,7 @@
 
 ## Summary
 
-Added **Modes** to OpenClaw Studio — preset configurations for model + suggestion behavior. Users can save their current settings as a mode, then quickly switch between modes (e.g., "Work Mode", "Budget Mode", "Deep Thinking").
+Added **Modes** to ClawSuite — preset configurations for model + suggestion behavior. Users can save their current settings as a mode, then quickly switch between modes (e.g., "Work Mode", "Budget Mode", "Deep Thinking").
 
 ---
 

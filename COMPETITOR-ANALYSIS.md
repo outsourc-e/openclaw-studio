@@ -1,8 +1,8 @@
-# Competitor Analysis: OpenClaw Studio (Official) vs Our webclaw-ui
+# Competitor Analysis: ClawSuite (Official) vs Our webclaw-ui
 
 **Date:** 2026-02-11  
 **Analyst:** Aurora (subagent)  
-**Subject:** grp06/openclaw-studio — The Official OpenClaw Studio
+**Subject:** grp06/openclaw-studio — The Official ClawSuite
 
 ---
 
@@ -11,7 +11,7 @@
 **Critical Finding:** George Pickett (grp06) is an **official OpenClaw maintainer** and his `openclaw-studio` project is the **canonical/official** UI for OpenClaw. This creates a significant branding conflict for our `webclaw-ui` project.
 
 - **Their project:** Official, maintained by OpenClaw org member, published on npm as `openclaw-studio`
-- **Our project:** Independent, feature-rich but using conflicting "OpenClaw Studio" naming
+- **Our project:** Independent, feature-rich but using conflicting "ClawSuite" naming
 - **Verdict:** We must rebrand immediately to avoid confusion and trademark issues
 
 ---
@@ -203,7 +203,7 @@ Full docs/ folder with specs, guides, security audits.
 
 | Aspect | Risk Level | Details |
 |--------|------------|---------|
-| **Name collision** | 🔴 HIGH | Both projects use "OpenClaw Studio" |
+| **Name collision** | 🔴 HIGH | Both projects use "ClawSuite" |
 | **npm namespace** | 🔴 HIGH | They own `openclaw-studio` on npm |
 | **Official status** | 🔴 HIGH | grp06 is an OpenClaw maintainer |
 | **Community confusion** | 🔴 HIGH | Users will confuse the two |
@@ -317,7 +317,7 @@ Full docs/ folder with specs, guides, security audits.
 
 ### Summary
 
-**Official OpenClaw Studio:**
+**Official ClawSuite:**
 - Pros: Official backing, npm distribution, server-side security, Tailscale docs
 - Cons: Fewer features, no terminal/file explorer, no usage tracking
 
@@ -334,7 +334,7 @@ Full docs/ folder with specs, guides, security audits.
 1. **Rebrand to ClawDeck** (or chosen name)
    - Update package.json name
    - Update README title
-   - Update any "OpenClaw Studio" references
+   - Update any "ClawSuite" references
    
 2. **Check npm availability**
    - `npm info clawdeck` — verify name is free
@@ -372,7 +372,7 @@ Full docs/ folder with specs, guides, security audits.
 
 ## 10. Conclusion
 
-The official OpenClaw Studio by George Pickett is a well-maintained, focused agent management UI with strong official backing. However, our webclaw-ui has significantly more features (terminal, file explorer, usage tracking, debug console, provider wizard, etc.).
+The official ClawSuite by George Pickett is a well-maintained, focused agent management UI with strong official backing. However, our webclaw-ui has significantly more features (terminal, file explorer, usage tracking, debug console, provider wizard, etc.).
 
 **Our competitive advantage is feature richness.** Their advantage is official status and npm distribution.
 

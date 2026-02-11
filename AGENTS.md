@@ -2,7 +2,7 @@
 
 ## Overview
 
-OpenClaw Studio built with React + TanStack Router + Tailwind CSS v4.
+ClawSuite built with React + TanStack Router + Tailwind CSS v4.
 
 ## Commands
 

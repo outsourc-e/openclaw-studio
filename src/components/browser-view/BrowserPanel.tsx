@@ -58,7 +58,7 @@ function createLocalFallbackTabs(error: unknown): BrowserTabsResponse {
     tabs: [
       {
         id: 'local-demo-tab',
-        title: 'OpenClaw Studio Demo',
+        title: 'ClawSuite Demo',
         url: 'https://openclaw.local/studio',
         isActive: true,
       },

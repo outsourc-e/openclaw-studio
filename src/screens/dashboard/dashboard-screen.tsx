@@ -3,7 +3,7 @@ import {
   Settings01Icon,
 } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { OpenClawStudioIcon } from '@/components/icons/openclaw-studio'
+import { OpenClawStudioIcon } from '@/components/icons/clawsuite'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'

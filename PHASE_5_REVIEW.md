@@ -9,7 +9,7 @@
 
 ## Summary
 
-Prepared OpenClaw Studio v2.1.2 for external beta testing. **No new features** — only documentation, QA scripts, and verification per Phase 5 requirements.
+Prepared ClawSuite v2.1.2 for external beta testing. **No new features** — only documentation, QA scripts, and verification per Phase 5 requirements.
 
 ---
 

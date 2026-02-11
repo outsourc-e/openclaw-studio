@@ -7,7 +7,7 @@ type AvatarProps = {
 }
 
 /**
- * Assistant avatar — matches the OpenClaw Studio favicon/hero logo.
+ * Assistant avatar — matches the ClawSuite favicon/hero logo.
  * Orange gradient rounded square with dark claw brackets < | >
  */
 function AssistantAvatarComponent({ size = 28, className }: AvatarProps) {

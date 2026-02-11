@@ -1,7 +1,7 @@
 # Phase 1.5 Codex Task — Activity Log & Event Stream
 
 ## Context
-OpenClaw Studio at `~/. openclaw/workspace/webclaw-ui/` (Vite + React + TanStack Router).
+ClawSuite at `~/. openclaw/workspace/webclaw-ui/` (Vite + React + TanStack Router).
 Gateway WebSocket stream already exists at `src/server/gateway-stream.ts` — emits `agent`, `chat`, and `other` events.
 Dashboard is at `src/screens/dashboard/dashboard-screen.tsx` with widget components in `src/screens/dashboard/components/`.
 

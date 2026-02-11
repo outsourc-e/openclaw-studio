@@ -1,4 +1,4 @@
-# OpenClaw Studio Beta Tester Instructions
+# ClawSuite Beta Tester Instructions
 
 **Version:** v2.1.2  
 **Status:** Beta Testing  
@@ -8,7 +8,7 @@
 
 ## Welcome!
 
-Thank you for testing OpenClaw Studio! This document will guide you through installation, testing, and reporting issues.
+Thank you for testing ClawSuite! This document will guide you through installation, testing, and reporting issues.
 
 ---
 
@@ -383,10 +383,10 @@ npm run beta:export-diagnostics
 ## FAQ
 
 ### Q: Can I test on localhost without OpenClaw Gateway?
-**A:** No. OpenClaw Studio requires the Gateway to function. Install it from https://docs.openclaw.ai/installation.
+**A:** No. ClawSuite requires the Gateway to function. Install it from https://docs.openclaw.ai/installation.
 
 ### Q: Is my data sent to OpenClaw servers?
-**A:** No. All data stays local except API calls to your configured AI providers (Anthropic, OpenAI, etc.). OpenClaw Studio does not phone home.
+**A:** No. All data stays local except API calls to your configured AI providers (Anthropic, OpenAI, etc.). ClawSuite does not phone home.
 
 ### Q: Can I use my own API keys?
 **A:** Yes. Configure providers in Settings → Providers. Your keys are stored locally (encrypted by Gateway) and never sent to OpenClaw.
@@ -423,7 +423,7 @@ To fully uninstall OpenClaw Gateway, see https://docs.openclaw.ai/uninstall.
 
 ## Thank You!
 
-Your feedback helps make OpenClaw Studio better. We appreciate your time and effort in testing this beta release.
+Your feedback helps make ClawSuite better. We appreciate your time and effort in testing this beta release.
 
 **Happy testing! 🚀**
 

@@ -155,7 +155,7 @@ function SettingsRoute() {
         >
           <SettingsRow
             label="Gateway URL"
-            description="Used by OpenClaw Studio for provider connectivity checks."
+            description="Used by ClawSuite for provider connectivity checks."
           >
             <input
               type="url"

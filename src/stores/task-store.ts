@@ -187,7 +187,7 @@ export const useTaskStore = create<TaskStore>()(
       },
     }),
     {
-      name: 'openclaw-studio-tasks-v1',
+      name: 'clawsuite-tasks-v1',
     },
   ),
 )

@@ -147,7 +147,7 @@ export function ChatScreen({
   const composerHandleRef = useRef<ChatComposerHandle | null>(null)
   const [fileExplorerCollapsed, setFileExplorerCollapsed] = useState(() => {
     if (typeof window === 'undefined') return true
-    const stored = localStorage.getItem('openclaw-studio-file-explorer-collapsed')
+    const stored = localStorage.getItem('clawsuite-file-explorer-collapsed')
     return stored === null ? true : stored === 'true'
   })
   const { isMobile } = useChatMobile(queryClient)
@@ -1010,7 +1010,7 @@ export function ChatScreen({
     setFileExplorerCollapsed((prev) => {
       const next = !prev
       if (typeof window !== 'undefined') {
-        localStorage.setItem('openclaw-studio-file-explorer-collapsed', String(next))
+        localStorage.setItem('clawsuite-file-explorer-collapsed', String(next))
       }
       return next
     })

@@ -6,7 +6,7 @@ import {
   Search01Icon,
 } from '@hugeicons/core-free-icons'
 import { motion } from 'motion/react'
-import { OpenClawStudioIcon } from '@/components/icons/openclaw-studio'
+import { OpenClawStudioIcon } from '@/components/icons/clawsuite'
 
 type SuggestionChip = {
   label: string

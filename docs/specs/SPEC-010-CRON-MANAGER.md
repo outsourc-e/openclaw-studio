@@ -1,7 +1,7 @@
 # SPEC-010: Cron Manager (Phase 2)
 
 ## Summary
-Implemented a visual Cron Manager in OpenClaw Studio at `/cron` with job listing, status toggling, manual run execution, and run-history inspection.
+Implemented a visual Cron Manager in ClawSuite at `/cron` with job listing, status toggling, manual run execution, and run-history inspection.
 
 ## Scope Delivered
 - New route: `/cron`

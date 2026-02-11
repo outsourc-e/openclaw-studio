@@ -1,7 +1,7 @@
 # Phase 1.7 Codex Task — Provider Setup Wizard (Foundation)
 
 ## Context
-OpenClaw Studio at `~/.openclaw/workspace/webclaw-ui/` (Vite + React + TanStack Router).
+ClawSuite at `~/.openclaw/workspace/webclaw-ui/` (Vite + React + TanStack Router).
 Providers are configured in `~/.openclaw/openclaw.json` under `auth.profiles`. Studio reads provider names via `src/server/providers.ts`.
 This is a FOUNDATION phase — UI shell and flow only. No actual config writing.
 

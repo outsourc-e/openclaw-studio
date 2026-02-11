@@ -1,4 +1,4 @@
-# OpenClaw Studio v2.0.0 — Acceptance Test Report
+# ClawSuite v2.0.0 — Acceptance Test Report
 
 **QA Lead:** Aurora (AI)  
 **Date:** 2026-02-08  

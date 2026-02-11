@@ -1,4 +1,4 @@
-# Contributing to OpenClaw Studio
+# Contributing to ClawSuite
 
 Thank you for your interest in contributing! This guide will help you get started.
 
