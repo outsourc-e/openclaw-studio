@@ -455,20 +455,20 @@ export function AgentViewPanel() {
           <div className="border-b border-primary-300/70 px-3 py-2">
             {/* Row 1: Count left | Title center | Actions right */}
             <div className="flex items-center justify-between">
-              {/* Left — agent count badge */}
+              {/* Left — agent count + live indicator */}
               <div className="flex items-center gap-1.5">
-                <span className="inline-flex items-center justify-center size-7 rounded-full bg-orange-500/15 text-xs font-bold text-orange-500 tabular-nums">
+                <span className="inline-flex items-center gap-1 rounded-full border border-primary-300/70 bg-primary-200/50 px-2 py-0.5 text-[11px] font-medium text-primary-700 tabular-nums">
+                  {isLiveConnected ? (
+                    <motion.span
+                      animate={{ opacity: [0.4, 1, 0.4] }}
+                      transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
+                      className="size-1.5 rounded-full bg-emerald-400"
+                    />
+                  ) : (
+                    <span className="size-1.5 rounded-full bg-primary-400/50" />
+                  )}
                   {syncedSessionCount}
                 </span>
-                {isLiveConnected ? (
-                  <motion.span
-                    animate={{ opacity: [0.4, 1, 0.4], scale: [1, 1.18, 1] }}
-                    transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
-                    className="size-2 rounded-full bg-emerald-400"
-                  />
-                ) : (
-                  <span className="size-2 rounded-full bg-primary-400/50" />
-                )}
               </div>
 
               {/* Center — title */}

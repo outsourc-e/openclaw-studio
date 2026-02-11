@@ -360,8 +360,8 @@ export function AgentCard({
         ) : null}
       </div>
 
-      {/* Status bubble — only in expanded mode */}
-      {!isCompact ? (
+      {/* Status bubble — only in expanded mode, not on orchestrator */}
+      {!isCompact && !node.isMain ? (
         <AnimatePresence mode="wait" initial={false}>
           {node.statusBubble ? (
             <motion.div
