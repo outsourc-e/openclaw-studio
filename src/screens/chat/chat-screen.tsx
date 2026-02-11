@@ -866,8 +866,6 @@ export function ChatScreen({
             />
           )}
 
-          <ContextBar compact={compact} />
-
           {hideUi ? null : (
             <ChatMessageList
               messages={finalDisplayMessages}
