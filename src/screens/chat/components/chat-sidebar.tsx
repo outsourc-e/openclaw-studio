@@ -22,11 +22,12 @@ import {
   Task01Icon,
   UserGroupIcon,
   UserMultipleIcon,
+  UserIcon,
 } from '@hugeicons/core-free-icons'
 import { AnimatePresence, motion } from 'motion/react'
 import { memo, useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Link, useRouterState } from '@tanstack/react-router'
+import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
 import { useChatSettings } from '../hooks/use-chat-settings'
 import { useDeleteSession } from '../hooks/use-delete-session'
 import { useRenameSession } from '../hooks/use-rename-session'
@@ -49,6 +50,12 @@ import {
   useSearchModal,
 } from '@/hooks/use-search-modal'
 import { GatewayStatusIndicator } from '@/components/gateway-status-indicator'
+import {
+  MenuRoot,
+  MenuTrigger,
+  MenuContent,
+  MenuItem,
+} from '@/components/ui/menu'
 
 type ChatSidebarProps = {
   sessions: Array<SessionMeta>
@@ -442,6 +449,7 @@ function ChatSidebarComponent({
   sessionsError,
   onRetrySessions,
 }: ChatSidebarProps) {
+  const navigate = useNavigate()
   const {
     settingsOpen,
     setSettingsOpen,
@@ -481,27 +489,21 @@ function ChatSidebarComponent({
   const isSkillsActive = pathname === '/skills'
   const isFilesActive = pathname === '/files'
   const isMemoryActive = pathname === '/memory'
-  // Settings
-  const isSettingsRouteActive = pathname.startsWith('/settings')
-  const isSettingsProvidersActive = pathname === '/settings/providers'
   const isDebugActive = pathname === '/debug'
   const isLogsActive = pathname === '/activity' || pathname === '/logs'
 
   // Track last-visited route per section
   const studioRoutes = ['/dashboard', '/new', '/browser', '/terminal', '/tasks', '/skills', '/cron', '/activity', '/logs', '/debug', '/files', '/memory']
   const gatewayRoutes = ['/channels', '/instances', '/sessions', '/usage', '/agents', '/nodes']
-  const settingsRoutes = ['/settings', '/settings/providers']
 
   useEffect(() => {
     if (studioRoutes.includes(pathname)) setLastRoute('studio', pathname)
     else if (gatewayRoutes.includes(pathname)) setLastRoute('gateway', pathname)
-    else if (settingsRoutes.includes(pathname)) setLastRoute('settings', pathname)
   }, [pathname])
 
   // Resolve navigation targets (last visited or default)
   const studioNav = getLastRoute('studio') || '/dashboard'
   const gatewayNav = getLastRoute('gateway') || '/channels'
-  const settingsNav = getLastRoute('settings') || '/settings'
 
   const transition = {
     duration: 0.15,
@@ -519,10 +521,6 @@ function ChatSidebarComponent({
   // Collapsible section states
   const [gatewayExpanded, toggleGateway] = usePersistedBool(
     'openclaw-sidebar-gateway-expanded',
-    false,
-  )
-  const [settingsExpanded, toggleSettings] = usePersistedBool(
-    'openclaw-sidebar-settings-expanded',
     false,
   )
 
@@ -583,7 +581,7 @@ function ChatSidebarComponent({
 
   const asideProps = {
     className:
-      'border-r border-primary-200 h-full overflow-hidden bg-surface flex flex-col',
+      'border-r border-primary-200 h-full overflow-hidden bg-primary-50 dark:bg-primary-100 flex flex-col',
   }
 
   useEffect(() => {
@@ -605,6 +603,15 @@ function ChatSidebarComponent({
 
   // ── Nav definitions ─────────────────────────────────────────────────
 
+  // Search button definition (placed above Studio section)
+  const searchItem: NavItemDef = {
+    kind: 'button',
+    icon: Search01Icon,
+    label: 'Search',
+    active: isSearchModalOpen,
+    onClick: openSearchModal,
+  }
+
   const studioItems: NavItemDef[] = [
     {
       kind: 'link',
@@ -620,13 +627,6 @@ function ChatSidebarComponent({
       active: isNewSessionActive,
       onClick: onCreateSession,
       disabled: creatingSession,
-    },
-    {
-      kind: 'button',
-      icon: Search01Icon,
-      label: 'Search',
-      active: isSearchModalOpen,
-      onClick: openSearchModal,
     },
     {
       kind: 'link',
@@ -739,26 +739,8 @@ function ChatSidebarComponent({
     },
   ]
 
-  const settingsItems: NavItemDef[] = [
-    {
-      kind: 'link',
-      to: '/settings',
-      icon: Settings01Icon,
-      label: 'Config',
-      active: isSettingsRouteActive && !isSettingsProvidersActive,
-    },
-    {
-      kind: 'link',
-      to: '/settings/providers',
-      icon: ApiIcon,
-      label: 'Providers',
-      active: isSettingsProvidersActive,
-    },
-  ]
-
   // Auto-expand sections if any child route is active
   const isAnyGatewayActive = gatewayItems.some((i) => i.active)
-  const isAnySettingsActive = settingsItems.some((i) => i.active)
 
   return (
     <motion.aside
@@ -823,6 +805,22 @@ function ChatSidebarComponent({
         </TooltipProvider>
       </motion.div>
 
+      {/* ── Search (ChatGPT-style, above sections) ─────────────────── */}
+      <div className="px-2 pb-1">
+        <motion.div
+          layout
+          transition={{ layout: transition }}
+          className="w-full"
+        >
+          <NavItem
+            item={searchItem}
+            isCollapsed={isCollapsed}
+            transition={transition}
+            onSelectSession={onSelectSession}
+          />
+        </motion.div>
+      </div>
+
       {/* ── Navigation sections ─────────────────────────────────────── */}
       <div className="mb-2 space-y-0.5 px-2 overflow-y-auto scrollbar-thin">
         {/* STUDIO */}
@@ -866,24 +864,6 @@ function ChatSidebarComponent({
           onSelectSession={onSelectSession}
         />
 
-        {/* SETTINGS (collapsible) */}
-        <SectionLabel
-          label="Settings"
-          isCollapsed={isCollapsed}
-          transition={transition}
-          collapsible
-          expanded={settingsExpanded || isAnySettingsActive}
-          onToggle={toggleSettings}
-          navigateTo={settingsNav}
-        />
-        <CollapsibleSection
-          expanded={settingsExpanded || isAnySettingsActive || isCollapsed}
-          items={settingsItems}
-          isCollapsed={isCollapsed}
-          transition={transition}
-          onSelectSession={onSelectSession}
-        />
-        {/* (Providers is now a regular nav item in settingsItems) */}
       </div>
 
       {/* ── Sessions list ───────────────────────────────────────────── */}
@@ -916,8 +896,46 @@ function ChatSidebarComponent({
         </AnimatePresence>
       </div>
 
-      {/* ── Footer ──────────────────────────────────────────────────── */}
-      <div className="px-2 py-3 border-t border-primary-200 bg-surface shrink-0">
+      {/* ── Footer with User Menu ─────────────────────────────────── */}
+      <div className="px-2 py-2 border-t border-primary-200 bg-primary-50 dark:bg-primary-100 shrink-0 space-y-2">
+        {/* User menu (ChatGPT-style) */}
+        <MenuRoot>
+          <MenuTrigger
+            className={cn(
+              'flex w-full items-center gap-2.5 rounded-lg py-2 transition-colors hover:bg-primary-200',
+              isCollapsed ? 'justify-center px-0' : 'px-2',
+            )}
+          >
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-orange-500 text-white">
+              <HugeiconsIcon icon={UserIcon} size={16} strokeWidth={1.5} />
+            </div>
+            <AnimatePresence initial={false} mode="wait">
+              {!isCollapsed && (
+                <motion.span
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={transition}
+                  className="flex-1 truncate text-left text-sm font-medium text-primary-900"
+                >
+                  User
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </MenuTrigger>
+          <MenuContent side="top" align="start" className="min-w-[180px]">
+            <MenuItem onClick={() => navigate({ to: '/settings' })}>
+              <HugeiconsIcon icon={Settings01Icon} size={16} strokeWidth={1.5} />
+              Config
+            </MenuItem>
+            <MenuItem onClick={() => navigate({ to: '/settings/providers' })}>
+              <HugeiconsIcon icon={ApiIcon} size={16} strokeWidth={1.5} />
+              Providers
+            </MenuItem>
+          </MenuContent>
+        </MenuRoot>
+
+        {/* Gateway status */}
         <GatewayStatusIndicator collapsed={isCollapsed} />
       </div>
 

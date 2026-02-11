@@ -21,6 +21,7 @@ import { useWorkspaceStore } from '@/stores/workspace-store'
 import { SIDEBAR_TOGGLE_EVENT } from '@/hooks/use-global-shortcuts'
 import { ChatPanel } from '@/components/chat-panel'
 import { ChatPanelToggle } from '@/components/chat-panel-toggle'
+import { OnboardingWizard } from '@/components/onboarding/onboarding-wizard'
 import type { SessionMeta } from '@/screens/chat/types'
 
 type SessionsListResponse = Array<SessionMeta>
@@ -132,6 +133,9 @@ export function WorkspaceShell() {
 
       {/* Floating chat toggle — visible on non-chat routes */}
       {!isOnChatRoute && <ChatPanelToggle />}
+
+      {/* Onboarding wizard for new users */}
+      <OnboardingWizard />
     </div>
   )
 }

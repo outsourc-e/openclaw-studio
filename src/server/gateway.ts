@@ -83,6 +83,8 @@ export function buildConnectParams(token: string, password: string): ConnectPara
   }
 }
 
+export type GatewayEventHandler = (frame: GatewayFrame) => void
+
 class GatewayClient {
   private ws: WebSocket | null = null
   private connectPromise: Promise<void> | null = null
@@ -95,6 +97,12 @@ class GatewayClient {
 
   private requestQueue: Array<PendingRequest> = []
   private inflight = new Map<string, InflightRequest>()
+  private eventListeners = new Set<GatewayEventHandler>()
+
+  onEvent(handler: GatewayEventHandler): () => void {
+    this.eventListeners.add(handler)
+    return () => { this.eventListeners.delete(handler) }
+  }
 
   async request<TPayload = unknown>(method: string, params?: unknown): Promise<TPayload> {
     if (this.destroyed) {
@@ -106,7 +114,7 @@ class GatewayClient {
         id: randomUUID(),
         method,
         params,
-        resolve,
+        resolve: resolve as (value: unknown) => void,
         reject,
       }
 
@@ -233,6 +241,17 @@ class GatewayClient {
     try {
       frame = JSON.parse(rawDataToString(data)) as GatewayFrame
     } catch {
+      return
+    }
+
+    if (frame.type === 'event') {
+      for (const listener of this.eventListeners) {
+        try {
+          listener(frame)
+        } catch {
+          // ignore listener errors
+        }
+      }
       return
     }
 
@@ -455,6 +474,10 @@ export async function gatewayRpc<TPayload = unknown>(
   params?: unknown,
 ): Promise<TPayload> {
   return gatewayClient.request<TPayload>(method, params)
+}
+
+export function onGatewayEvent(handler: GatewayEventHandler): () => void {
+  return gatewayClient.onEvent(handler)
 }
 
 export async function gatewayConnectCheck(): Promise<void> {

@@ -1,5 +1,3 @@
-import 'xterm/css/xterm.css'
-
 import {
   useCallback,
   useEffect,
@@ -17,9 +15,29 @@ import {
   Settings01Icon,
   SidebarLeft01Icon,
 } from '@hugeicons/core-free-icons'
-import { Terminal } from 'xterm'
-import { FitAddon } from 'xterm-addon-fit'
-import { WebLinksAddon } from 'xterm-addon-web-links'
+import type { Terminal } from 'xterm'
+import type { FitAddon } from 'xterm-addon-fit'
+
+// Dynamic imports to avoid SSR crash (xterm uses `self` which doesn't exist on server)
+let xtermLoaded = false
+let TerminalCtor: typeof import('xterm').Terminal
+let FitAddonCtor: typeof import('xterm-addon-fit').FitAddon
+let WebLinksAddonCtor: typeof import('xterm-addon-web-links').WebLinksAddon
+
+async function ensureXterm() {
+  if (xtermLoaded) return
+  const [xtermMod, fitMod, linksMod] = await Promise.all([
+    import('xterm'),
+    import('xterm-addon-fit'),
+    import('xterm-addon-web-links'),
+  ])
+  // Load CSS on client only
+  await import('xterm/css/xterm.css')
+  TerminalCtor = xtermMod.Terminal
+  FitAddonCtor = fitMod.FitAddon
+  WebLinksAddonCtor = linksMod.WebLinksAddon
+  xtermLoaded = true
+}
 import type {TerminalTab} from '@/stores/terminal-panel-store';
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -296,7 +314,18 @@ export function TerminalWorkspace({
       const container = containerMapRef.current.get(tab.id)
       if (!container) return
 
-      const terminal = new Terminal({
+      // Guard: xterm must be loaded first
+      if (!xtermLoaded) {
+        void ensureXterm().then(() => {
+          // Re-trigger after load
+          if (!terminalMapRef.current.has(tab.id) && containerMapRef.current.has(tab.id)) {
+            ensureTerminalForTab(tab)
+          }
+        })
+        return
+      }
+
+      const terminal = new TerminalCtor({
         cursorBlink: true,
         fontSize: 13,
         fontFamily: 'JetBrains Mono, Menlo, Monaco, Consolas, monospace',
@@ -307,8 +336,8 @@ export function TerminalWorkspace({
           selectionBackground: '#2b2b2b',
         },
       })
-      const fitAddon = new FitAddon()
-      const webLinks = new WebLinksAddon()
+      const fitAddon = new FitAddonCtor()
+      const webLinks = new WebLinksAddonCtor()
       terminal.loadAddon(fitAddon)
       terminal.loadAddon(webLinks)
       terminal.open(container)

@@ -19,19 +19,10 @@ export const Route = createFileRoute('/api/terminal-stream')({
         const encoder = new TextEncoder()
         const stream = new ReadableStream({
           async start(controller) {
-            const session = await createTerminalSession({
-              command,
-              cwd,
-              cols,
-              rows,
-              pty: true,
-            })
-
             let isStreamActive = true
+
             const send = (event: string, data: unknown) => {
-              if (!isStreamActive || controller.desiredSize === null) {
-                return
-              }
+              if (!isStreamActive || controller.desiredSize === null) return
               try {
                 controller.enqueue(
                   encoder.encode(
@@ -43,31 +34,36 @@ export const Route = createFileRoute('/api/terminal-stream')({
               }
             }
 
-            send('session', { sessionId: session.id, execId: session.execId })
+            let session: Awaited<ReturnType<typeof createTerminalSession>>
 
-            const handleEvent = (payload: any) => {
-              send('event', payload)
+            try {
+              session = await createTerminalSession({
+                command,
+                cwd,
+                cols,
+                rows,
+                pty: true,
+              })
+            } catch (error) {
+              send('error', { message: String(error) })
+              try { controller.close() } catch { /* */ }
+              return
             }
 
-            const handleError = (error: unknown) => {
-              send('error', { message: String(error) })
+            send('session', { sessionId: session.id, execId: session.execId })
+
+            const handleEvent = (payload: unknown) => {
+              send('event', payload)
             }
 
             const handleClose = () => {
               send('close', { sessionId: session.id })
-              if (!isStreamActive) {
-                return
-              }
+              if (!isStreamActive) return
               isStreamActive = false
-              try {
-                controller.close()
-              } catch {
-                // Stream is already closed/cancelled.
-              }
+              try { controller.close() } catch { /* */ }
             }
 
             session.emitter.on('event', handleEvent)
-            session.emitter.on('error', handleError)
             session.emitter.on('close', handleClose)
 
             const keepAlive = setInterval(() => {
@@ -78,8 +74,8 @@ export const Route = createFileRoute('/api/terminal-stream')({
               isStreamActive = false
               clearInterval(keepAlive)
               session.emitter.off('event', handleEvent)
-              session.emitter.off('error', handleError)
               session.emitter.off('close', handleClose)
+              void session.close()
             }
 
             request.signal.addEventListener('abort', abort)

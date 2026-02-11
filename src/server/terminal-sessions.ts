@@ -1,18 +1,8 @@
 import { randomUUID } from 'node:crypto'
 import EventEmitter from 'node:events'
-import WebSocket from 'ws'
 
-import {
-  
-  buildConnectParams,
-  getGatewayConfig
-} from './gateway'
-import type {GatewayFrame} from './gateway';
-
-const DEFAULT_EXEC_METHOD = 'exec'
-const INPUT_METHOD = 'exec.write'
-const RESIZE_METHOD = 'exec.resize'
-const CLOSE_METHOD = 'exec.close'
+import { gatewayRpc, onGatewayEvent } from './gateway'
+import type { GatewayFrame } from './gateway'
 
 export type TerminalSessionEvent = {
   event: string
@@ -29,70 +19,12 @@ export type TerminalSession = {
   close: () => Promise<void>
 }
 
-type SessionRecord = TerminalSession & {
-  ws: WebSocket
-  pending: Map<string, (frame: GatewayFrame) => void>
-}
+const sessions = new Map<string, TerminalSession>()
 
-const sessions = new Map<string, SessionRecord>()
-
-function parsePayload(frame: { payload?: unknown; payloadJSON?: unknown }) {
-  if (frame.payload !== undefined) return frame.payload
-  if (typeof frame.payloadJSON === 'string') {
-    try {
-      return JSON.parse(frame.payloadJSON)
-    } catch {
-      return null
-    }
-  }
-  return null
-}
-
-async function waitForOpen(ws: WebSocket): Promise<void> {
-  if (ws.readyState === WebSocket.OPEN) return
-  await new Promise<void>((resolve, reject) => {
-    const onOpen = () => {
-      cleanup()
-      resolve()
-    }
-    const onError = (error: Error) => {
-      cleanup()
-      reject(error)
-    }
-    const cleanup = () => {
-      ws.off('open', onOpen)
-      ws.off('error', onError)
-    }
-    ws.on('open', onOpen)
-    ws.on('error', onError)
-  })
-}
-
-async function sendFrame(ws: WebSocket, frame: GatewayFrame): Promise<void> {
-  await new Promise<void>((resolve, reject) => {
-    ws.send(JSON.stringify(frame), (err) => {
-      if (err) reject(err)
-      else resolve()
-    })
-  })
-}
-
-function waitForResponse(record: SessionRecord, id: string): Promise<GatewayFrame> {
-  return new Promise((resolve) => {
-    record.pending.set(id, resolve)
-  })
-}
-
-function pickExecId(payload: any): string | null {
+function pickExecId(payload: unknown): string | null {
   if (!payload || typeof payload !== 'object') return null
-  const value =
-    payload.execId ??
-    payload.execID ??
-    payload.id ??
-    payload.streamId ??
-    payload.streamID ??
-    payload.processId ??
-    payload.pid
+  const p = payload as Record<string, unknown>
+  const value = p.execId ?? p.execID ?? p.id ?? p.streamId ?? p.streamID ?? p.processId ?? p.pid
   return typeof value === 'string' ? value : null
 }
 
@@ -104,139 +36,61 @@ export async function createTerminalSession(params: {
   rows?: number
   pty?: boolean
 }): Promise<TerminalSession> {
-  const { url, token, password } = getGatewayConfig()
-  const ws = new WebSocket(url)
-  await waitForOpen(ws)
+  const emitter = new EventEmitter()
+  const sessionId = randomUUID()
 
-  const record: SessionRecord = {
-    id: randomUUID(),
-    execId: null,
+  // Start exec via shared gateway connection
+  const execPayload = await gatewayRpc<Record<string, unknown>>('exec', {
+    command: params.command,
+    cwd: params.cwd,
+    env: params.env,
+    pty: params.pty ?? true,
+    cols: params.cols,
+    rows: params.rows,
+    timeoutMs: 0,
+  })
+
+  const execId = pickExecId(execPayload)
+
+  // Subscribe to gateway events for this exec session
+  const unsubscribe = onGatewayEvent((frame: GatewayFrame) => {
+    if (frame.type !== 'event') return
+
+    const payload = frame.payload ?? null
+
+    emitter.emit('event', {
+      event: frame.event,
+      payload: { payload },
+    } as TerminalSessionEvent)
+  })
+
+  const session: TerminalSession = {
+    id: sessionId,
+    execId,
     createdAt: Date.now(),
-    emitter: new EventEmitter(),
-    ws,
-    pending: new Map(),
-    sendInput: async () => {},
-    resize: async () => {},
-    close: async () => {},
-  }
+    emitter,
 
-  const connectId = randomUUID()
-  const connectFrame: GatewayFrame = {
-    type: 'req',
-    id: connectId,
-    method: 'connect',
-    params: buildConnectParams(token, password),
-  }
+    sendInput: async (data: string) => {
+      if (!execId) return
+      await gatewayRpc('exec.write', { id: execId, data }).catch(() => {})
+    },
 
-  ws.on('message', (data) => {
-    try {
-      const text = typeof data === 'string' ? data : data.toString('utf8')
-      const frame = JSON.parse(text) as GatewayFrame & { payloadJSON?: unknown }
-      if (frame.type === 'res') {
-        const waiter = record.pending.get(frame.id)
-        if (waiter) {
-          record.pending.delete(frame.id)
-          waiter(frame)
-        }
-        return
+    resize: async (cols: number, rows: number) => {
+      if (!execId) return
+      await gatewayRpc('exec.resize', { id: execId, cols, rows }).catch(() => {})
+    },
+
+    close: async () => {
+      unsubscribe()
+      if (execId) {
+        await gatewayRpc('exec.close', { id: execId }).catch(() => {})
       }
-      if (frame.type === 'event') {
-        const payload = parsePayload(frame)
-        record.emitter.emit('event', {
-          event: frame.event,
-          payload,
-        } as TerminalSessionEvent)
-      }
-    } catch {
-      // ignore
-    }
-  })
-
-  ws.on('close', () => {
-    record.emitter.emit('close')
-  })
-  ws.on('error', (error) => {
-    record.emitter.emit('error', error)
-  })
-
-  await sendFrame(ws, connectFrame)
-  await waitForResponse(record, connectId)
-
-  const execId = randomUUID()
-  const execFrame: GatewayFrame = {
-    type: 'req',
-    id: execId,
-    method: DEFAULT_EXEC_METHOD,
-    params: {
-      command: params.command,
-      cwd: params.cwd,
-      env: params.env,
-      pty: params.pty ?? true,
-      cols: params.cols,
-      rows: params.rows,
-      timeoutMs: 0,
+      sessions.delete(sessionId)
     },
   }
 
-  await sendFrame(ws, execFrame)
-  const execRes = (await waitForResponse(record, execId)) as GatewayFrame & {
-    payload?: unknown
-  }
-  if (execRes.type === 'res' && execRes.ok) {
-    record.execId = pickExecId(execRes.payload) ?? null
-  }
-
-  record.sendInput = async (data: string) => {
-    const id = randomUUID()
-    await sendFrame(ws, {
-      type: 'req',
-      id,
-      method: INPUT_METHOD,
-      params: {
-        id: record.execId,
-        data,
-      },
-    })
-  }
-
-  record.resize = async (cols: number, rows: number) => {
-    const id = randomUUID()
-    await sendFrame(ws, {
-      type: 'req',
-      id,
-      method: RESIZE_METHOD,
-      params: {
-        id: record.execId,
-        cols,
-        rows,
-      },
-    })
-  }
-
-  record.close = async () => {
-    const id = randomUUID()
-    try {
-      await sendFrame(ws, {
-        type: 'req',
-        id,
-        method: CLOSE_METHOD,
-        params: {
-          id: record.execId,
-        },
-      })
-    } catch {
-      // ignore
-    }
-    try {
-      ws.close()
-    } catch {
-      // ignore
-    }
-    sessions.delete(record.id)
-  }
-
-  sessions.set(record.id, record)
-  return record
+  sessions.set(sessionId, session)
+  return session
 }
 
 export function getTerminalSession(id: string): TerminalSession | null {
@@ -244,7 +98,7 @@ export function getTerminalSession(id: string): TerminalSession | null {
 }
 
 export async function closeTerminalSession(id: string): Promise<void> {
-  const record = sessions.get(id)
-  if (!record) return
-  await record.close()
+  const session = sessions.get(id)
+  if (!session) return
+  await session.close()
 }
