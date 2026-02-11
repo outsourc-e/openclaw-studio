@@ -29,6 +29,7 @@ import {
 import { chatUiQueryKey, getChatUiState, setChatUiState } from './chat-ui'
 import { ChatHeader } from './components/chat-header'
 import { ChatMessageList } from './components/chat-message-list'
+import { ChatEmptyState } from './components/chat-empty-state'
 import { ChatComposer } from './components/chat-composer'
 import { GatewayStatusMessage } from './components/gateway-status-message'
 import {
@@ -1109,6 +1110,7 @@ export function ChatScreen({
               messages={displayMessages}
               loading={historyLoading}
               empty={historyEmpty}
+              emptyState={<ChatEmptyState compact={compact} />}
               notice={gatewayNotice}
               noticePosition="end"
               waitingForResponse={waitingForResponse}
