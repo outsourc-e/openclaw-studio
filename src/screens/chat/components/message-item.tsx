@@ -211,8 +211,10 @@ function MessageItemComponent({
     streamingThinking !== undefined
       ? streamingThinking
       : messageStreamingThinking
+  // Only treat as streaming if explicitly passed isStreaming prop (active stream)
+  // Ignore stale __streamingStatus from history
   const remoteStreamingActive =
-    isStreaming || messageStreamingStatus === 'streaming'
+    isStreaming === true
 
   const fullText = useMemo(() => textFromMessage(message), [message])
   const [displayText, setDisplayText] = useState(() =>
