@@ -118,7 +118,7 @@ function OrchestratorCard() {
   return (
     <div
       className={cn(
-        'relative overflow-hidden rounded-2xl border bg-gradient-to-br from-primary-100/80 via-primary-100/60 to-primary-200/40 p-3 transition-all duration-500',
+        'relative rounded-2xl border bg-gradient-to-br from-primary-100/80 via-primary-100/60 to-primary-200/40 p-3 transition-all duration-500',
         glowClass,
       )}
     >

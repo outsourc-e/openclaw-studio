@@ -527,11 +527,11 @@ function OrchestratorAvatarComponent({ size = 48 }: OrchestratorAvatarProps) {
         </svg>
       </button>
 
-      {/* Picker popover */}
+      {/* Picker popover — fixed so it can't be clipped by parent overflow */}
       {showPicker && (
         <>
-          <div className="fixed inset-0 z-40" onClick={() => setShowPicker(false)} />
-          <div className="absolute top-full z-50 mt-1">
+          <div className="fixed inset-0 z-[100]" onClick={() => setShowPicker(false)} />
+          <div className="fixed left-1/2 top-1/2 z-[101] -translate-x-1/2 -translate-y-1/2">
             <AvatarPicker current={avatarStyle} onSelect={handleSelect} />
           </div>
         </>
