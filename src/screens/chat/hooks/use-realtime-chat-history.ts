@@ -2,8 +2,8 @@ import { useCallback, useEffect, useMemo } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useGatewayChatStream } from '../../../hooks/use-gateway-chat-stream'
 import { useGatewayChatStore } from '../../../stores/gateway-chat-store'
-import { chatQueryKeys, appendHistoryMessage } from '../chat-queries'
-import type { GatewayMessage, HistoryResponse } from '../types'
+import { appendHistoryMessage } from '../chat-queries'
+import type { GatewayMessage } from '../types'
 
 type UseRealtimeChatHistoryOptions = {
   sessionKey: string
@@ -47,7 +47,6 @@ export function useRealtimeChatHistory({
   })
 
   const { 
-    getRealtimeMessages, 
     getStreamingState,
     mergeHistoryMessages,
     clearSession,
@@ -66,14 +65,14 @@ export function useRealtimeChatHistory({
 
   // Clear realtime buffer when session changes
   useEffect(() => {
+    if (!sessionKey || sessionKey === 'new') return undefined
+
+    // Clear on unmount/session change after a delay
+    // to allow history to catch up
     return () => {
-      if (sessionKey && sessionKey !== 'new') {
-        // Don't clear immediately - wait for history to catch up
-        const timer = setTimeout(() => {
-          clearSession(sessionKey)
-        }, 5000)
-        return () => clearTimeout(timer)
-      }
+      setTimeout(() => {
+        clearSession(sessionKey)
+      }, 5000)
     }
   }, [sessionKey, clearSession])
 

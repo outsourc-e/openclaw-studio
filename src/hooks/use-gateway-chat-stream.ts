@@ -57,19 +57,19 @@ export function useGatewayChatStream(options: UseGatewayChatStreamOptions = {}) 
     const eventSource = new EventSource(url)
     eventSourceRef.current = eventSource
 
-    eventSource.addEventListener('connected', (event) => {
+    eventSource.addEventListener('connected', () => {
       if (!mountedRef.current) return
       reconnectAttempts.current = 0
       setConnectionState('connected')
     })
 
-    eventSource.addEventListener('disconnected', (event) => {
+    eventSource.addEventListener('disconnected', () => {
       if (!mountedRef.current) return
       setConnectionState('disconnected')
       scheduleReconnect()
     })
 
-    eventSource.addEventListener('error', (event) => {
+    eventSource.addEventListener('error', () => {
       if (!mountedRef.current) return
       
       if (eventSource.readyState === EventSource.CLOSED) {
@@ -168,7 +168,7 @@ export function useGatewayChatStream(options: UseGatewayChatStreamOptions = {}) 
       }
     })
 
-    eventSource.addEventListener('state', (event) => {
+    eventSource.addEventListener('state', () => {
       // State changes (started, thinking) - used for UI indicators
     })
   }, [enabled, sessionKey, setConnectionState, processEvent, onUserMessage, onChunk, onThinking, onDone])

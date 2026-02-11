@@ -191,7 +191,7 @@ export function ChatScreen({
   // Real-time streaming integration - enhances polling with live updates
   const {
     messages: realtimeEnhancedMessages,
-    connectionState: realtimeConnectionState,
+    connectionState: _realtimeConnectionState,
     isRealtimeStreaming,
     realtimeStreamingText,
     realtimeStreamingThinking,
