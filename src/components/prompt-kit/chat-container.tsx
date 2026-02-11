@@ -101,10 +101,10 @@ function ChatContainerRoot({
   }, [])
 
   return (
-    <div className={cn('relative flex-1 min-h-0', className)}>
+    <div className={cn('relative flex-1 min-h-0 overflow-hidden flex flex-col', className)}>
       <div
         ref={scrollRef}
-        className="absolute inset-0 overflow-y-auto overscroll-contain"
+        className="flex-1 min-h-0 overflow-y-auto overscroll-contain"
         style={{ overflowAnchor: 'none' }}
         data-chat-scroll-viewport
         {...props}

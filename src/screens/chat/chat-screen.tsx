@@ -370,14 +370,13 @@ export function ChatScreen({
 
   const terminalPanelInset =
     !isMobile && isTerminalPanelOpen ? terminalPanelHeight : 0
+  // Composer is in normal flex flow (shrink-0), so scroll area naturally stops above it.
+  // Only add minimal bottom padding for breathing room + terminal panel offset.
   const stableContentStyle = useMemo<React.CSSProperties>(() => {
-    const composerPadding =
-      'calc(var(--chat-composer-height, 160px) + env(safe-area-inset-bottom, 0px) + 48px)'
     return {
-      paddingBottom:
-        terminalPanelInset > 0
-          ? `calc(${composerPadding} + ${terminalPanelInset}px)`
-          : composerPadding,
+      paddingBottom: terminalPanelInset > 0
+        ? `${terminalPanelInset + 16}px`
+        : '16px',
     }
   }, [terminalPanelInset])
 
