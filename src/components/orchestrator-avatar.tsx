@@ -166,11 +166,13 @@ function AvatarSVG({ state, activeAgentCount, size }: AvatarSVGProps) {
 type OrchestratorAvatarProps = {
   waitingForResponse?: boolean
   isStreaming?: boolean
+  size?: number
 }
 
 function OrchestratorAvatarComponent({
   waitingForResponse = false,
   isStreaming = false,
+  size = 32,
 }: OrchestratorAvatarProps) {
   const { state, activeAgentCount } = useOrchestratorState({
     waitingForResponse,
@@ -198,10 +200,10 @@ function OrchestratorAvatarComponent({
             <button
               type="button"
               className="relative flex items-center justify-center rounded-full transition-all duration-300 hover:bg-primary-100/50"
-              style={{ width: 36, height: 36 }}
+              style={{ width: size + 4, height: size + 4 }}
               aria-label={tooltipText}
             >
-              <AvatarSVG state={state} activeAgentCount={activeAgentCount} size={32} />
+              <AvatarSVG state={state} activeAgentCount={activeAgentCount} size={size} />
               {/* State indicator dot */}
               <span
                 className="absolute bottom-0 right-0 block rounded-full border border-surface"
