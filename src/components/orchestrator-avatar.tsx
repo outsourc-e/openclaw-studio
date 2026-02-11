@@ -263,21 +263,22 @@ const DOT_COLORS: Record<OrchestratorState, string> = {
 
 function AvatarPicker({ current, onSelect }: { current: AvatarStyle; onSelect: (s: AvatarStyle) => void }) {
   return (
-    <div className="grid grid-cols-3 gap-1.5 rounded-xl border border-primary-300/70 bg-primary-100/95 p-2 shadow-lg backdrop-blur-xl">
+    <div className="grid grid-cols-3 gap-2 rounded-2xl border border-primary-300/70 bg-primary-100/95 p-3 shadow-xl backdrop-blur-xl" style={{ minWidth: 200 }}>
+      <p className="col-span-3 mb-1 text-[11px] font-medium text-primary-700">Choose Avatar</p>
       {AVATAR_OPTIONS.map((opt) => (
         <button
           key={opt.id}
           type="button"
           onClick={() => onSelect(opt.id)}
           className={cn(
-            'flex flex-col items-center gap-0.5 rounded-lg p-1.5 transition-colors',
+            'flex flex-col items-center gap-1 rounded-xl p-2.5 transition-all',
             current === opt.id
-              ? 'bg-orange-500/20 ring-1 ring-orange-500'
-              : 'hover:bg-primary-200/60',
+              ? 'bg-orange-500/20 ring-2 ring-orange-500 scale-105'
+              : 'hover:bg-primary-200/60 hover:scale-105',
           )}
         >
-          <span className="text-lg">{opt.emoji}</span>
-          <span className="text-[9px] text-primary-700">{opt.label}</span>
+          <span className="text-2xl">{opt.emoji}</span>
+          <span className="text-[10px] font-medium text-primary-700">{opt.label}</span>
         </button>
       ))}
     </div>
@@ -342,10 +343,10 @@ function OrchestratorAvatarComponent({ size = 48 }: OrchestratorAvatarProps) {
         <button
           type="button"
           onClick={() => setShowPicker((v) => !v)}
-          className="rounded p-0.5 text-primary-500 transition-colors hover:bg-primary-200/60 hover:text-primary-800"
+          className="rounded-md p-1 text-primary-500 transition-colors hover:bg-primary-200/60 hover:text-primary-800"
           aria-label="Change avatar"
         >
-          <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
             <path d="M12.146.854a.5.5 0 0 1 .708 0l2.292 2.292a.5.5 0 0 1 0 .708L5.854 13.146a.5.5 0 0 1-.233.131l-3.5 1a.5.5 0 0 1-.617-.617l1-3.5a.5.5 0 0 1 .131-.233L12.146.854zM11.5 2.5 13.5 4.5" />
           </svg>
         </button>

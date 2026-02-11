@@ -700,6 +700,7 @@ export function ChatScreen({
     attachments: Array<GatewayAttachment> = [],
     skipOptimistic = false,
   ) {
+    setOrchestratorActivity('reading')
     const normalizedAttachments = attachments.map((attachment) => ({
       ...attachment,
       id: attachment.id ?? crypto.randomUUID(),
