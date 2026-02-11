@@ -35,12 +35,13 @@ export function AddWidgetPopover({ visibleIds, onAdd }: AddWidgetPopoverProps) {
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="inline-flex size-7 items-center justify-center rounded-md text-primary-400 transition-colors hover:text-primary-700 dark:hover:text-primary-300"
+        className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] text-primary-400 transition-colors hover:text-primary-700 disabled:opacity-30 dark:hover:text-primary-300"
         aria-label="Widgets"
         title="Widgets"
         disabled={hiddenWidgets.length === 0}
       >
-        <HugeiconsIcon icon={Add01Icon} size={15} strokeWidth={1.5} />
+        <HugeiconsIcon icon={Add01Icon} size={13} strokeWidth={1.5} />
+        <span>Widgets</span>
       </button>
 
       {open ? (

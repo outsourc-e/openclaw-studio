@@ -37,6 +37,7 @@ import type {
 import { ThemeToggle } from '@/components/theme-toggle'
 import { AddWidgetPopover } from './components/add-widget-popover'
 import { HeaderAmbientStatus } from './components/header-ambient-status'
+import { NotificationsPopover } from './components/notifications-popover'
 import { SettingsDialog } from './components/settings-dialog'
 import { useVisibleWidgets } from './hooks/use-visible-widgets'
 import type { SessionMeta } from '@/screens/chat/types'
@@ -331,21 +332,12 @@ export function DashboardScreen() {
               <ModeSelector navigate={navigate} />
             </div>
 
-            {/* RIGHT — time/weather … widgets/icons */}
+            {/* RIGHT — time/weather … notifications/theme/settings */}
             <div className="flex items-center gap-4">
               <HeaderAmbientStatus />
               <div className="flex items-center gap-1">
-                <AddWidgetPopover visibleIds={visibleIds} onAdd={addWidget} />
+                <NotificationsPopover />
                 <ThemeToggle />
-                <button
-                  type="button"
-                  onClick={handleResetLayout}
-                  className="inline-flex size-7 items-center justify-center rounded-md text-primary-400 transition-colors hover:text-primary-700 dark:hover:text-primary-300"
-                  aria-label="Reset Layout"
-                  title="Reset Layout"
-                >
-                  <HugeiconsIcon icon={RefreshIcon} size={15} strokeWidth={1.5} />
-                </button>
                 <button
                   type="button"
                   onClick={() => setSettingsOpen(true)}
@@ -367,6 +359,21 @@ export function DashboardScreen() {
           totalSpend={heroCostQuery.data ?? '—'}
           gatewayConnected={systemStatus.gateway.connected}
         />
+
+        {/* Inline widget controls — belongs with the grid, not the header */}
+        <div className="mb-3 flex items-center justify-end gap-2">
+          <AddWidgetPopover visibleIds={visibleIds} onAdd={addWidget} />
+          <button
+            type="button"
+            onClick={handleResetLayout}
+            className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] text-primary-400 transition-colors hover:text-primary-700 dark:hover:text-primary-300"
+            aria-label="Reset Layout"
+            title="Reset Layout"
+          >
+            <HugeiconsIcon icon={RefreshIcon} size={13} strokeWidth={1.5} />
+            <span>Reset</span>
+          </button>
+        </div>
 
         <div ref={containerRef}>
           <ResponsiveGridLayout
