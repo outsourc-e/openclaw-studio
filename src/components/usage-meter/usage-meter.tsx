@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { UsageDetailsModal } from './usage-details-modal'
+import { ContextAlertModal } from './context-alert-modal'
 import { DialogContent, DialogRoot, DialogTrigger } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import { SEARCH_MODAL_EVENTS } from '@/hooks/use-search-modal'
@@ -384,6 +385,7 @@ export function UsageMeter() {
   const [providerUpdatedAt, setProviderUpdatedAt] = useState<number | null>(null)
   const [open, setOpen] = useState(false)
   const [pillMode, setPillMode] = useState<'auto' | 'session' | 'providers'>('auto')
+  const [contextAlert, setContextAlert] = useState<{ open: boolean; threshold: number }>({ open: false, threshold: 0 })
   const alertStateRef = useRef(getAlertState())
 
   const refresh = useCallback(async () => {
@@ -468,18 +470,9 @@ export function UsageMeter() {
       if (state.sent[threshold]) continue
       state.sent[threshold] = true
       saveAlertState(state)
-      if (!('Notification' in window)) continue
-      const notify = () =>
-        new Notification('Usage alert', {
-          body: `Context usage has reached ${threshold}% of the limit.`,
-        })
-      if (Notification.permission === 'granted') {
-        notify()
-      } else if (Notification.permission === 'default') {
-        void Notification.requestPermission().then((permission) => {
-          if (permission === 'granted') notify()
-        })
-      }
+      // Show in-app modal instead of browser notification
+      setContextAlert({ open: true, threshold })
+      break // Only show one alert at a time
     }
   }, [usage.contextPercent])
 
@@ -545,6 +538,7 @@ export function UsageMeter() {
   }
 
   return (
+    <>
     <DialogRoot open={open} onOpenChange={setOpen}>
       <DialogTrigger
         className={cn(
@@ -610,5 +604,13 @@ export function UsageMeter() {
         <UsageDetailsModal {...detailProps} />
       </DialogContent>
     </DialogRoot>
+
+    <ContextAlertModal
+      open={contextAlert.open}
+      onClose={() => setContextAlert({ open: false, threshold: 0 })}
+      threshold={contextAlert.threshold}
+      contextPercent={usage.contextPercent}
+    />
+    </>
   )
 }
