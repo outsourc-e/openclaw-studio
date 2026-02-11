@@ -179,6 +179,28 @@ function OrchestratorCard({ compact = false }: { compact?: boolean }) {
   )
 }
 
+function MainAgentCollapsible({ viewMode }: { viewMode: 'expanded' | 'compact' }) {
+  const [open, setOpen] = useState(true)
+
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <div className="flex items-center justify-between">
+        <CollapsibleTrigger className="h-7 px-0 text-xs font-medium hover:bg-transparent">
+          <HugeiconsIcon
+            icon={open ? ArrowDown01Icon : ArrowRight01Icon}
+            size={20}
+            strokeWidth={1.5}
+          />
+          Main Agent
+        </CollapsibleTrigger>
+      </div>
+      <CollapsiblePanel contentClassName="pt-1">
+        <OrchestratorCard compact={viewMode === 'compact'} />
+      </CollapsiblePanel>
+    </Collapsible>
+  )
+}
+
 function getHistoryPillClassName(status: 'success' | 'failed'): string {
   if (status === 'failed') {
     return 'border-red-500/50 bg-red-500/10 text-red-300'
@@ -620,9 +642,7 @@ export function AgentViewPanel() {
           <ScrollAreaRoot className="h-[calc(100vh-3.25rem)]">
             <ScrollAreaViewport>
               <div className="space-y-3 p-3">
-                {/* Main Agent Card */}
-                <OrchestratorCard compact={viewMode === 'compact'} />
-
+                {/* Swarm — agent cards */}
                 <section className="rounded-2xl border border-primary-300/70 bg-primary-200/35 p-1.5">
                   <div className="mb-1.5 flex items-center justify-between">
                     <div>
@@ -779,6 +799,10 @@ export function AgentViewPanel() {
                   </LayoutGroup>
                 </section>
 
+                {/* Main Agent — collapsible */}
+                <MainAgentCollapsible viewMode={viewMode} />
+
+                {/* History */}
                 <Collapsible open={historyOpen} onOpenChange={setHistoryOpen}>
                   <div className="flex items-center justify-between">
                     <CollapsibleTrigger className="h-7 px-0 text-xs font-medium hover:bg-transparent">

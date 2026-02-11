@@ -626,7 +626,7 @@ function ChatSidebarComponent({
       kind: 'link',
       to: '/agent-swarm',
       icon: BotIcon,
-      label: 'Agent Swarm',
+      label: 'Agent Hub',
       active: isAgentSwarmActive,
     },
     {
