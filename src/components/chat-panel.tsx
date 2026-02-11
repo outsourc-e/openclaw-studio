@@ -134,6 +134,7 @@ export function ChatPanel() {
               isNewChat={isNewChat}
               forcedSessionKey={forcedSessionKey}
               onSessionResolved={isNewChat ? handleSessionResolved : undefined}
+              compact
             />
           </div>
         </motion.div>

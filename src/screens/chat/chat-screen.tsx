@@ -72,6 +72,8 @@ type ChatScreenProps = {
     friendlyId: string
   }) => void
   forcedSessionKey?: string
+  /** Hide header + file explorer + terminal for panel mode */
+  compact?: boolean
 }
 
 type ActiveStreamContext = {
@@ -111,6 +113,7 @@ export function ChatScreen({
   isNewChat = false,
   onSessionResolved,
   forcedSessionKey,
+  compact = false,
 }: ChatScreenProps) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -1060,10 +1063,10 @@ export function ChatScreen({
       <div
         className={cn(
           'flex-1 min-h-0 overflow-hidden',
-          isMobile ? 'relative' : 'grid grid-cols-[auto_1fr]',
+          compact ? '' : isMobile ? 'relative' : 'grid grid-cols-[auto_1fr]',
         )}
       >
-        {hideUi ? null : isMobile ? null : (
+        {hideUi || compact ? null : isMobile ? null : (
           <FileExplorerSidebar
             collapsed={fileExplorerCollapsed}
             onToggle={handleToggleFileExplorer}
@@ -1079,15 +1082,17 @@ export function ChatScreen({
           style={{ marginBottom: terminalPanelInset > 0 ? `${terminalPanelInset}px` : undefined }}
           ref={mainRef}
         >
-          <ChatHeader
-            activeTitle={activeTitle}
-            wrapperRef={headerRef}
-            showSidebarButton={isMobile}
-            onOpenSidebar={handleOpenSidebar}
-            showFileExplorerButton={!isMobile}
-            fileExplorerCollapsed={fileExplorerCollapsed}
-            onToggleFileExplorer={handleToggleFileExplorer}
-          />
+          {!compact && (
+            <ChatHeader
+              activeTitle={activeTitle}
+              wrapperRef={headerRef}
+              showSidebarButton={isMobile}
+              onOpenSidebar={handleOpenSidebar}
+              showFileExplorerButton={!isMobile}
+              fileExplorerCollapsed={fileExplorerCollapsed}
+              onToggleFileExplorer={handleToggleFileExplorer}
+            />
+          )}
 
           {hideUi ? null : (
             <ChatMessageList
@@ -1126,9 +1131,9 @@ export function ChatScreen({
             />
           ) : null}
         </main>
-        <AgentViewPanel />
+        {!compact && <AgentViewPanel />}
       </div>
-      {hideUi || isMobile ? null : <TerminalPanel />}
+      {!compact && !hideUi && !isMobile && <TerminalPanel />}
 
       {suggestion && (
         <ModelSuggestionToast
