@@ -9,6 +9,7 @@ import {
   Link01Icon,
 } from '@hugeicons/core-free-icons'
 import { useNavigate } from '@tanstack/react-router'
+import { useSounds } from '@/hooks/use-sounds'
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from 'motion/react'
 import { AgentCard } from './agent-card'
 import { SwarmConnectionOverlay } from './swarm-connection-overlay'
@@ -121,6 +122,9 @@ function buildTranscriptText(agent: {
 }
 
 export function AgentViewPanel() {
+  // Sound notifications for agent events
+  useSounds({ autoPlay: true })
+
   const {
     isDesktop,
     panelVisible,

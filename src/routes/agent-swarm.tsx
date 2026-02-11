@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils'
 import { assignPersona } from '@/lib/agent-personas'
 import { IsometricOffice } from '@/components/agent-swarm/isometric-office'
 import { ActivityPanel } from '@/components/agent-swarm/activity-panel'
+import { useSounds } from '@/hooks/use-sounds'
 
 export const Route = createFileRoute('/agent-swarm')({
   component: AgentSwarmRoute,
@@ -102,6 +103,9 @@ function AgentSwarmRoute() {
   usePageTitle('Agent Swarm')
   const { sessions, isConnected, error, startPolling, stopPolling } = useSwarmStore()
   const [viewMode, setViewMode] = useState<ViewMode>('office')
+
+  // Sound notifications for agent events
+  useSounds({ autoPlay: true })
 
   useEffect(() => {
     startPolling(5000)
