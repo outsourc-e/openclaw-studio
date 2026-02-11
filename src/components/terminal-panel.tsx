@@ -1,7 +1,11 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useRef } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useNavigate } from '@tanstack/react-router'
-import { TerminalWorkspace } from '@/components/terminal/terminal-workspace'
+const TerminalWorkspace = lazy(() =>
+  import('@/components/terminal/terminal-workspace').then((m) => ({
+    default: m.TerminalWorkspace,
+  })),
+)
 import {
   DEFAULT_PANEL_HEIGHT,
   MIN_PANEL_HEIGHT,
@@ -103,13 +107,15 @@ export function TerminalPanel() {
             aria-label="Resize terminal panel"
           />
           <div className="h-full pt-1">
-            <TerminalWorkspace
-              mode="panel"
-              panelVisible={isPanelOpen}
-              onMinimizePanel={handleMinimize}
-              onMaximizePanel={handleMaximize}
-              onClosePanel={handleClose}
-            />
+            <Suspense fallback={<div className="flex h-full items-center justify-center text-xs text-primary-500">Loading terminal…</div>}>
+              <TerminalWorkspace
+                mode="panel"
+                panelVisible={isPanelOpen}
+                onMinimizePanel={handleMinimize}
+                onMaximizePanel={handleMaximize}
+                onClosePanel={handleClose}
+              />
+            </Suspense>
           </div>
         </motion.section>
       ) : null}
