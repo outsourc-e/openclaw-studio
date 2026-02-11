@@ -14,6 +14,23 @@ const config = defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  server: {
+    proxy: {
+      '/gateway-ui': {
+        target: 'http://127.0.0.1:18789',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/gateway-ui/, ''),
+        ws: true,
+        configure: (proxy) => {
+          proxy.on('proxyRes', (_proxyRes) => {
+            // Strip iframe-blocking headers so we can embed
+            delete _proxyRes.headers['x-frame-options']
+            delete _proxyRes.headers['content-security-policy']
+          })
+        },
+      },
+    },
+  },
   plugins: [
     // devtools(),
     // this is the plugin that enables path aliases

@@ -18,6 +18,8 @@ type ChatHeaderProps = {
   showFileExplorerButton?: boolean
   fileExplorerCollapsed?: boolean
   onToggleFileExplorer?: () => void
+  chatMode?: 'native' | 'gateway'
+  onToggleChatMode?: () => void
 }
 
 function ChatHeaderComponent({
@@ -28,6 +30,8 @@ function ChatHeaderComponent({
   showFileExplorerButton = false,
   fileExplorerCollapsed = true,
   onToggleFileExplorer,
+  chatMode = 'gateway',
+  onToggleChatMode,
 }: ChatHeaderProps) {
   return (
     <div
@@ -68,6 +72,28 @@ function ChatHeaderComponent({
         </TooltipProvider>
       ) : null}
       <div className="text-sm font-medium truncate flex-1">{activeTitle}</div>
+      {onToggleChatMode ? (
+        <TooltipProvider>
+          <TooltipRoot>
+            <TooltipTrigger
+              onClick={onToggleChatMode}
+              render={
+                <Button
+                  size="icon-sm"
+                  variant="ghost"
+                  className="mr-1 text-primary-800 hover:bg-primary-100"
+                  aria-label={chatMode === 'gateway' ? 'Switch to native chat' : 'Switch to gateway chat'}
+                >
+                  <span className="text-[10px] font-mono">{chatMode === 'gateway' ? 'GW' : 'UI'}</span>
+                </Button>
+              }
+            />
+            <TooltipContent side="bottom">
+              {chatMode === 'gateway' ? 'Using Gateway Chat (switch to native)' : 'Using Native Chat (switch to gateway)'}
+            </TooltipContent>
+          </TooltipRoot>
+        </TooltipProvider>
+      ) : null}
       <UsageMeter />
     </div>
   )

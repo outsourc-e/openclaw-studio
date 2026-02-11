@@ -47,12 +47,14 @@ import { useChatHistory } from './hooks/use-chat-history'
 import { useChatMobile } from './hooks/use-chat-mobile'
 import { useChatSessions } from './hooks/use-chat-sessions'
 import { useAutoSessionTitle } from './hooks/use-auto-session-title'
+import { ContextBar } from './components/context-bar'
 import type {
   ChatComposerAttachment,
   ChatComposerHandle,
   ChatComposerHelpers,
 } from './components/chat-composer'
 import type { GatewayAttachment, GatewayMessage, HistoryResponse as _HistoryResponse } from './types'
+import type { ChatMode } from '@/components/gateway-chat-embed'
 import { cn } from '@/lib/utils'
 import { FileExplorerSidebar } from '@/components/file-explorer'
 import { SEARCH_MODAL_EVENTS } from '@/hooks/use-search-modal'
@@ -65,7 +67,7 @@ import { useTerminalPanelStore } from '@/stores/terminal-panel-store'
 import { useModelSuggestions } from '@/hooks/use-model-suggestions'
 import { ModelSuggestionToast } from '@/components/model-suggestion-toast'
 import { useChatActivityStore } from '@/stores/chat-activity-store'
-import { ContextBar } from './components/context-bar'
+import { GatewayChatEmbed, getStoredChatMode, setStoredChatMode } from '@/components/gateway-chat-embed'
 
 type ChatScreenProps = {
   activeFriendlyId: string
@@ -129,6 +131,14 @@ export function ChatScreen({
   const [waitingForResponse, setWaitingForResponse] = useState(
     () => hasPendingSend() || hasPendingGeneration(),
   )
+  const [chatMode, setChatMode] = useState<ChatMode>(getStoredChatMode)
+  const handleChatModeToggle = useCallback(() => {
+    setChatMode((prev) => {
+      const next = prev === 'native' ? 'gateway' : 'native'
+      setStoredChatMode(next)
+      return next
+    })
+  }, [])
   const [pinToTop, setPinToTop] = useState(
     () => hasPendingSend() || hasPendingGeneration(),
   )
@@ -339,7 +349,7 @@ export function ChatScreen({
       const maxAttempts = 12
 
       for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-        const cached = queryClient.getQueryData(historyKey) as Record<string, unknown> | undefined
+        const cached = queryClient.getQueryData(historyKey)
         const cachedMessages = Array.isArray((cached as any)?.messages)
           ? (cached as any).messages
           : []
@@ -474,7 +484,7 @@ export function ChatScreen({
   const handleGatewayRefetch = useCallback(() => {
     void gatewayStatusQuery.refetch()
   }, [gatewayStatusQuery])
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime safety
+   
   const _isSidebarCollapsed = useWorkspaceStore((s) => s.sidebarCollapsed)
   const _handleActiveSessionDelete = useCallback(() => {
     setError(null)
@@ -654,7 +664,7 @@ export function ChatScreen({
       pending.friendlyId,
       pending.sessionKey,
     )
-    const cached = queryClient.getQueryData(historyKey) as Record<string, unknown> | undefined
+    const cached = queryClient.getQueryData(historyKey)
     const cachedMessages = Array.isArray((cached as any)?.messages)
       ? (cached as any).messages
       : []
@@ -1117,12 +1127,16 @@ export function ChatScreen({
               showFileExplorerButton={!isMobile}
               fileExplorerCollapsed={fileExplorerCollapsed}
               onToggleFileExplorer={handleToggleFileExplorer}
+              chatMode={chatMode}
+              onToggleChatMode={handleChatModeToggle}
             />
           )}
 
           <ContextBar compact={compact} />
 
-          {hideUi ? null : (
+          {chatMode === 'gateway' ? (
+            <GatewayChatEmbed className="flex-1 min-h-0" />
+          ) : hideUi ? null : (
             <ChatMessageList
               messages={displayMessages}
               loading={historyLoading}
@@ -1143,7 +1157,7 @@ export function ChatScreen({
               streamingThinking={streamingThinking}
             />
           )}
-          {showComposer ? (
+          {chatMode === 'gateway' ? null : showComposer ? (
             <ChatComposer
               onSubmit={send}
               isLoading={sending}
