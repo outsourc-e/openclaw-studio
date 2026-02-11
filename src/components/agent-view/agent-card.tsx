@@ -186,78 +186,99 @@ export function AgentCard({
         className,
       )}
     >
-      <div className={cn('flex items-center justify-between gap-1.5', isCompact ? 'mb-0.5' : 'mb-2')}>
-        <span
-          className={cn(
-            'rounded-full px-1.5 py-0.5 font-medium tabular-nums ring-1',
-            isCompact ? 'text-[9px]' : 'text-[11px]',
-            getModelBadgeClassName(node.model),
-          )}
-        >
-          {node.model}
-        </span>
-        <div className="inline-flex items-center gap-1 ml-auto">
-          {node.isLive ? (
-            <motion.span
-              aria-hidden
-              animate={{ opacity: [0.5, 1, 0.5], scale: [1, 1.15, 1] }}
-              transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
-              className="size-1.5 rounded-full bg-emerald-400"
-            />
-          ) : null}
-          <span
-            className={cn(
-              'font-medium text-balance tabular-nums',
-              isCompact ? 'text-[9px]' : 'text-xs',
-              getStatusTextClassName(node.status),
-            )}
-          >
-            {getStatusLabel(node.status)}
-          </span>
-        </div>
-      </div>
-
-      <div className={cn('relative mx-auto', isCompact ? 'mb-1 size-10' : 'mb-2 size-24')}>
-        {isCompact ? (
-          <div className="relative flex size-10 items-center justify-center">
-            {/* Mini progress ring */}
-            <svg className="absolute inset-0 size-10 -rotate-90" viewBox="0 0 40 40">
-              <circle cx="20" cy="20" r="17" fill="none" stroke="currentColor" strokeWidth="2" className="text-primary-300/40" />
-              <circle
-                cx="20" cy="20" r="17"
-                fill="none"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeDasharray={`${(node.progress / 100) * 106.8} 106.8`}
-                className={cn(
-                  node.status === 'complete' ? 'text-emerald-400' :
-                  node.status === 'failed' ? 'text-red-400' :
-                  node.status === 'thinking' ? 'text-orange-400' :
-                  'text-emerald-400',
-                )}
-                stroke="currentColor"
-              />
-            </svg>
-            <div className="flex size-7 items-center justify-center rounded-full border border-primary-300/70 bg-primary-200/80">
-              {node.isMain ? (
-                <AgentAvatar size="sm" />
-              ) : (
-                <PixelAvatar
-                  color={getPersonaColors(node.name, node.id).body}
-                  accentColor={getPersonaColors(node.name, node.id).accent}
-                  size={24}
-                  status={node.status}
-                />
+      {/* Compact mode: vertical layout */}
+      {isCompact ? (
+        <>
+          <div className="flex items-center justify-between gap-1.5 mb-0.5">
+            <span
+              className={cn(
+                'rounded-full px-1.5 py-0.5 font-medium tabular-nums ring-1 text-[8px]',
+                getModelBadgeClassName(node.model),
               )}
+            >
+              {node.model}
+            </span>
+            <div className="inline-flex items-center gap-1 ml-auto">
+              {node.isLive ? (
+                <motion.span
+                  aria-hidden
+                  animate={{ opacity: [0.5, 1, 0.5], scale: [1, 1.15, 1] }}
+                  transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
+                  className="size-1.5 rounded-full bg-emerald-400"
+                />
+              ) : null}
+              <span
+                className={cn(
+                  'font-medium text-balance tabular-nums text-[9px]',
+                  getStatusTextClassName(node.status),
+                )}
+              >
+                {getStatusLabel(node.status)}
+              </span>
             </div>
           </div>
-        ) : (
-          <>
+
+          <div className="relative mx-auto mb-1 size-10">
+            <div className="relative flex size-10 items-center justify-center">
+              {/* Mini progress ring */}
+              <svg className="absolute inset-0 size-10 -rotate-90" viewBox="0 0 40 40">
+                <circle cx="20" cy="20" r="17" fill="none" stroke="currentColor" strokeWidth="2" className="text-primary-300/40" />
+                <circle
+                  cx="20" cy="20" r="17"
+                  fill="none"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeDasharray={`${(node.progress / 100) * 106.8} 106.8`}
+                  className={cn(
+                    node.status === 'complete' ? 'text-emerald-400' :
+                    node.status === 'failed' ? 'text-red-400' :
+                    node.status === 'thinking' ? 'text-orange-400' :
+                    'text-emerald-400',
+                  )}
+                  stroke="currentColor"
+                />
+              </svg>
+              <div className="flex size-7 items-center justify-center rounded-full border border-primary-300/70 bg-primary-200/80">
+                {node.isMain ? (
+                  <AgentAvatar size="sm" />
+                ) : (
+                  <PixelAvatar
+                    color={getPersonaColors(node.name, node.id).body}
+                    accentColor={getPersonaColors(node.name, node.id).accent}
+                    size={24}
+                    status={node.status === 'queued' ? 'idle' : node.status}
+                  />
+                )}
+              </div>
+            </div>
+            <AnimatePresence>
+              {node.status === 'complete' ? (
+                <motion.span
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute -right-1 -bottom-1 inline-flex size-4 items-center justify-center rounded-full bg-emerald-500 text-primary-50"
+                >
+                  <HugeiconsIcon icon={CheckmarkCircle01Icon} size={12} strokeWidth={1.5} />
+                </motion.span>
+              ) : null}
+            </AnimatePresence>
+          </div>
+
+          <h4 className="truncate text-center font-medium text-balance text-primary-900 text-[10px]">
+            {node.name}
+          </h4>
+        </>
+      ) : (
+        /* Expanded mode: horizontal layout for non-main agents */
+        <div className="flex items-start gap-2.5">
+          {/* Left: Progress ring + avatar */}
+          <div className="relative flex-shrink-0 size-14">
             <AgentProgress
               value={node.progress}
               status={node.status}
-              size={96}
-              strokeWidth={5}
+              size={56}
+              strokeWidth={3}
               className="absolute inset-0"
             />
             {shouldPulse(node.status) ? (
@@ -271,37 +292,71 @@ export function AgentCard({
                 )}
               />
             ) : null}
-            <div className="absolute inset-2 inline-flex items-center justify-center rounded-full border border-primary-300/70 bg-primary-200/80">
+            <div className="absolute inset-1.5 inline-flex items-center justify-center rounded-full border border-primary-300/70 bg-primary-200/80">
               {node.isMain ? (
-                <AgentAvatar size="lg" />
+                <AgentAvatar size="md" />
               ) : (
                 <PixelAvatar
                   color={getPersonaColors(node.name, node.id).body}
                   accentColor={getPersonaColors(node.name, node.id).accent}
-                  size={40}
-                  status={node.status}
+                  size={28}
+                  status={node.status === 'queued' ? 'idle' : node.status}
                 />
               )}
             </div>
-          </>
-        )}
-        <AnimatePresence>
-          {node.status === 'complete' ? (
-            <motion.span
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute -right-1 -bottom-1 inline-flex size-6 items-center justify-center rounded-full bg-emerald-500 text-primary-50"
-            >
-              <HugeiconsIcon icon={CheckmarkCircle01Icon} size={20} strokeWidth={1.5} />
-            </motion.span>
-          ) : null}
-        </AnimatePresence>
-      </div>
+            <AnimatePresence>
+              {node.status === 'complete' ? (
+                <motion.span
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute -right-0.5 -bottom-0.5 inline-flex size-5 items-center justify-center rounded-full bg-emerald-500 text-primary-50"
+                >
+                  <HugeiconsIcon icon={CheckmarkCircle01Icon} size={14} strokeWidth={1.5} />
+                </motion.span>
+              ) : null}
+            </AnimatePresence>
+          </div>
 
-      <h4 className={cn('truncate text-center font-medium text-balance text-primary-900', isCompact ? 'text-[10px]' : 'text-xs')}>
-        {node.name}
-      </h4>
+          {/* Right: Text content */}
+          <div className="flex-1 min-w-0 pt-0.5">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <h4 className="truncate font-medium text-primary-900 text-xs">
+                {node.name}
+              </h4>
+              <span
+                className={cn(
+                  'rounded-full px-1.5 py-0.5 font-medium tabular-nums ring-1 text-[8px]',
+                  getModelBadgeClassName(node.model),
+                )}
+              >
+                {node.model}
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              {node.isLive ? (
+                <motion.span
+                  aria-hidden
+                  animate={{ opacity: [0.5, 1, 0.5], scale: [1, 1.15, 1] }}
+                  transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
+                  className="size-1.5 rounded-full bg-emerald-400"
+                />
+              ) : null}
+              <span
+                className={cn(
+                  'font-medium tabular-nums text-[10px]',
+                  getStatusTextClassName(node.status),
+                )}
+              >
+                {getStatusLabel(node.status)}
+              </span>
+              <span className="text-[10px] text-primary-600 tabular-nums">
+                {node.progress}%
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div
         className={cn(
