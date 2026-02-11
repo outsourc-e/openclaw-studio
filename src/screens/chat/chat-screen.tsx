@@ -1059,7 +1059,7 @@ export function ChatScreen({
   const hasActiveStreamPlaceholder = streamingMessageId !== null
 
   return (
-    <div className="relative h-full flex flex-col">
+    <div className="relative h-full min-w-0 flex flex-col">
       <div
         className={cn(
           'flex-1 min-h-0 overflow-hidden',
@@ -1076,8 +1076,8 @@ export function ChatScreen({
 
         <main
           className={cn(
-            'flex h-full min-h-0 flex-col transition-[margin-right,margin-bottom] duration-200',
-            isAgentViewOpen ? 'min-[1024px]:mr-80' : 'mr-0',
+            'flex h-full min-h-0 min-w-0 flex-col transition-[margin-right,margin-bottom] duration-200',
+            !compact && isAgentViewOpen ? 'min-[1024px]:mr-80' : 'mr-0',
           )}
           style={{ marginBottom: terminalPanelInset > 0 ? `${terminalPanelInset}px` : undefined }}
           ref={mainRef}

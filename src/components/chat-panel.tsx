@@ -122,7 +122,8 @@ export function ChatPanel() {
           animate={{ width: 420, opacity: 1 }}
           exit={{ width: 0, opacity: 0 }}
           transition={{ duration: 0.2, ease: 'easeInOut' }}
-          className="h-full border-l border-primary-200 bg-surface overflow-hidden flex flex-col relative"
+          className="h-full min-w-0 border-l border-primary-200 bg-surface overflow-hidden flex flex-col relative z-10"
+          style={{ maxWidth: 420 }}
         >
           {/* Panel header */}
           <div className="flex items-center justify-between h-10 px-3 border-b border-primary-200 shrink-0">
@@ -228,16 +229,18 @@ export function ChatPanel() {
             )}
           </AnimatePresence>
 
-          {/* Chat content */}
-          <div className="flex-1 min-h-0 overflow-hidden">
-            <ChatScreen
-              key={activeFriendlyId}
-              activeFriendlyId={activeFriendlyId}
-              isNewChat={isNewChat}
-              forcedSessionKey={forcedSessionKey}
-              onSessionResolved={isNewChat ? handleSessionResolved : undefined}
-              compact
-            />
+          {/* Chat content — force width containment to panel width */}
+          <div className="flex-1 min-h-0 w-full max-w-full overflow-hidden chat-panel-content">
+            <div className="h-full w-full max-w-full overflow-hidden">
+              <ChatScreen
+                key={activeFriendlyId}
+                activeFriendlyId={activeFriendlyId}
+                isNewChat={isNewChat}
+                forcedSessionKey={forcedSessionKey}
+                onSessionResolved={isNewChat ? handleSessionResolved : undefined}
+                compact
+              />
+            </div>
           </div>
         </motion.div>
       )}
