@@ -66,7 +66,7 @@ export function useChatHistory({
       Boolean(activeFriendlyId) &&
       !isRedirecting &&
       (!sessionsReady || activeExists),
-    refetchInterval: 350, // Fast polling (350ms) - matches upstream webclaw for reliability
+    // No auto-polling here — chat-screen.tsx uses streamStart() for 350ms polling during streaming
     placeholderData: function useCachedHistory(): HistoryResponse | undefined {
       return queryClient.getQueryData(historyKey)
     },

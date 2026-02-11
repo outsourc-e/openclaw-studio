@@ -43,7 +43,7 @@ import {
 } from './pending-send'
 import { useChatMeasurements } from './hooks/use-chat-measurements'
 import { useChatHistory } from './hooks/use-chat-history'
-import { useRealtimeChatHistory } from './hooks/use-realtime-chat-history'
+// import { useRealtimeChatHistory } from './hooks/use-realtime-chat-history'
 import { useChatMobile } from './hooks/use-chat-mobile'
 import { useChatSessions } from './hooks/use-chat-sessions'
 import { useAutoSessionTitle } from './hooks/use-auto-session-title'
@@ -53,7 +53,7 @@ import type {
   ChatComposerHandle,
   ChatComposerHelpers,
 } from './components/chat-composer'
-import type { GatewayAttachment, GatewayMessage } from './types'
+import type { GatewayAttachment } from './types'
 import { cn } from '@/lib/utils'
 import { FileExplorerSidebar } from '@/components/file-explorer'
 import { SEARCH_MODAL_EVENTS } from '@/hooks/use-search-modal'
@@ -100,7 +100,10 @@ export function ChatScreen({
   const [pinToTop, setPinToTop] = useState(
     () => hasPendingSend() || hasPendingGeneration(),
   )
-  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null)
+  const streamTimer = useRef<number | null>(null)
+  const streamIdleTimer = useRef<number | null>(null)
+  const lastAssistantSignature = useRef('')
+  const refreshHistoryRef = useRef<() => void>(() => {})
 
   const pendingStartRef = useRef(false)
   const composerHandleRef = useRef<ChatComposerHandle | null>(null)
@@ -145,67 +148,61 @@ export function ChatScreen({
     queryClient,
   })
 
-  // Real-time streaming integration - SSE is now the PRIMARY source
-  const {
-    messages: realtimeEnhancedMessages,
-    connectionState: _realtimeConnectionState,
-    isRealtimeStreaming,
-    realtimeStreamingText,
-    realtimeStreamingThinking,
-    lastCompletedRunAt,
-  } = useRealtimeChatHistory({
-    sessionKey: resolvedSessionKey || activeSessionKey || activeFriendlyId,
-    friendlyId: activeFriendlyId,
-    historyMessages: displayMessages,
-    enabled: !isNewChat && !isRedirecting,
-  })
+  // Display messages from polling (proven upstream approach)
+  const finalDisplayMessages = displayMessages
 
-  // Use realtime-enhanced messages for display
-  const finalDisplayMessages = realtimeEnhancedMessages
-
-  // Clear waitingForResponse when SSE delivers a completed response
-  useEffect(() => {
-    if (lastCompletedRunAt && waitingForResponse) {
-      if (streamingMessageId) {
-        removeHistoryMessageByClientId(
-          queryClient,
-          activeFriendlyId,
-          resolvedSessionKey || activeSessionKey,
-          streamingMessageId,
-        )
-        setStreamingMessageId(null)
-      }
-      setPendingGeneration(false)
-      setWaitingForResponse(false)
-      setPinToTop(false)
+  // --- Stream management (upstream webclaw pattern) ---
+  const streamStop = useCallback(() => {
+    if (streamTimer.current) {
+      window.clearInterval(streamTimer.current)
+      streamTimer.current = null
     }
-  }, [lastCompletedRunAt, waitingForResponse, streamingMessageId, queryClient, activeFriendlyId, resolvedSessionKey, activeSessionKey])
-
-  // Fallback: Clear waiting state when a real assistant message arrives via polling
-  // (in case SSE final event doesn't fire)
-  useEffect(() => {
-    if (!waitingForResponse) return
-    const lastMsg = historyMessages[historyMessages.length - 1]
-    if (
-      lastMsg?.role === 'assistant' &&
-      !lastMsg.__optimisticId &&
-      !lastMsg.__streamingStatus
-    ) {
-      // A real assistant message arrived via polling — clear waiting state
-      if (streamingMessageId) {
-        removeHistoryMessageByClientId(
-          queryClient,
-          activeFriendlyId,
-          resolvedSessionKey || activeSessionKey,
-          streamingMessageId,
-        )
-        setStreamingMessageId(null)
-      }
-      setPendingGeneration(false)
-      setWaitingForResponse(false)
-      setPinToTop(false)
+    if (streamIdleTimer.current) {
+      window.clearTimeout(streamIdleTimer.current)
+      streamIdleTimer.current = null
     }
-  }, [historyMessages, waitingForResponse, streamingMessageId, queryClient, activeFriendlyId, resolvedSessionKey, activeSessionKey])
+  }, [])
+
+  useEffect(() => {
+    return () => { streamStop() }
+  }, [streamStop])
+
+  const streamFinish = useCallback(() => {
+    streamStop()
+    setPendingGeneration(false)
+    setWaitingForResponse(false)
+    setPinToTop(false)
+  }, [streamStop])
+
+  const streamStart = useCallback(() => {
+    if (!activeFriendlyId || isNewChat) return
+    if (streamTimer.current) window.clearInterval(streamTimer.current)
+    streamTimer.current = window.setInterval(() => {
+      refreshHistoryRef.current()
+    }, 350)
+  }, [activeFriendlyId, isNewChat])
+
+  refreshHistoryRef.current = function refreshHistory() {
+    if (historyQuery.isFetching) return
+    void historyQuery.refetch()
+  }
+
+  // Idle detection: when latest assistant message is stable for 4s, finish
+  useEffect(() => {
+    if (historyMessages.length === 0) return
+    const latestMessage = historyMessages[historyMessages.length - 1]
+    if (latestMessage.role !== 'assistant') return
+    const signature = `${historyMessages.length}:${textFromMessage(latestMessage).slice(-64)}`
+    if (signature !== lastAssistantSignature.current) {
+      lastAssistantSignature.current = signature
+      if (streamIdleTimer.current) {
+        window.clearTimeout(streamIdleTimer.current)
+      }
+      streamIdleTimer.current = window.setTimeout(() => {
+        streamFinish()
+      }, 4000)
+    }
+  }, [historyMessages, streamFinish])
 
   useAutoSessionTitle({
     friendlyId: activeFriendlyId,
@@ -294,14 +291,12 @@ export function ChatScreen({
   // Sync chat activity to global store for sidebar orchestrator avatar
   const setLocalActivity = useChatActivityStore((s) => s.setLocalActivity)
   useEffect(() => {
-    if (isRealtimeStreaming) {
-      setLocalActivity('responding')
-    } else if (waitingForResponse) {
+    if (waitingForResponse) {
       setLocalActivity('thinking')
     } else {
       setLocalActivity('idle')
     }
-  }, [isRealtimeStreaming, waitingForResponse, setLocalActivity])
+  }, [waitingForResponse, setLocalActivity])
 
   const _uiQuery = useQuery({
     queryKey: chatUiQueryKey,
@@ -451,10 +446,11 @@ export function ChatScreen({
       setPinToTop(true)
       return
     }
+    streamStop()
+    lastAssistantSignature.current = ''
     setWaitingForResponse(false)
     setPinToTop(false)
-    setStreamingMessageId(null)
-  }, [activeFriendlyId, isNewChat])
+  }, [activeFriendlyId, isNewChat, streamStop])
 
   useLayoutEffect(() => {
     if (isNewChat) return
@@ -548,20 +544,6 @@ export function ChatScreen({
       )
     }
 
-    // Create streaming placeholder message for real-time streaming display
-    const streamId = `streaming-${Date.now()}`
-    setStreamingMessageId(streamId)
-    const streamingPlaceholder: GatewayMessage = {
-      role: 'assistant',
-      content: [],
-      __optimisticId: streamId,
-      __streamingStatus: 'streaming' as const,
-      __streamingText: '',
-      __streamingThinking: '',
-      timestamp: Date.now(),
-    }
-    appendHistoryMessage(queryClient, friendlyId, sessionKey, streamingPlaceholder)
-
     setPendingGeneration(true)
     setSending(true)
     setError(null)
@@ -576,7 +558,6 @@ export function ChatScreen({
       dataUrl: attachment.dataUrl,
     }))
 
-    // Fire and forget - response comes through SSE stream
     fetch('/api/send', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -591,7 +572,7 @@ export function ChatScreen({
     })
       .then(async (res) => {
         if (!res.ok) throw new Error(await readError(res))
-        // Response will arrive via SSE stream - nothing more to do here
+        streamStart()
       })
       .catch((err) => {
         const messageText = err instanceof Error ? err.message : String(err)
@@ -610,9 +591,6 @@ export function ChatScreen({
             },
           )
         }
-        // Clean up streaming placeholder on error
-        removeHistoryMessageByClientId(queryClient, friendlyId, sessionKey, streamId)
-        setStreamingMessageId(null)
         setError(`Failed to send message. ${messageText}`)
         setPendingGeneration(false)
         setWaitingForResponse(false)
@@ -886,10 +864,10 @@ export function ChatScreen({
               headerHeight={headerHeight}
               contentStyle={stableContentStyle}
               bottomOffset={terminalPanelInset}
-              isStreaming={isRealtimeStreaming}
-              streamingMessageId={streamingMessageId}
-              streamingText={realtimeStreamingText}
-              streamingThinking={realtimeStreamingThinking}
+              isStreaming={false}
+              streamingMessageId={null}
+              streamingText={''}
+              streamingThinking={''}
             />
           )}
           {showComposer ? (
