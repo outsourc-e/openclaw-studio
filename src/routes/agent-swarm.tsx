@@ -8,6 +8,7 @@ import { useSwarmStore, type SwarmSession } from '@/stores/agent-swarm-store'
 import { cn } from '@/lib/utils'
 import { assignPersona } from '@/lib/agent-personas'
 import { IsometricOffice } from '@/components/agent-swarm/isometric-office'
+import { ActivityPanel } from '@/components/agent-swarm/activity-panel'
 
 export const Route = createFileRoute('/agent-swarm')({
   component: AgentSwarmRoute,
@@ -194,10 +195,17 @@ function AgentSwarmRoute() {
           )}
         </header>
 
-        {/* Office View */}
+        {/* Office View — split layout: office + activity panel */}
         {viewMode === 'office' && (
-          <div className="mb-6 h-[500px] overflow-hidden rounded-2xl border border-primary-200">
-            <IsometricOffice sessions={sessions} />
+          <div className="mb-6 flex h-[550px] gap-3">
+            {/* Office (left ~70%) */}
+            <div className="flex-[7] overflow-hidden rounded-2xl border border-primary-200">
+              <IsometricOffice sessions={sessions} />
+            </div>
+            {/* Activity Panel (right ~30%) */}
+            <div className="flex-[3] overflow-hidden rounded-2xl border border-primary-200">
+              <ActivityPanel sessions={sessions} />
+            </div>
           </div>
         )}
 
