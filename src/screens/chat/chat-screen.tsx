@@ -467,7 +467,7 @@ export function ChatScreen({
     !isMobile && isTerminalPanelOpen ? terminalPanelHeight : 0
   const stableContentStyle = useMemo<React.CSSProperties>(() => {
     const composerPadding =
-      'calc(var(--chat-composer-height, 0px) + env(safe-area-inset-bottom, 0px) + 12px)'
+      'calc(var(--chat-composer-height, 140px) + env(safe-area-inset-bottom, 0px) + 24px)'
     return {
       paddingBottom:
         terminalPanelInset > 0
