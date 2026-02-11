@@ -461,41 +461,53 @@ export function AgentViewPanel() {
             panelVisible ? 'pointer-events-auto' : 'pointer-events-none',
           )}
         >
-          <div className="flex h-13 items-center justify-between border-b border-primary-300/70 px-3">
-            <div className="min-w-0">
-              <h2 className="flex items-center gap-1.5 text-sm font-medium text-balance text-primary-900">
+          <div className="border-b border-primary-300/70 px-3 py-2">
+            {/* Row 1: Title + live badge + close */}
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
                 <AgentAvatar size="sm" />
-                Agent Swarm
-              </h2>
-              <p className="truncate text-[11px] text-primary-700 tabular-nums">
-                {activeCount} active · {queuedAgents.length} queued · {formatCost(totalCost)} total
-              </p>
+                <h2 className="text-sm font-semibold text-primary-900 whitespace-nowrap">Agent Swarm</h2>
+                {isDemoMode ? (
+                  <span className="rounded-full border border-orange-500/30 bg-orange-500/10 px-1.5 py-0.5 text-[10px] text-orange-300">
+                    Demo
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-primary-200/60 px-1.5 py-0.5 text-[10px] text-primary-700 tabular-nums">
+                    {isLiveConnected ? (
+                      <motion.span
+                        animate={{ opacity: [0.4, 1, 0.4], scale: [1, 1.18, 1] }}
+                        transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
+                        className="size-1.5 rounded-full bg-emerald-400"
+                      />
+                    ) : (
+                      <span className="size-1.5 rounded-full bg-primary-500/60" />
+                    )}
+                    {isLoading ? 'sync' : syncedSessionCount}
+                  </span>
+                )}
+              </div>
+              <Button
+                size="icon-sm"
+                variant="ghost"
+                onClick={function handleClosePanel() {
+                  setOpen(false)
+                }}
+                aria-label="Hide Agent View"
+              >
+                <HugeiconsIcon icon={Cancel01Icon} size={20} strokeWidth={1.5} />
+              </Button>
             </div>
-            <div className="flex items-center gap-2">
-              {isDemoMode ? (
-                <div className="inline-flex items-center rounded-full border border-orange-500/30 bg-orange-500/10 px-2 py-1 text-[11px] text-orange-300 tabular-nums">
-                  Demo Mode
-                </div>
-              ) : (
-                <div className="inline-flex items-center gap-1.5 rounded-full bg-primary-200/60 px-2 py-1 text-[11px] text-primary-700 tabular-nums">
-                  {isLiveConnected ? (
-                    <motion.span
-                      animate={{ opacity: [0.4, 1, 0.4], scale: [1, 1.18, 1] }}
-                      transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
-                      className="size-1.5 rounded-full bg-emerald-400"
-                    />
-                  ) : (
-                    <span className="size-1.5 rounded-full bg-primary-500/60" />
-                  )}
-                  {isLoading ? 'syncing...' : `live ${syncedSessionCount}`}
-                </div>
-              )}
+            {/* Row 2: Stats + view toggle */}
+            <div className="mt-1.5 flex items-center justify-between">
+              <p className="text-[11px] text-primary-600 tabular-nums">
+                {activeCount} active · {queuedAgents.length} queued · {formatCost(totalCost)}
+              </p>
               <div className="inline-flex items-center rounded-full border border-primary-300/70 bg-primary-200/50 p-0.5">
                 <Button
                   size="sm"
                   variant="ghost"
                   className={cn(
-                    'h-6 rounded-full px-2 text-[11px]',
+                    'h-5 rounded-full px-2 text-[10px]',
                     viewMode === 'expanded' ? 'bg-primary-300/70 text-primary-900' : 'text-primary-700',
                   )}
                   onClick={function handleExpandedMode() {
@@ -508,7 +520,7 @@ export function AgentViewPanel() {
                   size="sm"
                   variant="ghost"
                   className={cn(
-                    'h-6 rounded-full px-2 text-[11px]',
+                    'h-5 rounded-full px-2 text-[10px]',
                     viewMode === 'compact' ? 'bg-primary-300/70 text-primary-900' : 'text-primary-700',
                   )}
                   onClick={function handleCompactMode() {
@@ -518,16 +530,6 @@ export function AgentViewPanel() {
                   Compact
                 </Button>
               </div>
-              <Button
-                size="icon-sm"
-                variant="ghost"
-                onClick={function handleClosePanel() {
-                  setOpen(false)
-                }}
-                aria-label="Hide Agent View"
-              >
-                <HugeiconsIcon icon={Cancel01Icon} size={20} strokeWidth={1.5} />
-              </Button>
             </div>
           </div>
 
