@@ -32,7 +32,7 @@ function ChatHeaderComponent({
   return (
     <div
       ref={wrapperRef}
-      className="border-b border-primary-200 px-4 h-12 flex items-center bg-surface"
+      className="sticky top-0 z-10 border-b border-primary-200 px-4 h-12 flex items-center bg-surface"
     >
       {showSidebarButton ? (
         <Button
