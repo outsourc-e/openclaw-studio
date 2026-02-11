@@ -462,9 +462,12 @@ function MessageItemComponent({
                 </div>
               ))}
             {effectiveIsStreaming && !hasText && (
-              <div className="flex items-center gap-1.5 text-primary-500">
-                <span className="animate-pulse">Thinking</span>
-                <StreamingCursor />
+              <div className="flex items-center gap-1.5 py-1">
+                <span className="typing-dots flex gap-1">
+                  <span className="size-2 rounded-full bg-primary-400 animate-[typing-bounce_1.4s_ease-in-out_infinite]" />
+                  <span className="size-2 rounded-full bg-primary-400 animate-[typing-bounce_1.4s_ease-in-out_0.2s_infinite]" />
+                  <span className="size-2 rounded-full bg-primary-400 animate-[typing-bounce_1.4s_ease-in-out_0.4s_infinite]" />
+                </span>
               </div>
             )}
           </div>

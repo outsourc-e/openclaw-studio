@@ -26,7 +26,7 @@ export function ApplyModeDialog({
       }
 
       if (event.key === 'Tab') {
-        const focusable = dialog.querySelectorAll<HTMLElement>(
+        const focusable = dialog!.querySelectorAll<HTMLElement>(
           'button, [tabindex]:not([tabindex="-1"])'
         );
         const first = focusable[0];

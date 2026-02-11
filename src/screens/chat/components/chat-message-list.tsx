@@ -251,10 +251,10 @@ function ChatMessageListComponent({
     .filter(({ message }) => message.role === 'user')
     .map(({ index }) => index)
     .pop()
-  // Don't show typing indicator if we're streaming
+  // Show typing indicator when waiting for response and no streaming text visible
+  const hasVisibleStreamContent = isStreaming && streamingText && streamingText.length > 0
   const showTypingIndicator =
-    !isStreaming &&
-    streamingState.streamingTargets.size === 0 &&
+    !hasVisibleStreamContent &&
     waitingForResponse &&
     (typeof lastUserIndex !== 'number' ||
       typeof lastAssistantIndex !== 'number' ||

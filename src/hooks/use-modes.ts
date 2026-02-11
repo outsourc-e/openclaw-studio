@@ -33,7 +33,7 @@ function saveModes(modes: Mode[]): void {
 export function useModes() {
   const [modes, setModes] = useState<Mode[]>(loadModes);
   const [appliedModeId, setAppliedModeId] = useState<string | null>(null);
-  const settings = useSettings();
+  const { settings, updateSettings } = useSettings();
 
   // Sync modes to localStorage whenever they change
   useEffect(() => {
@@ -42,14 +42,13 @@ export function useModes() {
 
   // Check for settings drift
   const checkDrift = useCallback((mode: Mode): boolean => {
-    // Only check meaningful fields
     return (
-      mode.smartSuggestionsEnabled !== settings.smartSuggestionsEnabled ||
-      mode.onlySuggestCheaper !== settings.onlySuggestCheaper ||
+      mode.smartSuggestionsEnabled !== (settings.smartSuggestionsEnabled ?? false) ||
+      mode.onlySuggestCheaper !== (settings.onlySuggestCheaper ?? false) ||
       (mode.preferredBudgetModel !== undefined &&
-        mode.preferredBudgetModel !== settings.preferredBudgetModel) ||
+        mode.preferredBudgetModel !== (settings.preferredBudgetModel ?? '')) ||
       (mode.preferredPremiumModel !== undefined &&
-        mode.preferredPremiumModel !== settings.preferredPremiumModel)
+        mode.preferredPremiumModel !== (settings.preferredPremiumModel ?? ''))
     );
   }, [settings]);
 
@@ -78,10 +77,10 @@ export function useModes() {
         id: crypto.randomUUID(),
         name,
         preferredModel: includeCurrentModel ? currentModel : undefined,
-        smartSuggestionsEnabled: settings.smartSuggestionsEnabled,
-        onlySuggestCheaper: settings.onlySuggestCheaper,
-        preferredBudgetModel: settings.preferredBudgetModel,
-        preferredPremiumModel: settings.preferredPremiumModel,
+        smartSuggestionsEnabled: settings.smartSuggestionsEnabled ?? false,
+        onlySuggestCheaper: settings.onlySuggestCheaper ?? false,
+        preferredBudgetModel: settings.preferredBudgetModel ?? '',
+        preferredPremiumModel: settings.preferredPremiumModel ?? '',
       };
 
       setModes((prev) => [...prev, newMode]);
@@ -117,14 +116,12 @@ export function useModes() {
 
   const applyMode = useCallback((mode: Mode): void => {
     // Apply settings immediately
-    settings.setSmartSuggestionsEnabled(mode.smartSuggestionsEnabled);
-    settings.setOnlySuggestCheaper(mode.onlySuggestCheaper);
-    if (mode.preferredBudgetModel) {
-      settings.setPreferredBudgetModel(mode.preferredBudgetModel);
-    }
-    if (mode.preferredPremiumModel) {
-      settings.setPreferredPremiumModel(mode.preferredPremiumModel);
-    }
+    updateSettings({
+      smartSuggestionsEnabled: mode.smartSuggestionsEnabled,
+      onlySuggestCheaper: mode.onlySuggestCheaper,
+      ...(mode.preferredBudgetModel ? { preferredBudgetModel: mode.preferredBudgetModel } : {}),
+      ...(mode.preferredPremiumModel ? { preferredPremiumModel: mode.preferredPremiumModel } : {}),
+    });
 
     // Mark as applied
     setAppliedModeId(mode.id);
