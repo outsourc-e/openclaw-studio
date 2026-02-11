@@ -273,6 +273,7 @@ function ChatComposerComponent({
   const dragCounterRef = useRef(0)
   const shouldRefocusAfterSendRef = useRef(false)
   const modelSelectorRef = useRef<HTMLDivElement | null>(null)
+  const composerWrapperRef = useRef<HTMLDivElement | null>(null)
   const isVoiceInputDisabled = true
   const isSupplementalActionDisabled = true
   
@@ -426,6 +427,32 @@ function ChatComposerComponent({
     : noModelsAvailable
       ? 'No models available'
       : null
+
+  // Measure composer height and set CSS variable for scroll padding
+  useLayoutEffect(() => {
+    const wrapper = composerWrapperRef.current
+    if (!wrapper) return
+
+    const updateHeight = () => {
+      const height = wrapper.offsetHeight
+      if (height > 0) {
+        document.documentElement.style.setProperty(
+          '--chat-composer-height',
+          `${height}px`
+        )
+      }
+    }
+
+    updateHeight()
+
+    // Use ResizeObserver to track height changes (e.g., when textarea grows)
+    const resizeObserver = new ResizeObserver(updateHeight)
+    resizeObserver.observe(wrapper)
+
+    return () => {
+      resizeObserver.disconnect()
+    }
+  }, [attachments.length, value])
 
   const focusPrompt = useCallback(() => {
     if (typeof window === 'undefined') return
@@ -679,11 +706,24 @@ function ChatComposerComponent({
     [addAttachments],
   )
 
+  // Combine internal ref with external wrapperRef
+  const setWrapperRefs = useCallback(
+    (node: HTMLDivElement | null) => {
+      composerWrapperRef.current = node
+      if (typeof wrapperRef === 'function') {
+        wrapperRef(node)
+      } else if (wrapperRef && 'current' in wrapperRef) {
+        ;(wrapperRef as React.MutableRefObject<HTMLDivElement | null>).current = node
+      }
+    },
+    [wrapperRef]
+  )
+
   return (
     <div
       className="sticky bottom-0 z-30 mx-auto w-full bg-surface/95 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-2 backdrop-blur sm:px-5"
       style={{ maxWidth: 'min(768px, 100%)' }}
-      ref={wrapperRef}
+      ref={setWrapperRefs}
     >
       <input
         ref={attachmentInputRef}

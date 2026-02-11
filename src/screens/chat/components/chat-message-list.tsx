@@ -361,9 +361,23 @@ function ChatMessageListComponent({
         !prevPinRef.current || prevUserIndexRef.current !== lastUserIndex
       prevPinRef.current = true
       prevUserIndexRef.current = lastUserIndex
+      // Keep stickToBottom ready so we scroll down when pinToTop clears
+      stickToBottomRef.current = true
       if (shouldPin && lastUserRef.current) {
         setProgrammaticScroll(32)
         lastUserRef.current.scrollIntoView({ behavior: 'auto', block: 'start' })
+      }
+      return
+    }
+
+    // pinToTop just turned off — force scroll to bottom
+    if (prevPinRef.current) {
+      prevPinRef.current = false
+      prevUserIndexRef.current = lastUserIndex
+      stickToBottomRef.current = true
+      setIsNearBottom(true)
+      if (anchorRef.current) {
+        scrollToAnchor('smooth', 220)
       }
       return
     }
@@ -377,7 +391,7 @@ function ChatMessageListComponent({
     if (anchorRef.current) {
       scrollToAnchor(sessionChanged ? 'auto' : 'smooth', sessionChanged ? 32 : 220)
     }
-  }, [loading, displayMessages.length, sessionKey, pinToTop, lastUserIndex])
+  }, [loading, displayMessages.length, sessionKey, pinToTop, lastUserIndex, scrollToAnchor, setProgrammaticScroll])
 
   useLayoutEffect(() => {
     if (loading || pinToTop || !isStreaming) return
