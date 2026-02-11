@@ -155,10 +155,6 @@ export function AgentViewPanel() {
   } | null>(null)
   const [viewMode, setViewMode] = useState<'expanded' | 'compact'>('compact')
 
-  const syncedSessionCount = useMemo(function getSyncedSessionCount() {
-    return activeAgents.length + queuedAgents.length + historyAgents.length
-  }, [activeAgents.length, historyAgents.length, queuedAgents.length])
-
   const totalCost = useMemo(function getTotalCost() {
     return activeAgents.reduce(function sumCost(total, agent) {
       return total + agent.estimatedCost
@@ -455,19 +451,27 @@ export function AgentViewPanel() {
           <div className="border-b border-primary-300/70 px-3 py-2">
             {/* Row 1: Count left | Title center | Actions right */}
             <div className="flex items-center justify-between">
-              {/* Left — agent count + live indicator */}
+              {/* Left — active agent count + live indicator */}
               <div className="flex items-center gap-1.5">
-                <span className="inline-flex items-center gap-1 rounded-full border border-primary-300/70 bg-primary-200/50 px-2 py-0.5 text-[11px] font-medium text-primary-700 tabular-nums">
+                <span
+                  className={cn(
+                    'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium tabular-nums cursor-default',
+                    activeCount > 0
+                      ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-700'
+                      : 'border-primary-300/70 bg-primary-200/50 text-primary-700',
+                  )}
+                  title={`${activeCount} agent${activeCount !== 1 ? 's' : ''} running · ${historyAgents.length} in history · ${queuedAgents.length} queued`}
+                >
                   {isLiveConnected ? (
                     <motion.span
-                      animate={{ opacity: [0.4, 1, 0.4] }}
+                      animate={activeCount > 0 ? { opacity: [0.4, 1, 0.4], scale: [1, 1.2, 1] } : { opacity: [0.4, 1, 0.4] }}
                       transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
-                      className="size-1.5 rounded-full bg-emerald-400"
+                      className={cn('size-1.5 rounded-full', activeCount > 0 ? 'bg-emerald-400' : 'bg-emerald-400')}
                     />
                   ) : (
                     <span className="size-1.5 rounded-full bg-primary-400/50" />
                   )}
-                  {syncedSessionCount}
+                  {activeCount}
                 </span>
               </div>
 
