@@ -151,6 +151,20 @@ export function ChatScreen({
   // Display messages from polling (proven upstream approach)
   const finalDisplayMessages = displayMessages
 
+  // Derive streaming state: when waiting for response and the last display message
+  // is from the assistant, treat it as actively streaming (enables cursor + glow)
+  const derivedStreamingInfo = useMemo(() => {
+    if (!waitingForResponse || finalDisplayMessages.length === 0) {
+      return { isStreaming: false, streamingMessageId: null as string | null }
+    }
+    const last = finalDisplayMessages[finalDisplayMessages.length - 1]
+    if (last && last.role === 'assistant') {
+      const id = (last as any).__optimisticId || (last as any).id || null
+      return { isStreaming: true, streamingMessageId: id }
+    }
+    return { isStreaming: false, streamingMessageId: null as string | null }
+  }, [waitingForResponse, finalDisplayMessages])
+
   // --- Stream management (upstream webclaw pattern) ---
   const streamStop = useCallback(() => {
     if (streamTimer.current) {
@@ -883,10 +897,10 @@ export function ChatScreen({
               headerHeight={headerHeight}
               contentStyle={stableContentStyle}
               bottomOffset={terminalPanelInset}
-              isStreaming={false}
-              streamingMessageId={null}
-              streamingText={''}
-              streamingThinking={''}
+              isStreaming={derivedStreamingInfo.isStreaming}
+              streamingMessageId={derivedStreamingInfo.streamingMessageId}
+              streamingText={undefined}
+              streamingThinking={undefined}
             />
           )}
           {showComposer ? (
