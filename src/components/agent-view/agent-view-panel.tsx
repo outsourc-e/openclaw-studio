@@ -36,6 +36,7 @@ import {
 } from '@/hooks/use-agent-view'
 import { useSounds } from '@/hooks/use-sounds'
 import { OrchestratorAvatar } from '@/components/orchestrator-avatar'
+import { useOrchestratorState } from '@/hooks/use-orchestrator-state'
 import { cn } from '@/lib/utils'
 
 function getLastUserMessageBubbleElement(): HTMLElement | null {
@@ -50,6 +51,53 @@ function formatRelativeMs(msAgo: number): string {
   if (seconds < 60) return `${seconds}s ago`
   const minutes = Math.floor(seconds / 60)
   return `${minutes}m ago`
+}
+
+const STATE_GLOW: Record<string, string> = {
+  idle: 'border-primary-300/70',
+  reading: 'border-blue-400/50 shadow-[0_0_8px_rgba(59,130,246,0.15)]',
+  thinking: 'border-yellow-400/50 shadow-[0_0_8px_rgba(234,179,8,0.15)]',
+  responding: 'border-emerald-400/50 shadow-[0_0_8px_rgba(34,197,94,0.2)]',
+  'tool-use': 'border-violet-400/50 shadow-[0_0_8px_rgba(139,92,246,0.15)]',
+  orchestrating: 'border-orange-400/50 shadow-[0_0_8px_rgba(249,115,22,0.2)]',
+}
+
+function OrchestratorCard() {
+  const { state, label } = useOrchestratorState()
+  const glowClass = STATE_GLOW[state] ?? STATE_GLOW.idle
+
+  return (
+    <div
+      className={cn(
+        'relative overflow-hidden rounded-2xl border bg-gradient-to-br from-primary-100/80 via-primary-100/60 to-primary-200/40 p-3 transition-all duration-500',
+        glowClass,
+      )}
+    >
+      {/* Subtle animated bg gradient for active states */}
+      {state !== 'idle' && (
+        <div className="pointer-events-none absolute inset-0 animate-pulse rounded-2xl bg-gradient-to-br from-orange-500/[0.03] to-transparent" />
+      )}
+
+      <div className="relative flex items-center gap-3">
+        <OrchestratorAvatar size={52} />
+
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs font-semibold text-primary-900">Aurora</span>
+            <span className="rounded-full bg-orange-500/15 px-1.5 py-0.5 text-[9px] font-medium text-orange-600">
+              Main Agent
+            </span>
+          </div>
+          <p className="mt-0.5 text-[10px] text-primary-600">
+            {label}
+          </p>
+          <p className="mt-0.5 truncate text-[9px] font-mono text-primary-500">
+            claude-opus-4-6
+          </p>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 function getHistoryPillClassName(status: 'success' | 'failed'): string {
@@ -426,7 +474,7 @@ export function AgentViewPanel() {
               </div>
 
               {/* Center — title */}
-              <h2 className="text-sm font-semibold text-primary-900">Agent Swarm</h2>
+              <h2 className="text-sm font-semibold text-primary-900">Agent Hub</h2>
 
               {/* Right — expand + close */}
               <div className="flex items-center gap-1">
@@ -437,8 +485,8 @@ export function AgentViewPanel() {
                     setOpen(false)
                     navigate({ to: '/agent-swarm' })
                   }}
-                  aria-label="Open Agent Swarm fullscreen"
-                  title="Open in Studio"
+                  aria-label="Open Agent Swarm studio"
+                  title="Open Studio View"
                 >
                   <HugeiconsIcon icon={ArrowExpand01Icon} size={16} strokeWidth={1.5} />
                 </Button>
@@ -493,10 +541,8 @@ export function AgentViewPanel() {
           <ScrollAreaRoot className="h-[calc(100vh-3.25rem)]">
             <ScrollAreaViewport>
               <div className="space-y-3 p-3">
-                {/* Orchestrator Avatar */}
-                <div className="flex items-center justify-center rounded-2xl border border-primary-300/70 bg-primary-200/35 py-3">
-                  <OrchestratorAvatar size={44} />
-                </div>
+                {/* Main Agent Card */}
+                <OrchestratorCard />
 
                 <section className="rounded-2xl border border-primary-300/70 bg-primary-200/35 p-1.5">
                   <div className="mb-1.5 flex items-center justify-between">
