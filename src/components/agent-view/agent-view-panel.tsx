@@ -11,7 +11,6 @@ import {
 import { useNavigate } from '@tanstack/react-router'
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from 'motion/react'
 import { AgentCard } from './agent-card'
-import { SwarmConnectionOverlay } from './swarm-connection-overlay'
 import { useAgentSpawn } from './hooks/use-agent-spawn'
 import type { AgentNode, AgentNodeStatus, AgentStatusBubble } from './agent-card'
 import type { SwarmConnectionLine } from './swarm-connection-overlay'

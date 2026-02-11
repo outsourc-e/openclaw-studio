@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useGatewayChatStream } from '../../../hooks/use-gateway-chat-stream'
 import { useGatewayChatStore } from '../../../stores/gateway-chat-store'
@@ -14,9 +14,10 @@ type UseRealtimeChatHistoryOptions = {
 }
 
 /**
- * Hook that enhances history polling with real-time streaming.
- * Subscribes to gateway chat events and merges incoming messages
- * with the polled history.
+ * Hook that makes SSE the PRIMARY source for new messages and streaming.
+ * - Streaming chunks update the gateway-chat-store (already happens)
+ * - When 'done' arrives, the complete message is immediately available
+ * - History polling is now just a backup/backfill mechanism
  */
 export function useRealtimeChatHistory({
   sessionKey,
@@ -26,6 +27,8 @@ export function useRealtimeChatHistory({
   onUserMessage,
 }: UseRealtimeChatHistoryOptions) {
   const queryClient = useQueryClient()
+  const [lastCompletedRunAt, setLastCompletedRunAt] = useState<number | null>(null)
+  
   const { 
     connectionState, 
     lastError,
@@ -44,6 +47,12 @@ export function useRealtimeChatHistory({
       }
       onUserMessage?.(message, source)
     }, [queryClient, friendlyId, sessionKey, onUserMessage]),
+    onDone: useCallback((_state: string, eventSessionKey: string) => {
+      // Track when generation completes for this session
+      if (eventSessionKey === sessionKey || !sessionKey || sessionKey === 'new') {
+        setLastCompletedRunAt(Date.now())
+      }
+    }, [sessionKey]),
   })
 
   const { 
@@ -90,5 +99,6 @@ export function useRealtimeChatHistory({
     realtimeStreamingText,
     realtimeStreamingThinking,
     streamingRunId: streamingState?.runId ?? null,
+    lastCompletedRunAt, // Parent watches this to clear waitingForResponse
   }
 }

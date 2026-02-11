@@ -371,7 +371,7 @@ export function AgentCard({
         x: { duration: 0.3, ease: 'easeOut' },
       }}
       className={cn(
-        'group relative overflow-visible rounded-3xl border border-primary-300/80 bg-primary-100/70 shadow-md backdrop-blur-sm',
+        'group relative overflow-hidden rounded-3xl border border-primary-300/80 bg-primary-100/70 shadow-md backdrop-blur-sm',
         isCompact ? 'w-full rounded-xl p-1.5' : 'w-full p-2.5',
         node.status === 'complete' ? 'opacity-50' : 'opacity-100',
         node.status === 'failed' ? 'shadow-red-600/35' : '',
@@ -563,41 +563,24 @@ export function AgentCard({
         <p className={cn('text-pretty text-primary-700', isCompact ? 'line-clamp-1 text-[9px]' : 'line-clamp-2 text-[11px]')}>
           {node.task}
         </p>
-        {isCompact ? (
-          <p className="mt-0.5 truncate text-[9px] text-primary-600 tabular-nums">
-            {formatRuntime(node.runtimeSeconds)} · {node.tokenCount.toLocaleString()} · {formatCost(node.cost)}
-          </p>
-        ) : (
-          <div className="mt-2 space-y-1 text-[11px]">
-            <div className="flex items-center gap-1 truncate">
-              <HugeiconsIcon icon={Clock01Icon} size={20} strokeWidth={1.5} />
-              <span className="truncate font-mono">{formatRuntime(node.runtimeSeconds)}</span>
-            </div>
-            <div className="flex items-center gap-1 truncate">
-              <HugeiconsIcon icon={AiChat01Icon} size={20} strokeWidth={1.5} />
-              <span className="truncate">{node.tokenCount.toLocaleString()}</span>
-            </div>
-            <div className="flex items-center gap-1 truncate">
-              <HugeiconsIcon icon={CoinsDollarIcon} size={20} strokeWidth={1.5} />
-              <span className="truncate">{formatCost(node.cost)}</span>
-            </div>
-          </div>
-        )}
+        <p className={cn('mt-0.5 truncate tabular-nums', isCompact ? 'text-[9px] text-primary-600' : 'text-[10px] text-primary-600')}>
+          {formatRuntime(node.runtimeSeconds)} · {node.tokenCount.toLocaleString()} tokens · {formatCost(node.cost)}
+        </p>
 
         {showActions ? (
-          <div className={cn('space-y-1.5', isCompact ? 'mt-1.5 max-h-0 overflow-hidden opacity-0 transition-all duration-200 group-hover:max-h-32 group-hover:opacity-100' : 'mt-2')}>
-            {/* Buttons row: Chat | View | Kill icon */}
+          <div className={cn(isCompact ? 'mt-1.5 max-h-0 overflow-hidden opacity-0 transition-all duration-200 group-hover:max-h-32 group-hover:opacity-100' : 'mt-2')}>
+            {/* Buttons row: Chat | View | Kill icon — all inline */}
             <div className="flex items-center gap-1.5">
               {onChat ? (
                 <Button
                   variant="secondary"
                   size="sm"
-                  className={cn('flex-1 justify-center', isCompact ? 'h-6 text-[11px]' : 'h-7')}
+                  className="flex-1 justify-center h-7 text-xs"
                   onClick={function handleChatClick() {
                     onChat(node.id)
                   }}
                 >
-                  <HugeiconsIcon icon={AiChat01Icon} size={16} strokeWidth={1.5} />
+                  <HugeiconsIcon icon={AiChat01Icon} size={14} strokeWidth={1.5} />
                   Chat
                 </Button>
               ) : null}
@@ -605,10 +588,10 @@ export function AgentCard({
                 <Button
                   variant="outline"
                   size="sm"
-                  className={cn('flex-1 justify-center', isCompact ? 'h-6 text-[11px]' : 'h-7')}
+                  className="flex-1 justify-center h-7 text-xs"
                   onClick={handleViewClick}
                 >
-                  <HugeiconsIcon icon={EyeIcon} size={16} strokeWidth={1.5} />
+                  <HugeiconsIcon icon={EyeIcon} size={14} strokeWidth={1.5} />
                   View
                 </Button>
               ) : null}
@@ -616,13 +599,13 @@ export function AgentCard({
                 <Button
                   variant="ghost"
                   size="icon-sm"
-                  className={cn('flex-shrink-0 rounded-full', isCompact ? 'size-6' : 'size-7')}
+                  className="flex-shrink-0 rounded-full size-7"
                   onClick={function handleCancelClick() {
                     onCancel?.(node.id)
                   }}
                   title="Cancel"
                 >
-                  <HugeiconsIcon icon={Cancel01Icon} size={16} strokeWidth={1.5} />
+                  <HugeiconsIcon icon={Cancel01Icon} size={14} strokeWidth={1.5} />
                 </Button>
               ) : (
                 <AlertDialogRoot>
@@ -631,10 +614,10 @@ export function AgentCard({
                       <Button
                         variant="destructive"
                         size="icon-sm"
-                        className={cn('flex-shrink-0 rounded-full', isCompact ? 'size-6' : 'size-7')}
+                        className="flex-shrink-0 rounded-full size-7"
                         title="Kill agent"
                       >
-                        <HugeiconsIcon icon={Delete02Icon} size={16} strokeWidth={1.5} />
+                        <HugeiconsIcon icon={Delete02Icon} size={14} strokeWidth={1.5} />
                       </Button>
                     }
                   />
@@ -664,31 +647,6 @@ export function AgentCard({
         ) : null}
       </div>
 
-      {/* Status bubble — only in expanded mode, not on orchestrator */}
-      {!isCompact && !node.isMain ? (
-        <AnimatePresence mode="wait" initial={false}>
-          {node.statusBubble ? (
-            <motion.div
-              key={`${node.statusBubble.type}:${node.statusBubble.text}`}
-              initial={{ opacity: 0, scale: 0.84, y: 8 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.84, y: 6 }}
-              transition={{ duration: 0.2, ease: 'easeOut' }}
-              className="pointer-events-none absolute inset-x-0 -bottom-3 z-10 flex justify-center"
-            >
-              <span
-                className={cn(
-                  'inline-flex max-w-[90%] items-center gap-1.5 rounded-full border px-2 py-1 text-[10px] font-medium tabular-nums shadow-sm',
-                  getBubbleClassName(node.statusBubble.type),
-                )}
-              >
-                <span aria-hidden>{getBubbleIcon(node.statusBubble.type)}</span>
-                <span className="truncate text-pretty">{node.statusBubble.text}</span>
-              </span>
-            </motion.div>
-          ) : null}
-        </AnimatePresence>
-      ) : null}
     </motion.article>
   )
 }
