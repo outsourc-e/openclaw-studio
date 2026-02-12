@@ -862,7 +862,7 @@ function ChatSidebarComponent({
       )}
 
       {/* ── Navigation sections ─────────────────────────────────────── */}
-      <div className="shrink-0 max-h-[70%] space-y-0.5 px-2 overflow-y-auto scrollbar-thin">
+      <div className="shrink-0 space-y-0.5 px-2 overflow-y-auto scrollbar-thin">
         {/* SUITE */}
         <SectionLabel
           label="Suite"
@@ -902,7 +902,7 @@ function ChatSidebarComponent({
       </div>
 
       {/* ── Sessions list ───────────────────────────────────────────── */}
-      <div className="flex-1 min-h-0 overflow-hidden border-t border-primary-200/60">
+      <div className="shrink min-h-0 max-h-[30%] overflow-hidden border-t border-primary-200/60">
         <AnimatePresence initial={false}>
           {!isCollapsed && (
             <motion.div
