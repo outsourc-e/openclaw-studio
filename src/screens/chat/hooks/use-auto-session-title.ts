@@ -21,13 +21,16 @@ const GENERIC_TITLE_PATTERNS = [
   /^untitled/i,
   /^session \d/i,
   /^greet the/i,
+  /^conversation$/i,
+  /^chat$/i,
+  /^[0-9a-f]{6,}/i,
   /^\w{8} \(\d{4}-\d{2}-\d{2}\)$/, // hash-based titles like "17e7f569 (2026-02-10)"
 ]
 
 function isGenericTitle(title: string): boolean {
   const trimmed = title.trim()
   if (!trimmed || trimmed === 'New Session') return true
-  return GENERIC_TITLE_PATTERNS.some(pattern => pattern.test(trimmed))
+  return GENERIC_TITLE_PATTERNS.some((pattern) => pattern.test(trimmed))
 }
 const MAX_PER_MESSAGE_CHARS = 600
 
@@ -140,11 +143,18 @@ export function useAutoSessionTitle({
     if (snippet.length < minMessagesForThisSnippet) return false
     if (resolvedMessageCount < minMessagesForThisSnippet) return false
     if (resolvedMessageCount > MAX_MESSAGES_FOR_TITLE) return false
-    if (activeSession?.label || activeSession?.title) return false
-    if (activeSession?.derivedTitle && activeSession.titleSource === 'auto' && !isGenericTitle(activeSession.derivedTitle))
+    if (activeSession?.label) return false
+    if (activeSession?.title && !isGenericTitle(activeSession.title)) return false
+    if (activeSession?.derivedTitle && !isGenericTitle(activeSession.derivedTitle))
+      return false
+    if (titleInfo.source === 'manual' && titleInfo.title) return false
+    if (
+      titleInfo.status === 'ready' &&
+      titleInfo.title &&
+      !isGenericTitle(titleInfo.title)
+    )
       return false
     if (titleInfo.status === 'generating') return false
-    if (titleInfo.status === 'ready' && titleInfo.title) return false
     return true
   }, [
     activeSession?.derivedTitle,
@@ -158,6 +168,7 @@ export function useAutoSessionTitle({
     sessionKey,
     snippet.length,
     snippetSignature,
+    titleInfo.source,
     titleInfo.status,
     titleInfo.title,
   ])
