@@ -38,7 +38,7 @@ function StreamingCursor() {
   return <LoadingIndicator ariaLabel="Assistant is streaming" />
 }
 
-const WORDS_PER_TICK = 10
+const WORDS_PER_TICK = 3
 
 function isWhitespaceCharacter(value: string): boolean {
   return /\s/.test(value)
