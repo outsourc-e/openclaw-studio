@@ -54,30 +54,28 @@ function normalizeStatusPayload(payload: unknown): BrowserStatusResponse {
 
 async function fetchBrowserStatus(): Promise<BrowserStatusResponse> {
   try {
-    // Try local Playwright browser first
-    const localRes = await fetch('/api/browser', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'screenshot' }),
-    })
-    if (localRes.ok) {
-      const data = (await localRes.json()) as Record<string, unknown>
+    // Check local stream server status (same server the browser UI uses)
+    const res = await fetch('http://localhost:9223', { signal: AbortSignal.timeout(2000) })
+    if (res.ok) {
+      const data = (await res.json()) as Record<string, unknown>
       if (data.running) {
+        // Get a fresh screenshot for the preview
+        const ssRes = await fetch('http://localhost:9223', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'screenshot' }),
+          signal: AbortSignal.timeout(3000),
+        })
+        const ssData = ssRes.ok ? (await ssRes.json()) as Record<string, unknown> : {}
         return {
           active: true,
           url: readString(data.url),
-          screenshotUrl: readString(data.screenshot),
+          screenshotUrl: readString(ssData.screenshot) || '',
           message: readString(data.title) || 'Browser active',
         }
       }
     }
-
-    // Fallback to gateway browser status
-    const response = await fetch('/api/browser/status')
-    if (!response.ok) return FALLBACK_STATUS
-
-    const payload = (await response.json()) as unknown
-    return normalizeStatusPayload(payload)
+    return FALLBACK_STATUS
   } catch {
     return FALLBACK_STATUS
   }

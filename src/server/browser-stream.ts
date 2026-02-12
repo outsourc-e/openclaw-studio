@@ -170,26 +170,20 @@ async function handleAction(action: string, params: Record<string, unknown>) {
     case 'keydown': {
       const key = String(params.key || '')
       if (cdp) {
-        // Map special keys to CDP key identifiers
-        const text = key.length === 1 ? key : undefined
-        await cdp.send('Input.dispatchKeyEvent', {
-          type: 'keyDown',
-          key,
-          code: String(params.code || ''),
-          text,
-          windowsVirtualKeyCode: Number(params.keyCode) || 0,
-          nativeVirtualKeyCode: Number(params.keyCode) || 0,
-          modifiers: Number(params.modifiers) || 0,
-        })
+        const modifiers = Number(params.modifiers) || 0
+        const text = key.length === 1 && !modifiers ? key : undefined
         if (text) {
+          // For printable characters, use insertText — clean, no duplicates
+          await cdp.send('Input.insertText', { text })
+        } else {
+          // For special keys (Enter, Backspace, Tab, arrows, etc.) use keyDown
           await cdp.send('Input.dispatchKeyEvent', {
-            type: 'char',
+            type: 'keyDown',
             key,
             code: String(params.code || ''),
-            text,
             windowsVirtualKeyCode: Number(params.keyCode) || 0,
             nativeVirtualKeyCode: Number(params.keyCode) || 0,
-            modifiers: Number(params.modifiers) || 0,
+            modifiers,
           })
         }
       } else {
@@ -200,6 +194,10 @@ async function handleAction(action: string, params: Record<string, unknown>) {
 
     case 'keyup': {
       const key = String(params.key || '')
+      // Skip keyUp for printable chars (we used insertText for those)
+      if (key.length === 1 && !(Number(params.modifiers) || 0)) {
+        return { ok: true }
+      }
       if (cdp) {
         await cdp.send('Input.dispatchKeyEvent', {
           type: 'keyUp',
@@ -245,6 +243,10 @@ async function handleAction(action: string, params: Record<string, unknown>) {
       currentTitle = await page!.title().catch(() => '')
       broadcastState()
       return { ok: true }
+
+    case 'screenshot': {
+      return { ok: true, screenshot: lastFrame || '', url: currentUrl, title: currentTitle }
+    }
 
     case 'content': {
       const url = page!.url()
