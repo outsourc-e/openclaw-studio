@@ -946,14 +946,12 @@ function ChatSidebarComponent({
           </MenuTrigger>
           <MenuContent side="top" align="start" className="min-w-[200px]">
             <MenuItem
-              onClick={function onOpenSettings() {
-                setSettingsOpen(true)
-              }}
+              render={<Link to="/settings" />}
               className="justify-between"
             >
               <span className="flex items-center gap-2">
                 <HugeiconsIcon icon={Settings01Icon} size={20} strokeWidth={1.5} />
-                Config
+                Settings
               </span>
               <kbd className="ml-auto text-[10px] text-primary-500 font-mono">⌘,</kbd>
             </MenuItem>

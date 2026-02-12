@@ -274,9 +274,12 @@ export function DashboardScreen() {
 
             <div className="ml-auto flex items-center gap-3">
               <HeaderAmbientStatus />
+
+              {/* Theme toggle — prominent pill */}
+              <ThemeToggle variant="pill" />
+
               <div className="flex items-center gap-1 rounded-full border border-primary-200 bg-primary-100/65 p-1">
                 <NotificationsPopover />
-                <ThemeToggle />
                 <button
                   type="button"
                   onClick={() => void handleRefresh()}

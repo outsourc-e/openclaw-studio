@@ -3,12 +3,14 @@ import {
   CheckmarkCircle02Icon,
   CloudIcon,
   ComputerIcon,
+  MessageMultiple01Icon,
   Moon01Icon,
   Notification03Icon,
   PaintBoardIcon,
   Settings02Icon,
   SourceCodeSquareIcon,
   Sun01Icon,
+  UserIcon,
 } from '@hugeicons/core-free-icons'
 import { createFileRoute } from '@tanstack/react-router'
 import { useState, useEffect } from 'react'
@@ -25,6 +27,17 @@ import {
   useSettings
 } from '@/hooks/use-settings'
 import { cn } from '@/lib/utils'
+import {
+  getChatProfileDisplayName,
+  useChatSettingsStore,
+} from '@/hooks/use-chat-settings'
+import type { LoaderStyle } from '@/hooks/use-chat-settings'
+import { UserAvatar } from '@/components/avatars'
+import { Input } from '@/components/ui/input'
+import { LogoLoader } from '@/components/logo-loader'
+import { BrailleSpinner } from '@/components/ui/braille-spinner'
+import type { BrailleSpinnerPreset } from '@/components/ui/braille-spinner'
+import { ThreeDotsSpinner } from '@/components/ui/three-dots-spinner'
 
 export const Route = createFileRoute('/settings/')({
   component: SettingsRoute,
@@ -405,11 +418,195 @@ function SettingsRoute() {
           </SettingsRow>
         </SettingsSection>
 
+        <ProfileSection />
+        <ChatDisplaySection />
+        <LoaderStyleSection />
+
         <footer className="flex items-center gap-2 rounded-2xl border border-primary-200 bg-primary-50/70 p-3 text-sm text-primary-600 backdrop-blur-sm">
           <HugeiconsIcon icon={Settings02Icon} size={20} strokeWidth={1.5} />
           <span className="text-pretty">Changes are saved automatically to local storage.</span>
         </footer>
       </main>
     </div>
+  )
+}
+
+// ── Profile Section ─────────────────────────────────────────────────────
+
+const PROFILE_IMAGE_MAX_DIMENSION = 128
+const PROFILE_IMAGE_MAX_FILE_SIZE = 10 * 1024 * 1024
+
+function ProfileSection() {
+  const { settings: chatSettings, updateSettings: updateChatSettings } = useChatSettingsStore()
+  const [profileError, setProfileError] = useState<string | null>(null)
+  const [profileProcessing, setProfileProcessing] = useState(false)
+  const displayName = getChatProfileDisplayName(chatSettings.displayName)
+
+  async function handleAvatarUpload(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      setProfileError('Unsupported file type.')
+      return
+    }
+    if (file.size > PROFILE_IMAGE_MAX_FILE_SIZE) {
+      setProfileError('Image too large (max 10MB).')
+      return
+    }
+    setProfileError(null)
+    setProfileProcessing(true)
+    try {
+      const url = URL.createObjectURL(file)
+      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const i = new Image()
+        i.onload = () => resolve(i)
+        i.onerror = () => reject(new Error('Failed to load image'))
+        i.src = url
+      })
+      const max = PROFILE_IMAGE_MAX_DIMENSION
+      const scale = Math.min(1, max / Math.max(img.width, img.height))
+      const w = Math.round(img.width * scale)
+      const h = Math.round(img.height * scale)
+      const canvas = document.createElement('canvas')
+      canvas.width = w
+      canvas.height = h
+      const ctx = canvas.getContext('2d')!
+      ctx.imageSmoothingQuality = 'high'
+      ctx.drawImage(img, 0, 0, w, h)
+      URL.revokeObjectURL(url)
+      const outputType = file.type === 'image/png' ? 'image/png' : 'image/jpeg'
+      updateChatSettings({ avatarDataUrl: canvas.toDataURL(outputType, 0.82) })
+    } catch {
+      setProfileError('Failed to process image.')
+    } finally {
+      setProfileProcessing(false)
+    }
+  }
+
+  return (
+    <SettingsSection title="Profile" description="Your display name and avatar for chat." icon={UserIcon}>
+      <div className="flex items-center gap-4">
+        <UserAvatar size={56} src={chatSettings.avatarDataUrl} alt={displayName} />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium text-primary-900">{displayName}</p>
+          <p className="text-xs text-primary-500">Shown in the sidebar and chat messages.</p>
+        </div>
+      </div>
+      <SettingsRow label="Display name" description="Leave blank for default.">
+        <Input
+          value={chatSettings.displayName}
+          onChange={(e) => updateChatSettings({ displayName: e.target.value })}
+          placeholder="User"
+          className="h-9 min-w-[220px]"
+        />
+      </SettingsRow>
+      <SettingsRow label="Profile picture" description="Resized to 128×128, stored locally.">
+        <div className="flex items-center gap-2">
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleAvatarUpload}
+            className="block w-full max-w-[220px] cursor-pointer text-xs text-primary-700 file:mr-2 file:rounded-md file:border file:border-primary-200 file:bg-primary-100 file:px-2.5 file:py-1.5 file:text-xs file:font-medium"
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => updateChatSettings({ avatarDataUrl: null })}
+            disabled={!chatSettings.avatarDataUrl || profileProcessing}
+          >
+            Remove
+          </Button>
+        </div>
+      </SettingsRow>
+      {profileError && <p className="text-xs text-red-600">{profileError}</p>}
+    </SettingsSection>
+  )
+}
+
+// ── Chat Display Section ────────────────────────────────────────────────
+
+function ChatDisplaySection() {
+  const { settings: chatSettings, updateSettings: updateChatSettings } = useChatSettingsStore()
+
+  return (
+    <SettingsSection title="Chat Display" description="Control what's visible in chat messages." icon={MessageMultiple01Icon}>
+      <SettingsRow label="Show tool messages" description="Display tool call/result blocks in chat.">
+        <Switch
+          checked={chatSettings.showToolMessages}
+          onCheckedChange={(checked) => updateChatSettings({ showToolMessages: checked })}
+        />
+      </SettingsRow>
+      <SettingsRow label="Show reasoning blocks" description="Display model thinking/reasoning in chat.">
+        <Switch
+          checked={chatSettings.showReasoningBlocks}
+          onCheckedChange={(checked) => updateChatSettings({ showReasoningBlocks: checked })}
+        />
+      </SettingsRow>
+    </SettingsSection>
+  )
+}
+
+// ── Loader Style Section ────────────────────────────────────────────────
+
+type LoaderStyleOption = { value: LoaderStyle; label: string }
+
+const LOADER_STYLES: LoaderStyleOption[] = [
+  { value: 'dots', label: 'Dots' },
+  { value: 'braille-claw', label: 'Claw' },
+  { value: 'braille-orbit', label: 'Orbit' },
+  { value: 'braille-breathe', label: 'Breathe' },
+  { value: 'braille-pulse', label: 'Pulse' },
+  { value: 'braille-wave', label: 'Wave' },
+  { value: 'lobster', label: 'Lobster' },
+  { value: 'logo', label: 'Logo' },
+]
+
+function getPreset(style: LoaderStyle): BrailleSpinnerPreset | null {
+  const map: Record<string, BrailleSpinnerPreset> = {
+    'braille-claw': 'claw', 'braille-orbit': 'orbit',
+    'braille-breathe': 'breathe', 'braille-pulse': 'pulse', 'braille-wave': 'wave',
+  }
+  return map[style] ?? null
+}
+
+function LoaderPreview({ style }: { style: LoaderStyle }) {
+  if (style === 'dots') return <ThreeDotsSpinner />
+  if (style === 'lobster') return <span className="inline-block text-sm animate-pulse">🦞</span>
+  if (style === 'logo') return <LogoLoader />
+  const preset = getPreset(style)
+  return preset ? <BrailleSpinner preset={preset} size={16} speed={120} className="text-primary-500" /> : <ThreeDotsSpinner />
+}
+
+function LoaderStyleSection() {
+  const { settings: chatSettings, updateSettings: updateChatSettings } = useChatSettingsStore()
+
+  return (
+    <SettingsSection title="Loading Animation" description="Choose the animation while the assistant is streaming." icon={Settings02Icon}>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {LOADER_STYLES.map((option) => {
+          const active = chatSettings.loaderStyle === option.value
+          return (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => updateChatSettings({ loaderStyle: option.value })}
+              className={cn(
+                'flex min-h-16 flex-col items-center justify-center gap-2 rounded-xl border px-2 py-2 transition-colors',
+                active
+                  ? 'border-primary-500 bg-primary-200/60 text-primary-900'
+                  : 'border-primary-200 bg-primary-50 text-primary-700 hover:bg-primary-100',
+              )}
+              aria-pressed={active}
+            >
+              <span className="flex h-5 items-center justify-center">
+                <LoaderPreview style={option.value} />
+              </span>
+              <span className="text-[11px] font-medium text-center leading-4">{option.label}</span>
+            </button>
+          )
+        })}
+      </div>
+    </SettingsSection>
   )
 }
