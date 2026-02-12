@@ -25,7 +25,7 @@ import {
   UserMultipleIcon,
 } from '@hugeicons/core-free-icons'
 import { AnimatePresence, motion } from 'motion/react'
-import { memo, useEffect, useState } from 'react'
+import { memo, useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useRouterState } from '@tanstack/react-router'
 import { useChatSettings as useSidebarSettings } from '../hooks/use-chat-settings'
@@ -482,10 +482,13 @@ function ChatSidebarComponent({
     },
   })
 
+  // Platform-aware modifier key
+  const mod = useMemo(() => typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.userAgent) ? '⌘' : 'Ctrl+', [])
+
   // Route active states
   const isDashboardActive = pathname === '/dashboard'
   const isAgentSwarmActive = pathname === '/agent-swarm'
-  const isNewSessionActive = pathname === '/new' || pathname === '/chat/new'
+  const isNewSessionActive = pathname === '/new' || pathname.startsWith('/chat/new')
   const isBrowserActive = pathname === '/browser'
   const isTerminalActive = pathname === '/terminal'
   const isTasksActive = pathname === '/tasks'
@@ -845,9 +848,9 @@ function ChatSidebarComponent({
             type="button"
             onClick={() => {
               onSelectSession?.()
-              // Force fresh navigation even if already on /chat/* by using window.location
+              // Force fresh navigation with cache-buster so browser always treats as new URL
               // TanStack Router won't remount for same route pattern changes
-              window.location.href = '/chat/new'
+              window.location.href = `/chat/new?t=${Date.now()}`
             }}
             className={cn(
               buttonVariants({ variant: 'ghost', size: 'sm' }),
@@ -973,7 +976,7 @@ function ChatSidebarComponent({
                 <HugeiconsIcon icon={Settings01Icon} size={20} strokeWidth={1.5} />
                 Settings
               </span>
-              <kbd className="ml-auto text-[10px] text-primary-500 font-mono">⌘,</kbd>
+              <kbd className="ml-auto text-[10px] text-primary-500 font-mono">{mod},</kbd>
             </MenuItem>
             <MenuItem
               onClick={function onOpenProviders() {
@@ -985,7 +988,7 @@ function ChatSidebarComponent({
                 <HugeiconsIcon icon={ApiIcon} size={20} strokeWidth={1.5} />
                 Providers
               </span>
-              <kbd className="ml-auto text-[10px] text-primary-500 font-mono">⌘P</kbd>
+              <kbd className="ml-auto text-[10px] text-primary-500 font-mono">{mod}P</kbd>
             </MenuItem>
           </MenuContent>
         </MenuRoot>
