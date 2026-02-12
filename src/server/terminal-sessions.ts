@@ -1,12 +1,12 @@
 /**
- * Terminal sessions using native child_process.
- * Uses macOS `script` command for PTY allocation (no native addons needed).
- * Falls back to raw pipe mode on other platforms.
+ * Terminal sessions using Python PTY helper.
+ * Gives us real PTY (echo, colors, resize) without node-pty native addon.
  */
 import { randomUUID } from 'node:crypto'
 import { spawn, type ChildProcess } from 'node:child_process'
+import { resolve, dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import EventEmitter from 'node:events'
-import { platform } from 'node:os'
 
 export type TerminalSessionEvent = {
   event: string
@@ -24,6 +24,12 @@ export type TerminalSession = {
 
 const sessions = new Map<string, TerminalSession>()
 
+// Resolve path to pty-helper.py relative to this file
+const __dirname_resolved = typeof __dirname !== 'undefined'
+  ? __dirname
+  : dirname(fileURLToPath(import.meta.url))
+const PTY_HELPER = resolve(__dirname_resolved, 'pty-helper.py')
+
 export function createTerminalSession(params: {
   command?: string[]
   cwd?: string
@@ -35,13 +41,6 @@ export function createTerminalSession(params: {
   const sessionId = randomUUID()
 
   const shell = params.command?.[0] ?? process.env.SHELL ?? '/bin/zsh'
-  // Always include -i for interactive mode (needed for prompt + pipe I/O)
-  const shellArgs = params.command?.slice(1) ?? []
-  if (!shellArgs.includes('-i')) {
-    shellArgs.unshift('-i')
-  }
-
-  // Resolve ~ to home directory
   let cwd = params.cwd ?? process.env.HOME ?? '/tmp'
   if (cwd.startsWith('~')) {
     cwd = cwd.replace('~', process.env.HOME ?? '/tmp')
@@ -50,17 +49,6 @@ export function createTerminalSession(params: {
   const cols = params.cols ?? 80
   const rows = params.rows ?? 24
 
-  const env = {
-    ...process.env,
-    ...params.env,
-    TERM: 'xterm-256color',
-    COLORTERM: 'truecolor',
-    COLUMNS: String(cols),
-    LINES: String(rows),
-  } as Record<string, string>
-
-  let proc: ChildProcess
-
   // Buffer early output before any listener registers
   const earlyBuffer: TerminalSessionEvent[] = []
   let hasListeners = false
@@ -68,7 +56,6 @@ export function createTerminalSession(params: {
   emitter.on('newListener', (eventName) => {
     if (eventName === 'event' && !hasListeners) {
       hasListeners = true
-      // Flush buffered events on next tick so listener is fully registered
       process.nextTick(() => {
         for (const evt of earlyBuffer) {
           emitter.emit('event', evt)
@@ -76,14 +63,6 @@ export function createTerminalSession(params: {
         earlyBuffer.length = 0
       })
     }
-  })
-
-  // Spawn shell directly with pipes. Colors still work via TERM=xterm-256color.
-  // No PTY resize, but fully functional for running commands.
-  proc = spawn(shell, shellArgs, {
-    cwd,
-    env,
-    stdio: ['pipe', 'pipe', 'pipe'],
   })
 
   const pushEvent = (evt: TerminalSessionEvent) => {
@@ -94,21 +73,45 @@ export function createTerminalSession(params: {
     }
   }
 
-  const onData = (data: Buffer) => {
+  // Spawn Python PTY helper
+  const proc: ChildProcess = spawn('python3', [
+    PTY_HELPER,
+    shell,
+    cwd,
+    String(cols),
+    String(rows),
+  ], {
+    env: {
+      ...process.env,
+      ...params.env,
+      TERM: 'xterm-256color',
+      COLORTERM: 'truecolor',
+      COLUMNS: String(cols),
+      LINES: String(rows),
+    } as Record<string, string>,
+    stdio: ['pipe', 'pipe', 'pipe'],
+  })
+
+  proc.stdout?.on('data', (data: Buffer) => {
     pushEvent({
       event: 'data',
       payload: { data: data.toString() },
     })
-  }
+  })
 
-  proc.stdout?.on('data', onData)
-  proc.stderr?.on('data', onData)
+  // stderr from the helper itself (not the shell)
+  proc.stderr?.on('data', (data: Buffer) => {
+    const msg = data.toString()
+    if (msg.trim()) {
+      console.error('[pty-helper stderr]', msg)
+    }
+  })
 
   proc.on('exit', (exitCode, signal) => {
     pushEvent({
       event: 'exit',
       payload: { exitCode, signal: signal ?? undefined },
-    } as TerminalSessionEvent)
+    })
     emitter.emit('close')
     sessions.delete(sessionId)
   })
@@ -132,23 +135,25 @@ export function createTerminalSession(params: {
     },
 
     resize(newCols: number, newRows: number) {
-      // With `script`, we can't resize dynamically.
-      // But we can send SIGWINCH if we had the PTY fd.
-      // For now, just update env for future reference.
-      void newCols
-      void newRows
+      // Send SIGWINCH to the Python helper, which propagates to the PTY
+      if (proc.pid) {
+        try {
+          // Update env so the signal handler reads new size
+          proc.env = { ...proc.env, COLUMNS: String(newCols), LINES: String(newRows) } as Record<string, string>
+        } catch { /* */ }
+        try {
+          process.kill(proc.pid, 'SIGWINCH')
+        } catch { /* */ }
+      }
     },
 
     close() {
       try {
         proc.kill('SIGTERM')
-        // Force kill after 2s if still alive
         setTimeout(() => {
           try { proc.kill('SIGKILL') } catch { /* */ }
         }, 2000)
-      } catch {
-        // Already dead
-      }
+      } catch { /* */ }
       sessions.delete(sessionId)
     },
   }
