@@ -4,7 +4,9 @@
 
 **ClawSuite** is an open-source, self-hosted chat interface for OpenClaw AI agents. Build, monitor, and interact with AI-powered automation through a beautifully designed dashboard that puts you in full control.
 
-![ClawSuite Dashboard](./public/cover.webp)
+![ClawSuite Dashboard](./public/screenshots/dashboard.png)
+
+> ⬆️ *Replace with your own screenshot: take a screenshot of the dashboard at 1440×900+ and save to `public/screenshots/dashboard.png`*
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Node Version](https://img.shields.io/badge/node-%3E%3D22.0.0-brightgreen.svg)](https://nodejs.org/)
