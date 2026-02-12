@@ -299,7 +299,8 @@ export function AgentViewPanel() {
     agentName: string
     statusLabel: string
   } | null>(null)
-  const [viewMode, setViewMode] = useState<'expanded' | 'compact'>('compact')
+  // Auto: expanded avatar when idle, compact when agents are working
+  const viewMode = activeCount > 0 || cliAgents.length > 0 ? 'compact' : 'expanded'
   const [cliAgentsExpanded, setCliAgentsExpanded] = useState(true)
   const [browserPreviewExpanded, setBrowserPreviewExpanded] = useState(true)
   const cliAgentsQuery = useCliAgents()
