@@ -3,6 +3,7 @@ import {
   ArrowDown01Icon,
   ArrowUp02Icon,
   Cancel01Icon,
+  Mic01Icon,
   StopIcon,
 } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
@@ -34,6 +35,7 @@ import type {
 import { usePinnedModels } from '@/hooks/use-pinned-models'
 // import { ModeSelector } from '@/components/mode-selector'
 import { cn } from '@/lib/utils'
+import { useVoiceInput } from '@/hooks/use-voice-input'
 
 type ChatComposerAttachment = {
   id: string
@@ -760,6 +762,18 @@ function ChatComposerComponent({
   const submitDisabled =
     disabled || (value.trim().length === 0 && attachments.length === 0)
 
+  // Voice input
+  const voiceInput = useVoiceInput({
+    onResult: useCallback((text: string) => {
+      if (!text.trim()) return
+      setValue(prev => {
+        const next = prev.trim().length > 0 ? `${prev} ${text}` : text
+        persistDraft(next)
+        return next
+      })
+    }, [persistDraft]),
+  })
+
   const handleAbort = useCallback(async function handleAbort() {
     try {
       await fetch('/api/chat-abort', {
@@ -1109,6 +1123,25 @@ function ChatComposerComponent({
             */}
           </div>
           <div className="flex items-center gap-1">
+            {voiceInput.isSupported ? (
+              <PromptInputAction tooltip={voiceInput.isListening ? 'Stop listening' : 'Voice input'}>
+                <Button
+                  onClick={voiceInput.toggle}
+                  size="icon-sm"
+                  variant="ghost"
+                  className={cn(
+                    'rounded-lg transition-colors',
+                    voiceInput.isListening
+                      ? 'text-red-500 bg-red-50 hover:bg-red-100 animate-pulse'
+                      : 'text-primary-500 hover:bg-primary-100 hover:text-primary-700',
+                  )}
+                  aria-label={voiceInput.isListening ? 'Stop listening' : 'Voice input'}
+                  disabled={disabled}
+                >
+                  <HugeiconsIcon icon={Mic01Icon} size={18} strokeWidth={1.5} />
+                </Button>
+              </PromptInputAction>
+            ) : null}
             {isLoading ? (
               <PromptInputAction tooltip="Stop generation">
                 <Button
