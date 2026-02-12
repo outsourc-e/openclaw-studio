@@ -16,6 +16,7 @@ import {
   cdpMouseClick,
 } from '../../server/browser-session'
 import { startProxy, stopProxy, getProxyUrl, getCurrentTarget } from '../../server/browser-proxy'
+import { startBrowserStream } from '../../server/browser-stream'
 
 export const Route = createFileRoute('/api/browser')({
   server: {
@@ -120,6 +121,11 @@ export const Route = createFileRoute('/api/browser')({
 
             case 'proxy-status': {
               return json({ ok: true, proxyUrl: getProxyUrl(), target: getCurrentTarget() })
+            }
+
+            case 'stream-start': {
+              const result = await startBrowserStream()
+              return json({ ok: true, wsUrl: `ws://localhost:${result.port}`, ...result })
             }
 
             default:
