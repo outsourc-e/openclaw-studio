@@ -66,7 +66,7 @@ export function ThemeToggle({ variant = 'pill' }: ThemeToggleProps) {
             className={cn(
               'inline-flex size-7 items-center justify-center rounded-full transition-all duration-200',
               active
-                ? 'bg-orange-500 text-white shadow-sm'
+                ? 'bg-accent-500 text-white shadow-sm'
                 : 'text-primary-500 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-200',
             )}
             aria-label={mode.label}
