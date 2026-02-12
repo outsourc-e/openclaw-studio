@@ -89,16 +89,17 @@ export function HeaderAmbientStatus() {
     if (editing) inputRef.current?.focus()
   }, [editing])
 
-  const timeStr = useMemo(() => {
+  const timeStr = useMemo(function buildTimeString() {
     return new Intl.DateTimeFormat(undefined, {
-      hour: 'numeric',
+      hour: '2-digit',
       minute: '2-digit',
       hour12: is12h,
     }).format(now)
   }, [now, is12h])
 
-  const dateStr = useMemo(() => {
+  const dateStr = useMemo(function buildDateString() {
     return new Intl.DateTimeFormat(undefined, {
+      weekday: 'short',
       month: 'short',
       day: 'numeric',
     }).format(now)
@@ -123,20 +124,23 @@ export function HeaderAmbientStatus() {
   return (
     <div className="relative hidden sm:block">
       {/* Pill — matches Studio Overview border style */}
-      <div className="inline-flex items-center gap-2 px-1 text-[11px] text-primary-400 tabular-nums">
-        <span>{timeStr}</span>
-        <span className="text-primary-300">·</span>
+      <div className="inline-flex items-center gap-2 px-1 text-[11px] text-primary-700 tabular-nums">
+        <span className="text-orange-600 dark:text-orange-400">{timeStr}</span>
+        <span className="text-primary-500">·</span>
         <span>{dateStr}</span>
         {weather ? (
           <>
-            <span className="text-primary-300">·</span>
-            <span>{weather.emoji} {weather.tempF}°</span>
+            <span className="text-primary-500">·</span>
+            <span>
+              {weather.emoji}{' '}
+              <span className="text-orange-600 dark:text-orange-400">{weather.tempF}°</span>
+            </span>
           </>
         ) : null}
         <button
           type="button"
           onClick={() => { setDraft(settings.weatherLocation); setEditing(!editing) }}
-          className="ml-0.5 rounded p-0.5 text-primary-400 transition-colors hover:text-primary-700"
+          className="ml-0.5 rounded p-0.5 text-primary-600 transition-colors hover:text-primary-900 dark:hover:text-primary-100"
           aria-label="Edit time and weather settings"
           title="Edit settings"
         >

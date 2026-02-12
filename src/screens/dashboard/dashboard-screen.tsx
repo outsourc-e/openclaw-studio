@@ -37,6 +37,7 @@ import type { ResponsiveLayouts } from 'react-grid-layout'
 import { OpenClawStudioIcon } from '@/components/icons/clawsuite'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { chatQueryKeys, fetchGatewayStatus, fetchSessions } from '@/screens/chat/chat-queries'
+import { cn } from '@/lib/utils'
 
 type SessionStatusPayload = {
   ok?: boolean
@@ -218,22 +219,27 @@ export function DashboardScreen() {
   return (
     <main className="h-full overflow-y-auto bg-surface px-4 py-6 text-primary-900 md:px-6 md:py-8">
       <section className="mx-auto w-full max-w-[1600px]">
-        <header className="relative z-20 mb-4 rounded-lg border border-primary-200 bg-primary-50/90 px-4 py-2.5 md:mb-5 md:px-5">
+        <header className="relative z-20 mb-4 rounded-lg border border-primary-300 bg-primary-50/90 px-4 py-2.5 md:mb-5 md:px-5">
           <div className="flex items-center justify-between gap-4">
             {/* LEFT — Logo + title + mode selector */}
             <div className="flex items-center gap-3">
               <OpenClawStudioIcon className="mt-0.5 size-7 shrink-0 rounded-lg" />
               <div className="flex flex-col leading-tight">
-                <h1 className="text-sm font-semibold text-ink">
+                <h1 className="text-sm font-medium text-primary-900">
                   ClawSuite
                 </h1>
-                <p className="mt-0.5 flex items-center gap-1.5 text-[11px] text-primary-400">
+                <p className="mt-0.5 flex items-center gap-1.5 text-[11px] text-primary-600">
                   <span className="inline-flex items-center gap-1">
-                    <span className={`size-1.5 shrink-0 rounded-full ${systemStatus.gateway.connected ? 'bg-emerald-500' : 'bg-red-500'}`} />
+                    <span
+                      className={cn(
+                        'size-1.5 shrink-0 rounded-full',
+                        systemStatus.gateway.connected ? 'bg-emerald-500' : 'bg-red-500',
+                      )}
+                    />
                     <span>{systemStatus.gateway.connected ? 'Connected' : 'Disconnected'}</span>
                   </span>
-                  <span className="text-primary-300">·</span>
-                  <span className="text-primary-500">{systemStatus.currentModel || '—'}</span>
+                  <span className="text-primary-500">·</span>
+                  <span className="text-orange-600 dark:text-orange-400">{systemStatus.currentModel || '—'}</span>
                 </p>
               </div>
               {/* Mode selector removed — sidebar provides navigation */}
@@ -248,7 +254,7 @@ export function DashboardScreen() {
                 <button
                   type="button"
                   onClick={() => void handleRefresh()}
-                  className="inline-flex size-7 items-center justify-center rounded-md text-primary-400 transition-colors hover:text-primary-700 disabled:opacity-50 dark:hover:text-primary-300"
+                  className="inline-flex size-7 items-center justify-center rounded-md text-primary-600 transition-colors hover:text-primary-900 disabled:opacity-50 dark:hover:text-primary-100"
                   aria-label="Refresh Dashboard Data"
                   title="Refresh Dashboard Data"
                   disabled={isRefreshing}
@@ -263,7 +269,7 @@ export function DashboardScreen() {
                 <button
                   type="button"
                   onClick={() => setSettingsOpen(true)}
-                  className="inline-flex size-7 items-center justify-center rounded-md text-primary-400 transition-colors hover:text-primary-700 dark:hover:text-primary-300"
+                  className="inline-flex size-7 items-center justify-center rounded-md text-primary-600 transition-colors hover:text-primary-900 dark:hover:text-primary-100"
                   aria-label="Settings"
                   title="Settings"
                 >
@@ -287,7 +293,7 @@ export function DashboardScreen() {
           <button
             type="button"
             onClick={handleResetLayout}
-            className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] text-primary-400 transition-colors hover:text-primary-700 dark:hover:text-primary-300"
+            className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] text-primary-600 transition-colors hover:text-primary-900 dark:hover:text-primary-100"
             aria-label="Reset Layout"
             title="Reset Layout"
           >

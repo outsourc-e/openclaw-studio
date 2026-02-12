@@ -48,6 +48,8 @@ type SkillsApiResponse = {
   categories: Array<string>
 }
 
+type SkillSearchTier = 0 | 1 | 2 | 3
+
 const PAGE_LIMIT = 30
 
 const DEFAULT_CATEGORIES = [
@@ -66,6 +68,25 @@ const DEFAULT_CATEGORIES = [
   'Data & Analytics',
   'Finance & Crypto',
 ]
+
+function resolveSkillSearchTier(skill: SkillSummary, query: string): SkillSearchTier {
+  const normalizedQuery = query.trim().toLowerCase()
+  if (!normalizedQuery) return 0
+
+  if (skill.name.toLowerCase().includes(normalizedQuery)) return 0
+
+  const tagText = skill.tags.join(' ').toLowerCase()
+  const triggerText = skill.triggers.join(' ').toLowerCase()
+  if (
+    tagText.includes(normalizedQuery) ||
+    triggerText.includes(normalizedQuery)
+  ) {
+    return 1
+  }
+
+  if (skill.description.toLowerCase().includes(normalizedQuery)) return 2
+  return 3
+}
 
 export function SkillsScreen() {
   const queryClient = useQueryClient()
@@ -116,7 +137,32 @@ export function SkillsScreen() {
     Math.ceil((skillsQuery.data?.total || 0) / PAGE_LIMIT),
   )
 
-  const skills = skillsQuery.data?.skills || []
+  const skills = useMemo(
+    function resolveVisibleSkills() {
+      const sourceSkills = skillsQuery.data?.skills || []
+      const normalizedQuery = searchInput.trim().toLowerCase()
+      if (!normalizedQuery) {
+        return sourceSkills
+      }
+
+      return sourceSkills
+        .map(function mapSkillToTier(skill, index) {
+          return {
+            skill,
+            index,
+            tier: resolveSkillSearchTier(skill, normalizedQuery),
+          }
+        })
+        .sort(function sortByTierThenOriginalOrder(a, b) {
+          if (a.tier !== b.tier) return a.tier - b.tier
+          return a.index - b.index
+        })
+        .map(function unwrapSkill(entry) {
+          return entry.skill
+        })
+    },
+    [searchInput, skillsQuery.data?.skills],
+  )
 
   async function runSkillAction(action: 'install' | 'uninstall' | 'toggle', payload: {
     skillId: string
@@ -238,7 +284,7 @@ export function SkillsScreen() {
                 <input
                   value={searchInput}
                   onChange={(event) => handleSearchChange(event.target.value)}
-                  placeholder="Search by name or description"
+                  placeholder="Search by name, tags, or description"
                   className="h-9 min-w-[220px] rounded-lg border border-primary-200 bg-primary-100/60 px-3 text-sm text-ink outline-none transition-colors focus:border-primary"
                 />
 

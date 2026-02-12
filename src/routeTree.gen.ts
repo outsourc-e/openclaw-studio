@@ -61,6 +61,7 @@ import { Route as ApiCronRouteImport } from './routes/api/cron'
 import { Route as ApiCostRouteImport } from './routes/api/cost'
 import { Route as ApiContextUsageRouteImport } from './routes/api/context-usage'
 import { Route as ApiConfigPatchRouteImport } from './routes/api/config-patch'
+import { Route as ApiCliAgentsRouteImport } from './routes/api/cli-agents'
 import { Route as ApiChatEventsRouteImport } from './routes/api/chat-events'
 import { Route as ApiChatAbortRouteImport } from './routes/api/chat-abort'
 import { Route as ApiSessionsSendRouteImport } from './routes/api/sessions/send'
@@ -341,6 +342,11 @@ const ApiConfigPatchRoute = ApiConfigPatchRouteImport.update({
   path: '/api/config-patch',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCliAgentsRoute = ApiCliAgentsRouteImport.update({
+  id: '/api/cli-agents',
+  path: '/api/cli-agents',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiChatEventsRoute = ApiChatEventsRouteImport.update({
   id: '/api/chat-events',
   path: '/api/chat-events',
@@ -462,6 +468,7 @@ export interface FileRoutesByFullPath {
   '/usage': typeof UsageRoute
   '/api/chat-abort': typeof ApiChatAbortRoute
   '/api/chat-events': typeof ApiChatEventsRoute
+  '/api/cli-agents': typeof ApiCliAgentsRoute
   '/api/config-patch': typeof ApiConfigPatchRoute
   '/api/context-usage': typeof ApiContextUsageRoute
   '/api/cost': typeof ApiCostRoute
@@ -534,6 +541,7 @@ export interface FileRoutesByTo {
   '/usage': typeof UsageRoute
   '/api/chat-abort': typeof ApiChatAbortRoute
   '/api/chat-events': typeof ApiChatEventsRoute
+  '/api/cli-agents': typeof ApiCliAgentsRoute
   '/api/config-patch': typeof ApiConfigPatchRoute
   '/api/context-usage': typeof ApiContextUsageRoute
   '/api/cost': typeof ApiCostRoute
@@ -608,6 +616,7 @@ export interface FileRoutesById {
   '/usage': typeof UsageRoute
   '/api/chat-abort': typeof ApiChatAbortRoute
   '/api/chat-events': typeof ApiChatEventsRoute
+  '/api/cli-agents': typeof ApiCliAgentsRoute
   '/api/config-patch': typeof ApiConfigPatchRoute
   '/api/context-usage': typeof ApiContextUsageRoute
   '/api/cost': typeof ApiCostRoute
@@ -683,6 +692,7 @@ export interface FileRouteTypes {
     | '/usage'
     | '/api/chat-abort'
     | '/api/chat-events'
+    | '/api/cli-agents'
     | '/api/config-patch'
     | '/api/context-usage'
     | '/api/cost'
@@ -755,6 +765,7 @@ export interface FileRouteTypes {
     | '/usage'
     | '/api/chat-abort'
     | '/api/chat-events'
+    | '/api/cli-agents'
     | '/api/config-patch'
     | '/api/context-usage'
     | '/api/cost'
@@ -828,6 +839,7 @@ export interface FileRouteTypes {
     | '/usage'
     | '/api/chat-abort'
     | '/api/chat-events'
+    | '/api/cli-agents'
     | '/api/config-patch'
     | '/api/context-usage'
     | '/api/cost'
@@ -902,6 +914,7 @@ export interface RootRouteChildren {
   UsageRoute: typeof UsageRoute
   ApiChatAbortRoute: typeof ApiChatAbortRoute
   ApiChatEventsRoute: typeof ApiChatEventsRoute
+  ApiCliAgentsRoute: typeof ApiCliAgentsRoute
   ApiConfigPatchRoute: typeof ApiConfigPatchRoute
   ApiContextUsageRoute: typeof ApiContextUsageRoute
   ApiCostRoute: typeof ApiCostRoute
@@ -1307,6 +1320,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiConfigPatchRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/cli-agents': {
+      id: '/api/cli-agents'
+      path: '/api/cli-agents'
+      fullPath: '/api/cli-agents'
+      preLoaderRoute: typeof ApiCliAgentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/chat-events': {
       id: '/api/chat-events'
       path: '/api/chat-events'
@@ -1527,6 +1547,7 @@ const rootRouteChildren: RootRouteChildren = {
   UsageRoute: UsageRoute,
   ApiChatAbortRoute: ApiChatAbortRoute,
   ApiChatEventsRoute: ApiChatEventsRoute,
+  ApiCliAgentsRoute: ApiCliAgentsRoute,
   ApiConfigPatchRoute: ApiConfigPatchRoute,
   ApiContextUsageRoute: ApiContextUsageRoute,
   ApiCostRoute: ApiCostRoute,

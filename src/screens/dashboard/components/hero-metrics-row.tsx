@@ -48,14 +48,21 @@ export function HeroMetricsRow({
       {metrics.map((m) => (
         <div
           key={m.label}
-          className="flex items-center gap-2.5 rounded-lg border border-primary-200 bg-primary-50/80 px-3 py-2.5 dark:bg-primary-50/90"
+          className="flex items-center gap-2.5 rounded-lg border border-primary-300 bg-primary-50/95 px-3 py-2.5 dark:border-primary-200 dark:bg-primary-50/90"
         >
-          <HugeiconsIcon icon={m.icon} size={15} strokeWidth={1.5} className="shrink-0 text-primary-400" />
+          <HugeiconsIcon
+            icon={m.icon}
+            size={15}
+            strokeWidth={1.5}
+            className="shrink-0 text-orange-600 dark:text-orange-400"
+          />
           <div className="min-w-0">
-            <p className="truncate text-base font-semibold tabular-nums text-ink leading-tight">
+            <p className="truncate text-base font-medium tabular-nums text-orange-600 leading-tight dark:text-orange-400">
               {m.value}
             </p>
-            <p className="text-[10px] uppercase tracking-wide text-primary-400 leading-tight">{m.label}</p>
+            <p className="text-[10px] uppercase tracking-wide text-primary-700 leading-tight dark:text-primary-700">
+              {m.label}
+            </p>
           </div>
         </div>
       ))}
