@@ -19,6 +19,8 @@ type CommitEntry = {
 
 type UpdateCheckResult = {
   updateAvailable: boolean
+  localVersion: string
+  remoteVersion: string
   localCommit: string
   remoteCommit: string
   localDate: string
@@ -36,9 +38,22 @@ function runGit(args: string, cwd: string): string {
   }
 }
 
+function readPackageVersion(repoPath: string): string {
+  try {
+    const pkg = require(path.join(repoPath, 'package.json')) as { version?: string }
+    return pkg.version || '0.0.0'
+  } catch {
+    return '0.0.0'
+  }
+}
+
+function buildVersionLabel(baseVersion: string, commit: string): string {
+  return `${baseVersion} (${commit})`
+}
+
 function checkForUpdates(): UpdateCheckResult {
-  // Find the repo root (where the server is running from)
   const repoPath = path.resolve(process.cwd())
+  const pkgVersion = readPackageVersion(repoPath)
 
   // Fetch latest from remote (quiet, won't fail if offline)
   runGit('fetch origin --quiet', repoPath)
@@ -54,6 +69,12 @@ function checkForUpdates(): UpdateCheckResult {
   // Count commits behind
   const behindCount = runGit(`rev-list --count HEAD..${remoteRef}`, repoPath)
   const behindBy = parseInt(behindCount, 10) || 0
+
+  // Build version labels
+  const localVersion = buildVersionLabel(pkgVersion, localCommit)
+  const remoteVersion = behindBy > 0
+    ? buildVersionLabel(pkgVersion, remoteCommit)
+    : localVersion
 
   // Get changelog (up to 20 commits)
   const changelog: Array<CommitEntry> = []
@@ -73,6 +94,8 @@ function checkForUpdates(): UpdateCheckResult {
 
   return {
     updateAvailable: behindBy > 0,
+    localVersion,
+    remoteVersion,
     localCommit,
     remoteCommit: remoteCommit || localCommit,
     localDate,
@@ -89,7 +112,7 @@ function runUpdate(): { ok: boolean; output: string } {
 
   try {
     // Pull latest
-    const pullOutput = execSync(`git pull origin ${currentBranch}`, {
+    const pullOutput = execSync(`git pull --rebase --autostash origin ${currentBranch}`, {
       cwd: repoPath,
       timeout: 30_000,
       encoding: 'utf8',

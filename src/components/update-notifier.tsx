@@ -20,6 +20,8 @@ type CommitEntry = {
 
 type UpdateCheckResult = {
   updateAvailable: boolean
+  localVersion: string
+  remoteVersion: string
   localCommit: string
   remoteCommit: string
   localDate: string
@@ -239,7 +241,7 @@ export function UpdateNotifier() {
                     ? 'Reloading with latest version...'
                     : isUpdating
                       ? PHASE_LABELS[phase]
-                      : `v${data.localCommit} → v${data.remoteCommit}`}
+                      : `${data.behindBy} update${data.behindBy !== 1 ? 's' : ''} available · ${data.localVersion}`}
               </p>
             </div>
 
@@ -280,7 +282,7 @@ export function UpdateNotifier() {
 
           {/* Changelog */}
           <AnimatePresence>
-            {expanded && data.changelog.length > 0 && (
+            {expanded && (
               <motion.div
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: 'auto', opacity: 1 }}
@@ -289,45 +291,58 @@ export function UpdateNotifier() {
                 className="overflow-hidden"
               >
                 <div className="border-t border-primary-800/60">
-                  {/* Summary pills */}
-                  <div className="flex items-center gap-2 px-5 pt-3 pb-2">
-                    {changelogSummary.features > 0 && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-accent-500/15 px-2.5 py-0.5 text-[11px] font-medium text-accent-400">
-                        ✨ {changelogSummary.features} feature{changelogSummary.features !== 1 ? 's' : ''}
-                      </span>
-                    )}
-                    {changelogSummary.fixes > 0 && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/15 px-2.5 py-0.5 text-[11px] font-medium text-blue-400">
-                        🐛 {changelogSummary.fixes} fix{changelogSummary.fixes !== 1 ? 'es' : ''}
-                      </span>
-                    )}
-                    {changelogSummary.other > 0 && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-primary-700/40 px-2.5 py-0.5 text-[11px] font-medium text-primary-400">
-                        📦 {changelogSummary.other} other
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Commit list */}
-                  <div className="max-h-48 overflow-y-auto px-5 pb-4 space-y-1">
-                    {data.changelog.map((commit) => (
-                      <div
-                        key={commit.hash}
-                        className="flex items-start gap-2.5 py-1.5 group"
-                      >
-                        <span className="text-sm leading-5 shrink-0">{commitTypeIcon(commit.subject)}</span>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs text-primary-200 leading-5 truncate">
-                            {cleanSubject(commit.subject)}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <code className="text-[10px] text-primary-500 font-mono">{commit.hash}</code>
-                          <span className="text-[10px] text-primary-600">{relativeTime(commit.date)}</span>
-                        </div>
+                  {data.changelog.length > 0 ? (
+                    <>
+                      {/* Summary pills */}
+                      <div className="flex items-center gap-2 px-5 pt-3 pb-2">
+                        {changelogSummary.features > 0 && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-accent-500/15 px-2.5 py-0.5 text-[11px] font-medium text-accent-400">
+                            ✨ {changelogSummary.features} feature{changelogSummary.features !== 1 ? 's' : ''}
+                          </span>
+                        )}
+                        {changelogSummary.fixes > 0 && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/15 px-2.5 py-0.5 text-[11px] font-medium text-blue-400">
+                            🐛 {changelogSummary.fixes} fix{changelogSummary.fixes !== 1 ? 'es' : ''}
+                          </span>
+                        )}
+                        {changelogSummary.other > 0 && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-primary-700/40 px-2.5 py-0.5 text-[11px] font-medium text-primary-400">
+                            📦 {changelogSummary.other} other
+                          </span>
+                        )}
                       </div>
-                    ))}
-                  </div>
+
+                      {/* Commit list */}
+                      <div className="max-h-48 overflow-y-auto px-5 pb-4 space-y-1">
+                        {data.changelog.map((commit) => (
+                          <div
+                            key={commit.hash}
+                            className="flex items-start gap-2.5 py-1.5 group"
+                          >
+                            <span className="text-sm leading-5 shrink-0">{commitTypeIcon(commit.subject)}</span>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs text-primary-200 leading-5 truncate">
+                                {cleanSubject(commit.subject)}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <code className="text-[10px] text-primary-500 font-mono">{commit.hash}</code>
+                              <span className="text-[10px] text-primary-600">{relativeTime(commit.date)}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="px-5 py-4 text-center">
+                      <p className="text-xs text-primary-400">
+                        {data.behindBy} new update{data.behindBy !== 1 ? 's' : ''} available with bug fixes and improvements.
+                      </p>
+                      <p className="text-[10px] text-primary-500 mt-1">
+                        Click Install to update to the latest version.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </motion.div>
             )}
