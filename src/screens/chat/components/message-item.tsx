@@ -422,6 +422,22 @@ function MessageItemComponent({
       )
     : []
   const hasAttachments = attachments.length > 0
+
+  // Extract inline images from content array (gateway sends images as content blocks)
+  const inlineImages = useMemo(() => {
+    const parts = Array.isArray(message.content) ? message.content : []
+    return parts
+      .filter((p: any) => p.type === 'image' && p.source)
+      .map((p: any, i: number) => {
+        const src = p.source?.type === 'base64' && p.source?.data
+          ? `data:${p.source.media_type || 'image/jpeg'};base64,${p.source.data}`
+          : p.source?.url || p.url || ''
+        return { id: `inline-img-${i}`, src }
+      })
+      .filter((img) => img.src.length > 0)
+  }, [message.content])
+  const hasInlineImages = inlineImages.length > 0
+
   const hasText = displayText.length > 0
 
   // Get tool calls from this message (for assistant messages)
@@ -522,7 +538,7 @@ function MessageItemComponent({
           </details>
         </div>
       )}
-      {(hasText || hasAttachments || effectiveIsStreaming) && !(message as any).__isNarration && (
+      {(hasText || hasAttachments || hasInlineImages || effectiveIsStreaming) && !(message as any).__isNarration && (
         <Message className={cn(isUser ? 'flex-row-reverse' : '')}>
           {isUser ? (
             <UserAvatar
@@ -558,6 +574,25 @@ function MessageItemComponent({
                     <img
                       src={attachmentSource(attachment)}
                       alt={attachment.name || 'Attached image'}
+                      className="max-h-48 max-w-full object-contain"
+                    />
+                  </a>
+                ))}
+              </div>
+            )}
+            {hasInlineImages && (
+              <div className="flex flex-wrap gap-2">
+                {inlineImages.map((img) => (
+                  <a
+                    key={img.id}
+                    href={img.src}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block overflow-hidden rounded-lg border border-primary-200 hover:border-primary-400 transition-colors"
+                  >
+                    <img
+                      src={img.src}
+                      alt="Shared image"
                       className="max-h-48 max-w-full object-contain"
                     />
                   </a>
