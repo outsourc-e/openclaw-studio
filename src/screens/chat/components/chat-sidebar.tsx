@@ -841,10 +841,14 @@ function ChatSidebarComponent({
       {/* ── New Session button ──────────────────────────────────────── */}
       {!isCollapsed && (
         <div className="px-2 pb-1">
-          <Link
-            to="/chat/$sessionKey"
-            params={{ sessionKey: 'new' }}
-            onClick={onSelectSession}
+          <button
+            type="button"
+            onClick={() => {
+              onSelectSession?.()
+              // Force fresh navigation even if already on /chat/* by using window.location
+              // TanStack Router won't remount for same route pattern changes
+              window.location.href = '/chat/new'
+            }}
             className={cn(
               buttonVariants({ variant: 'ghost', size: 'sm' }),
               'w-full justify-start gap-2.5 px-3 py-2 text-primary-900 hover:bg-primary-200',
@@ -853,12 +857,12 @@ function ChatSidebarComponent({
           >
             <HugeiconsIcon icon={PencilEdit02Icon} size={20} strokeWidth={1.5} className="size-5 shrink-0" />
             <span>New Session</span>
-          </Link>
+          </button>
         </div>
       )}
 
       {/* ── Navigation sections ─────────────────────────────────────── */}
-      <div className="shrink-0 max-h-[55%] space-y-0.5 px-2 overflow-y-auto scrollbar-thin">
+      <div className="shrink-0 max-h-[70%] space-y-0.5 px-2 overflow-y-auto scrollbar-thin">
         {/* SUITE */}
         <SectionLabel
           label="Suite"
