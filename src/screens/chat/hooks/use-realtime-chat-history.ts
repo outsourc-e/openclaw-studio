@@ -82,6 +82,7 @@ export function useRealtimeChatHistory({
     getStreamingState,
     mergeHistoryMessages,
     clearSession,
+    lastEventAt,
   } = useGatewayChatStore()
 
   // Get current streaming state for this session
@@ -90,10 +91,12 @@ export function useRealtimeChatHistory({
   }, [getStreamingState, sessionKey])
 
   // Merge history with real-time messages
+  // Re-merge when realtime events arrive (lastEventAt changes)
   const mergedMessages = useMemo(() => {
     if (sessionKey === 'new') return historyMessages
     return mergeHistoryMessages(sessionKey, historyMessages)
-  }, [sessionKey, historyMessages, mergeHistoryMessages])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionKey, historyMessages, mergeHistoryMessages, lastEventAt])
 
   // Periodic history sync — catch missed messages every 30s
   const syncIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
