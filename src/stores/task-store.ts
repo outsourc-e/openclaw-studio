@@ -16,6 +16,8 @@ export type Task = {
   priority: TaskPriority
   project?: string
   tags: string[]
+  dueDate?: string
+  reminder?: string
   createdAt: string
   updatedAt: string
 }
@@ -33,121 +35,38 @@ export const PRIORITY_ORDER: TaskPriority[] = ['P0', 'P1', 'P2', 'P3']
 
 
 /** Seed data from real Mission Control tasks */
-const SEED_TASKS: Task[] = [
-  {
-    id: 'STUDIO-001',
-    title: 'Dashboard UX Lock-In',
-    description: 'Enterprise alignment pass — mode selector, header cleanup, widget polish, visual hierarchy.',
-    status: 'review',
-    priority: 'P0',
-    project: 'studio',
-    tags: ['dashboard', 'ux'],
-    createdAt: '2026-02-10T18:00:00Z',
-    updatedAt: '2026-02-10T19:00:00Z',
-  },
-  {
-    id: 'STUDIO-002',
-    title: 'Workspace (Chat/Session) UX Parity',
-    description: 'Begin chat/session UX polish to match dashboard quality. Separate phase after dashboard freeze.',
-    status: 'backlog',
-    priority: 'P1',
-    project: 'studio',
-    tags: ['workspace', 'ux'],
-    createdAt: '2026-02-10T18:00:00Z',
-    updatedAt: '2026-02-10T18:00:00Z',
-  },
-  {
-    id: 'STUDIO-003',
-    title: 'Fix Anthropic OAuth 403',
-    description: 'Anthropic OAuth returning 403. Debug and fix auth flow.',
-    status: 'backlog',
-    priority: 'P1',
-    project: 'studio',
-    tags: ['auth', 'bug'],
-    createdAt: '2026-02-10T18:00:00Z',
-    updatedAt: '2026-02-10T18:00:00Z',
-  },
-  {
-    id: 'STUDIO-004',
-    title: 'Fix Minimax Cookie Issue',
-    description: 'Minimax provider cookie-based auth failing. Investigate and resolve.',
-    status: 'backlog',
-    priority: 'P2',
-    project: 'studio',
-    tags: ['auth', 'bug'],
-    createdAt: '2026-02-10T18:00:00Z',
-    updatedAt: '2026-02-10T18:00:00Z',
-  },
-  {
-    id: 'MYAGENCYLAB-001',
-    title: 'Manager Role — Fix Broken Pages',
-    description: 'MyAgencyLab manager role has broken page layouts. Audit and fix all views.',
-    status: 'backlog',
-    priority: 'P2',
-    project: 'myagencylab',
-    tags: ['bug', 'ui'],
-    createdAt: '2026-02-09T01:00:00Z',
-    updatedAt: '2026-02-09T01:00:00Z',
-  },
-  {
-    id: 'MYAGENCYLAB-002',
-    title: 'Dashboard Design Iterations',
-    description: 'Iterate on MyAgencyLab dashboard layout and data presentation.',
-    status: 'backlog',
-    priority: 'P3',
-    project: 'myagencylab',
-    tags: ['design', 'dashboard'],
-    createdAt: '2026-02-09T01:00:00Z',
-    updatedAt: '2026-02-09T01:00:00Z',
-  },
-  {
-    id: 'MYAGENCYLAB-SEC',
-    title: 'Security Audit & Chatter Access Fix',
-    description: 'Full security audit completed. 18 tickets (P0-P3). Chatter access controls hardened.',
-    status: 'done',
-    priority: 'P0',
-    project: 'myagencylab',
-    tags: ['security'],
-    createdAt: '2026-02-07T01:00:00Z',
-    updatedAt: '2026-02-08T01:00:00Z',
-  },
-  {
-    id: 'CODEX-001',
-    title: 'Codex CLI Integration',
-    description: 'Codex CLI workflow integrated for free coding tasks via ChatGPT Pro.',
-    status: 'done',
-    priority: 'P1',
-    project: 'openclaw',
-    tags: ['tooling'],
-    createdAt: '2026-02-05T01:00:00Z',
-    updatedAt: '2026-02-06T01:00:00Z',
-  },
-  {
-    id: 'ACC-001',
-    title: 'Custom OF Scraper',
-    description: 'Build custom scraper to replace OnlyFansAPI.com dependency.',
-    status: 'backlog',
-    priority: 'P1',
-    project: 'myagencylab',
-    tags: ['scraper', 'automation'],
-    createdAt: '2026-02-08T01:00:00Z',
-    updatedAt: '2026-02-08T01:00:00Z',
-  },
-  {
-    id: 'STUDIO-005',
-    title: 'Tag Release v2.2.0',
-    description: 'Tag and release v2.2.0 after dashboard UX lock-in merge.',
-    status: 'backlog',
-    priority: 'P1',
-    project: 'studio',
-    tags: ['release'],
-    createdAt: '2026-02-10T19:00:00Z',
-    updatedAt: '2026-02-10T19:00:00Z',
-  },
-]
+const SEED_TASKS: Task[] = []
+
+function normalizeTaskList(payload: unknown): Task[] {
+  if (
+    !payload ||
+    typeof payload !== 'object' ||
+    !Array.isArray((payload as { tasks?: unknown }).tasks)
+  ) {
+    return []
+  }
+
+  const tasks = (payload as { tasks: unknown[] }).tasks
+  return tasks.filter((task): task is Task => {
+    if (!task || typeof task !== 'object') return false
+    const maybeTask = task as Partial<Task>
+    return (
+      typeof maybeTask.id === 'string' &&
+      typeof maybeTask.title === 'string' &&
+      typeof maybeTask.description === 'string' &&
+      typeof maybeTask.status === 'string' &&
+      typeof maybeTask.priority === 'string' &&
+      Array.isArray(maybeTask.tags) &&
+      typeof maybeTask.createdAt === 'string' &&
+      typeof maybeTask.updatedAt === 'string'
+    )
+  })
+}
 
 type TaskStore = {
   tasks: Task[]
+  afterSync: boolean
+  syncFromApi: () => Promise<void>
   addTask: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => void
   updateTask: (id: string, updates: Partial<Omit<Task, 'id' | 'createdAt'>>) => void
   moveTask: (id: string, status: TaskStatus) => void
@@ -158,6 +77,25 @@ export const useTaskStore = create<TaskStore>()(
   persist(
     (set) => ({
       tasks: SEED_TASKS,
+      afterSync: false,
+      syncFromApi: async function syncFromApi() {
+        if (typeof window === 'undefined') {
+          set({ afterSync: true })
+          return
+        }
+
+        try {
+          const response = await fetch('/api/tasks', { method: 'GET' })
+          if (!response.ok) throw new Error(`Failed to sync tasks (${response.status})`)
+          const payload = await response.json().catch(() => ({}))
+          set({
+            tasks: normalizeTaskList(payload),
+            afterSync: true,
+          })
+        } catch {
+          set({ afterSync: true })
+        }
+      },
       addTask: (taskData) => {
         const now = new Date().toISOString()
         const task: Task = {
@@ -167,6 +105,12 @@ export const useTaskStore = create<TaskStore>()(
           updatedAt: now,
         }
         set((state) => ({ tasks: [task, ...state.tasks] }))
+        // Persist to API
+        void fetch('/api/tasks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(task),
+        }).catch(() => {})
       },
       updateTask: (id, updates) => {
         set((state) => ({
@@ -174,6 +118,11 @@ export const useTaskStore = create<TaskStore>()(
             t.id === id ? { ...t, ...updates, updatedAt: new Date().toISOString() } : t,
           ),
         }))
+        void fetch(`/api/tasks/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updates),
+        }).catch(() => {})
       },
       moveTask: (id, status) => {
         set((state) => ({
@@ -181,9 +130,15 @@ export const useTaskStore = create<TaskStore>()(
             t.id === id ? { ...t, status, updatedAt: new Date().toISOString() } : t,
           ),
         }))
+        void fetch(`/api/tasks/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status }),
+        }).catch(() => {})
       },
       deleteTask: (id) => {
         set((state) => ({ tasks: state.tasks.filter((t) => t.id !== id) }))
+        void fetch(`/api/tasks/${id}`, { method: 'DELETE' }).catch(() => {})
       },
     }),
     {

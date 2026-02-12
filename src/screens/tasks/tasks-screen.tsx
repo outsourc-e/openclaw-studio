@@ -1,6 +1,6 @@
 import { Add01Icon, Delete02Icon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   useTaskStore,
   STATUS_ORDER,
@@ -47,6 +47,8 @@ function AddTaskDialog({
   const [description, setDescription] = useState('')
   const [priority, setPriority] = useState<TaskPriority>('P1')
   const [status, setStatus] = useState<TaskStatus>('backlog')
+  const [dueDate, setDueDate] = useState('')
+  const [reminder, setReminder] = useState('')
 
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
@@ -58,10 +60,12 @@ function AddTaskDialog({
         status,
         priority,
         tags: [],
+        ...(dueDate ? { dueDate } : {}),
+        ...(reminder ? { reminder } : {}),
       })
       onClose()
     },
-    [title, description, priority, status, onAdd, onClose],
+    [title, description, priority, status, dueDate, reminder, onAdd, onClose],
   )
 
   return (
@@ -96,7 +100,7 @@ function AddTaskDialog({
           />
         </label>
 
-        <div className="mb-4 flex gap-3">
+        <div className="mb-3 flex gap-3">
           <label className="flex-1">
             <span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-primary-500">Priority</span>
             <select
@@ -120,6 +124,27 @@ function AddTaskDialog({
                 <option key={s} value={s}>{STATUS_LABELS[s]}</option>
               ))}
             </select>
+          </label>
+        </div>
+
+        <div className="mb-4 flex gap-3">
+          <label className="flex-1">
+            <span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-primary-500">Due Date</span>
+            <input
+              type="date"
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+              className="w-full rounded-lg border border-primary-200 bg-primary-50 px-3 py-2 text-[13px] text-ink outline-none dark:bg-primary-50"
+            />
+          </label>
+          <label className="flex-1">
+            <span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-primary-500">Reminder</span>
+            <input
+              type="datetime-local"
+              value={reminder}
+              onChange={(e) => setReminder(e.target.value)}
+              className="w-full rounded-lg border border-primary-200 bg-primary-50 px-3 py-2 text-[13px] text-ink outline-none dark:bg-primary-50"
+            />
           </label>
         </div>
 
@@ -169,9 +194,23 @@ function TaskCard({
       ) : null}
 
       <div className="mt-2 flex items-center justify-between">
-        <span className={cn('rounded px-1.5 py-0.5 text-[10px] font-medium tabular-nums', priorityColor(task.priority))}>
-          {task.priority}
-        </span>
+        <div className="flex items-center gap-1.5">
+          <span className={cn('rounded px-1.5 py-0.5 text-[10px] font-medium tabular-nums', priorityColor(task.priority))}>
+            {task.priority}
+          </span>
+          {task.dueDate ? (
+            <span className={cn(
+              'rounded px-1.5 py-0.5 text-[10px] tabular-nums',
+              new Date(task.dueDate).getTime() < Date.now()
+                ? 'bg-red-500/15 text-red-600 dark:text-red-400'
+                : new Date(task.dueDate).getTime() - Date.now() < 24 * 60 * 60 * 1000
+                  ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400'
+                  : 'bg-primary-100 text-primary-500',
+            )}>
+              {formatDate(task.dueDate)}
+            </span>
+          ) : null}
+        </div>
         <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
           {/* Quick move buttons */}
           {task.status !== 'in_progress' && task.status !== 'done' ? (
@@ -336,9 +375,12 @@ function TaskDetailPanel({
 /* ── Main Screen ── */
 
 export function TasksScreen() {
-  const { tasks, addTask, moveTask, updateTask, deleteTask } = useTaskStore()
+  const { tasks, addTask, moveTask, updateTask, deleteTask, syncFromApi } = useTaskStore()
   const [showAdd, setShowAdd] = useState(false)
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
+
+  // Sync from API on mount
+  useEffect(() => { void syncFromApi() }, [syncFromApi])
 
   const columns = STATUS_ORDER.map((status) => ({
     status,

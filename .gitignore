@@ -85,3 +85,6 @@ debug-export-*.txt
 # Keep these files
 !.github/workflows
 tmp/
+
+# Task data (local persistence)
+data/

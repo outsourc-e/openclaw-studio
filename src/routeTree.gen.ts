@@ -64,6 +64,8 @@ import { Route as ApiConfigPatchRouteImport } from './routes/api/config-patch'
 import { Route as ApiCliAgentsRouteImport } from './routes/api/cli-agents'
 import { Route as ApiChatEventsRouteImport } from './routes/api/chat-events'
 import { Route as ApiChatAbortRouteImport } from './routes/api/chat-abort'
+import { Route as ApiTasksIndexRouteImport } from './routes/api/tasks/index'
+import { Route as ApiTasksTaskIdRouteImport } from './routes/api/tasks/$taskId'
 import { Route as ApiSessionsSendRouteImport } from './routes/api/sessions/send'
 import { Route as ApiGatewayUsageRouteImport } from './routes/api/gateway/usage'
 import { Route as ApiGatewaySessionsRouteImport } from './routes/api/gateway/sessions'
@@ -358,6 +360,16 @@ const ApiChatAbortRoute = ApiChatAbortRouteImport.update({
   path: '/api/chat-abort',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiTasksIndexRoute = ApiTasksIndexRouteImport.update({
+  id: '/api/tasks/',
+  path: '/api/tasks/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiTasksTaskIdRoute = ApiTasksTaskIdRouteImport.update({
+  id: '/$taskId',
+  path: '/$taskId',
+  getParentRoute: () => ApiTasksRoute,
+} as any)
 const ApiSessionsSendRoute = ApiSessionsSendRouteImport.update({
   id: '/send',
   path: '/send',
@@ -522,6 +534,8 @@ export interface FileRoutesByFullPath {
   '/api/gateway/sessions': typeof ApiGatewaySessionsRoute
   '/api/gateway/usage': typeof ApiGatewayUsageRoute
   '/api/sessions/send': typeof ApiSessionsSendRoute
+  '/api/tasks/$taskId': typeof ApiTasksTaskIdRoute
+  '/api/tasks/': typeof ApiTasksIndexRoute
   '/api/cron/runs/$jobId': typeof ApiCronRunsJobIdRoute
 }
 export interface FileRoutesByTo {
@@ -596,6 +610,8 @@ export interface FileRoutesByTo {
   '/api/gateway/sessions': typeof ApiGatewaySessionsRoute
   '/api/gateway/usage': typeof ApiGatewayUsageRoute
   '/api/sessions/send': typeof ApiSessionsSendRoute
+  '/api/tasks/$taskId': typeof ApiTasksTaskIdRoute
+  '/api/tasks': typeof ApiTasksIndexRoute
   '/api/cron/runs/$jobId': typeof ApiCronRunsJobIdRoute
 }
 export interface FileRoutesById {
@@ -672,6 +688,8 @@ export interface FileRoutesById {
   '/api/gateway/sessions': typeof ApiGatewaySessionsRoute
   '/api/gateway/usage': typeof ApiGatewayUsageRoute
   '/api/sessions/send': typeof ApiSessionsSendRoute
+  '/api/tasks/$taskId': typeof ApiTasksTaskIdRoute
+  '/api/tasks/': typeof ApiTasksIndexRoute
   '/api/cron/runs/$jobId': typeof ApiCronRunsJobIdRoute
 }
 export interface FileRouteTypes {
@@ -749,6 +767,8 @@ export interface FileRouteTypes {
     | '/api/gateway/sessions'
     | '/api/gateway/usage'
     | '/api/sessions/send'
+    | '/api/tasks/$taskId'
+    | '/api/tasks/'
     | '/api/cron/runs/$jobId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -823,6 +843,8 @@ export interface FileRouteTypes {
     | '/api/gateway/sessions'
     | '/api/gateway/usage'
     | '/api/sessions/send'
+    | '/api/tasks/$taskId'
+    | '/api/tasks'
     | '/api/cron/runs/$jobId'
   id:
     | '__root__'
@@ -898,6 +920,8 @@ export interface FileRouteTypes {
     | '/api/gateway/sessions'
     | '/api/gateway/usage'
     | '/api/sessions/send'
+    | '/api/tasks/$taskId'
+    | '/api/tasks/'
     | '/api/cron/runs/$jobId'
   fileRoutesById: FileRoutesById
 }
@@ -965,6 +989,7 @@ export interface RootRouteChildren {
   ApiGatewayNodesRoute: typeof ApiGatewayNodesRoute
   ApiGatewaySessionsRoute: typeof ApiGatewaySessionsRoute
   ApiGatewayUsageRoute: typeof ApiGatewayUsageRoute
+  ApiTasksIndexRoute: typeof ApiTasksIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1354,6 +1379,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiChatAbortRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/tasks/': {
+      id: '/api/tasks/'
+      path: '/api/tasks'
+      fullPath: '/api/tasks/'
+      preLoaderRoute: typeof ApiTasksIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/tasks/$taskId': {
+      id: '/api/tasks/$taskId'
+      path: '/$taskId'
+      fullPath: '/api/tasks/$taskId'
+      preLoaderRoute: typeof ApiTasksTaskIdRouteImport
+      parentRoute: typeof ApiTasksRoute
+    }
     '/api/sessions/send': {
       id: '/api/sessions/send'
       path: '/send'
@@ -1606,6 +1645,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiGatewayNodesRoute: ApiGatewayNodesRoute,
   ApiGatewaySessionsRoute: ApiGatewaySessionsRoute,
   ApiGatewayUsageRoute: ApiGatewayUsageRoute,
+  ApiTasksIndexRoute: ApiTasksIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

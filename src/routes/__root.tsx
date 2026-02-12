@@ -9,6 +9,7 @@ import { SearchModal } from '@/components/search/search-modal'
 import { TerminalShortcutListener } from '@/components/terminal-shortcut-listener'
 import { GlobalShortcutListener } from '@/components/global-shortcut-listener'
 import { WorkspaceShell } from '@/components/workspace-shell'
+import { useTaskReminders } from '@/hooks/use-task-reminders'
 
 const themeScript = `
 (() => {
@@ -109,11 +110,17 @@ export const Route = createRootRoute({
 
 const queryClient = new QueryClient()
 
+function TaskReminderRunner() {
+  useTaskReminders()
+  return null
+}
+
 function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <GlobalShortcutListener />
       <TerminalShortcutListener />
+      <TaskReminderRunner />
       <WorkspaceShell />
       <SearchModal />
     </QueryClientProvider>
