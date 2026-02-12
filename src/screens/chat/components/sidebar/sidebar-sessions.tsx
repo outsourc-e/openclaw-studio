@@ -100,8 +100,8 @@ export const SidebarSessions = memo(function SidebarSessions({
       ) : null}
 
       <CollapsiblePanel
-        className="w-full flex-1 min-h-0 h-auto data-starting-style:h-0 data-ending-style:h-0"
-        contentClassName="flex flex-1 min-h-0 flex-col overflow-y-auto"
+        className="w-full min-h-0"
+        contentClassName="flex flex-col overflow-y-auto max-h-[calc(100vh-300px)]"
       >
         <ScrollAreaRoot className="flex-1 min-h-0">
           <ScrollAreaViewport className="min-h-0">
