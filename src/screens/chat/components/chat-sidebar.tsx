@@ -23,13 +23,12 @@ import {
   Task01Icon,
   UserGroupIcon,
   UserMultipleIcon,
-  UserIcon,
 } from '@hugeicons/core-free-icons'
 import { AnimatePresence, motion } from 'motion/react'
 import { memo, useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
-import { useChatSettings } from '../hooks/use-chat-settings'
+import { useChatSettings as useSidebarSettings } from '../hooks/use-chat-settings'
 import { useDeleteSession } from '../hooks/use-delete-session'
 import { useRenameSession } from '../hooks/use-rename-session'
 import { SettingsDialog } from './settings-dialog'
@@ -46,10 +45,15 @@ import {
 import { cn } from '@/lib/utils'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { OpenClawStudioIcon } from '@/components/icons/clawsuite'
+import { UserAvatar } from '@/components/avatars'
 import {
   SEARCH_MODAL_EVENTS,
   useSearchModal,
 } from '@/hooks/use-search-modal'
+import {
+  getChatProfileDisplayName,
+  useChatSettingsStore,
+} from '@/hooks/use-chat-settings'
 import { GatewayStatusIndicator } from '@/components/gateway-status-indicator'
 import {
   MenuRoot,
@@ -461,7 +465,17 @@ function ChatSidebarComponent({
     closeSettings,
     copySessionsDir,
     copyStorePath,
-  } = useChatSettings()
+  } = useSidebarSettings()
+  const profileDisplayName = useChatSettingsStore(
+    function selectProfileDisplayName(state) {
+      return getChatProfileDisplayName(state.settings.displayName)
+    },
+  )
+  const profileAvatarDataUrl = useChatSettingsStore(
+    function selectProfileAvatarDataUrl(state) {
+      return state.settings.avatarDataUrl
+    },
+  )
   const { deleteSession } = useDeleteSession()
   const { renameSession } = useRenameSession()
   const openSearchModal = useSearchModal((state) => state.openModal)
@@ -915,9 +929,11 @@ function ChatSidebarComponent({
               isCollapsed ? 'justify-center px-0' : 'px-2',
             )}
           >
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-orange-500 text-white">
-              <HugeiconsIcon icon={UserIcon} size={16} strokeWidth={1.5} />
-            </div>
+            <UserAvatar
+              size={32}
+              src={profileAvatarDataUrl}
+              alt={profileDisplayName}
+            />
             <AnimatePresence initial={false} mode="wait">
               {!isCollapsed && (
                 <motion.span
@@ -927,13 +943,7 @@ function ChatSidebarComponent({
                   transition={transition}
                   className="flex-1 truncate text-left text-sm font-medium text-primary-900"
                 >
-                  {(() => {
-                    try {
-                      return localStorage.getItem('openclaw-user-name') || 'User'
-                    } catch {
-                      return 'User'
-                    }
-                  })()}
+                  {profileDisplayName}
                 </motion.span>
               )}
             </AnimatePresence>

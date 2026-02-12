@@ -123,13 +123,22 @@ export async function fetchSessions(): Promise<GatewaySessionsResponse> {
 export async function fetchSessionStatus(
   key: string,
 ): Promise<GatewaySessionStatusResponse> {
-  const response = await fetch(
-    makeEndpoint(`/api/sessions/${encodeURIComponent(key)}/status`),
-  )
+  void key
+  const response = await fetch(makeEndpoint('/api/session-status'))
   if (!response.ok) {
     throw new Error(await readError(response))
   }
-  return (await response.json()) as GatewaySessionStatusResponse
+
+  const payload = (await response.json()) as Record<string, unknown>
+  const normalized =
+    payload &&
+    typeof payload === 'object' &&
+    payload.payload &&
+    typeof payload.payload === 'object'
+      ? payload.payload
+      : payload
+
+  return normalized as GatewaySessionStatusResponse
 }
 
 export async function fetchModels(): Promise<GatewayModelsResponse> {

@@ -26,6 +26,10 @@ import {
   CollapsiblePanel,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
+import {
+  getChatProfileDisplayName,
+  useChatSettingsStore,
+} from '@/hooks/use-chat-settings'
 import { cn } from '@/lib/utils'
 
 // Streaming cursor component
@@ -257,6 +261,16 @@ function MessageItemComponent({
   expandAllToolSections = false,
 }: MessageItemProps) {
   const role = message.role || 'assistant'
+  const profileDisplayName = useChatSettingsStore(
+    function selectProfileDisplayName(state) {
+      return getChatProfileDisplayName(state.settings.displayName)
+    },
+  )
+  const profileAvatarDataUrl = useChatSettingsStore(
+    function selectProfileAvatarDataUrl(state) {
+      return state.settings.avatarDataUrl
+    },
+  )
 
   const messageStreamingText =
     typeof message.__streamingText === 'string'
@@ -491,7 +505,12 @@ function MessageItemComponent({
       {(hasText || hasAttachments || effectiveIsStreaming) && (
         <Message className={cn(isUser ? 'flex-row-reverse' : '')}>
           {isUser ? (
-            <UserAvatar size={24} className="mt-0.5" />
+            <UserAvatar
+              size={24}
+              className="mt-0.5"
+              src={profileAvatarDataUrl}
+              alt={profileDisplayName}
+            />
           ) : (
             <AssistantAvatar size={24} className="mt-0.5" />
           )}

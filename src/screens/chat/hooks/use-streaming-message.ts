@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { GatewayAttachment, GatewayMessage } from '../types'
 
 type StreamingState = {
@@ -47,6 +47,20 @@ export function useStreamingMessage(options: UseStreamingMessageOptions = {}) {
       frameRef.current = null
     }
   }, [])
+
+  useEffect(
+    function cleanupStreamingOnUnmount() {
+      return function cleanup() {
+        if (eventSourceRef.current) {
+          eventSourceRef.current.abort()
+          eventSourceRef.current = null
+        }
+        finishedRef.current = true
+        stopFrame()
+      }
+    },
+    [stopFrame],
+  )
 
   const markFailed = useCallback(
     (message: string) => {

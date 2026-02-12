@@ -216,6 +216,9 @@ function isAgentSession(session: GatewaySession): boolean {
   const friendlyId = readString(session.friendlyId).toLowerCase()
   if (friendlyId === 'main') return false
 
+  // Accept Codex agent sessions (agent:codex:UUID but not agent:codex:main or cron)
+  if (key.startsWith('agent:') && !key.includes('cron')) return true
+
   // Accept labeled sessions (user-spawned with a label)
   const label = readString(session.label)
   if (label.length > 0 && !key.includes('cron')) return true

@@ -3,11 +3,14 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
 export type ThemeMode = 'system' | 'light' | 'dark'
+export const DEFAULT_CHAT_DISPLAY_NAME = 'User'
 
 export type ChatSettings = {
   showToolMessages: boolean
   showReasoningBlocks: boolean
   theme: ThemeMode
+  displayName: string
+  avatarDataUrl: string | null
 }
 
 type ChatSettingsState = {
@@ -15,24 +18,66 @@ type ChatSettingsState = {
   updateSettings: (updates: Partial<ChatSettings>) => void
 }
 
+function defaultChatSettings(): ChatSettings {
+  return {
+    showToolMessages: false,
+    showReasoningBlocks: false,
+    theme: 'dark',
+    displayName: DEFAULT_CHAT_DISPLAY_NAME,
+    avatarDataUrl: null,
+  }
+}
+
+function mergePersistedSettings(
+  persistedState: unknown,
+  currentState: ChatSettingsState,
+): ChatSettingsState {
+  if (
+    !persistedState ||
+    typeof persistedState !== 'object' ||
+    !('settings' in persistedState)
+  ) {
+    return currentState
+  }
+
+  const state = persistedState as Partial<ChatSettingsState>
+  return {
+    ...currentState,
+    ...state,
+    settings: {
+      ...currentState.settings,
+      ...(state.settings || {}),
+    },
+  }
+}
+
 export const useChatSettingsStore = create<ChatSettingsState>()(
   persist(
-    (set) => ({
-      settings: {
-        showToolMessages: false,
-        showReasoningBlocks: false,
-        theme: 'dark',
-      },
-      updateSettings: (updates) =>
-        set((state) => ({
-          settings: { ...state.settings, ...updates },
-        })),
-    }),
+    function createSettingsStore(set) {
+      return {
+        settings: defaultChatSettings(),
+        updateSettings: function updateSettings(updates) {
+          set(function applyUpdates(state) {
+            return {
+              settings: { ...state.settings, ...updates },
+            }
+          })
+        },
+      }
+    },
     {
       name: 'chat-settings',
+      merge: function merge(persistedState, currentState) {
+        return mergePersistedSettings(persistedState, currentState)
+      },
     },
   ),
 )
+
+export function getChatProfileDisplayName(displayName: string): string {
+  const trimmed = displayName.trim()
+  return trimmed.length > 0 ? trimmed : DEFAULT_CHAT_DISPLAY_NAME
+}
 
 export function useChatSettings() {
   const settings = useChatSettingsStore((state) => state.settings)

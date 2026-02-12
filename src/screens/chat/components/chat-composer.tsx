@@ -283,6 +283,7 @@ function ChatComposerComponent({
   const shouldRefocusAfterSendRef = useRef(false)
   const modelSelectorRef = useRef<HTMLDivElement | null>(null)
   const composerWrapperRef = useRef<HTMLDivElement | null>(null)
+  const focusFrameRef = useRef<number | null>(null)
   const isVoiceInputDisabled = true
   const isSupplementalActionDisabled = true
   
@@ -467,12 +468,31 @@ function ChatComposerComponent({
     }
   }, [attachments.length, value])
 
-  const focusPrompt = useCallback(() => {
-    if (typeof window === 'undefined') return
-    window.requestAnimationFrame(() => {
-      promptRef.current?.focus()
-    })
+  const cancelFocusPromptFrame = useCallback(function cancelFocusPromptFrame() {
+    if (focusFrameRef.current === null) return
+    window.cancelAnimationFrame(focusFrameRef.current)
+    focusFrameRef.current = null
   }, [])
+
+  const focusPrompt = useCallback(function focusPrompt() {
+    if (typeof window === 'undefined') return
+    cancelFocusPromptFrame()
+    focusFrameRef.current = window.requestAnimationFrame(
+      function focusPromptInFrame() {
+        focusFrameRef.current = null
+        promptRef.current?.focus()
+      },
+    )
+  }, [cancelFocusPromptFrame])
+
+  useEffect(
+    function cleanupFocusPromptFrameOnUnmount() {
+      return function cleanupFocusPromptFrame() {
+        cancelFocusPromptFrame()
+      }
+    },
+    [cancelFocusPromptFrame],
+  )
 
   const resetDragState = useCallback(() => {
     dragCounterRef.current = 0
