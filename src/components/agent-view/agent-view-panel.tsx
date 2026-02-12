@@ -515,40 +515,12 @@ export function AgentViewPanel() {
                 </Button>
               </div>
             </div>
-            {/* Row 2: Stats + view toggle */}
-            <div className="mt-1 flex items-center justify-between">
-              <p className="text-[10px] text-primary-600 tabular-nums">
+            {/* Row 2: Stats */}
+            {(activeCount > 0 || queuedAgents.length > 0) ? (
+              <p className="mt-1 text-[10px] text-primary-600 tabular-nums">
                 {activeCount} active · {queuedAgents.length} queued · {formatCost(totalCost)}
               </p>
-              <div className="inline-flex items-center rounded-full border border-primary-300/70 bg-primary-200/50 p-0.5">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className={cn(
-                    'h-5 rounded-full px-2 text-[10px]',
-                    viewMode === 'expanded' ? 'bg-primary-300/70 text-primary-900' : 'text-primary-700',
-                  )}
-                  onClick={function handleExpandedMode() {
-                    setViewMode('expanded')
-                  }}
-                >
-                  Expanded
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className={cn(
-                    'h-5 rounded-full px-2 text-[10px]',
-                    viewMode === 'compact' ? 'bg-primary-300/70 text-primary-900' : 'text-primary-700',
-                  )}
-                  onClick={function handleCompactMode() {
-                    setViewMode('compact')
-                  }}
-                >
-                  Compact
-                </Button>
-              </div>
-            </div>
+            ) : null}
           </div>
 
           <ScrollAreaRoot className="h-[calc(100vh-3.25rem)]">
@@ -722,46 +694,47 @@ export function AgentViewPanel() {
 
                 {/* History — only show when there are entries */}
                 {historyAgents.length > 0 ? (
-                  <Collapsible open={historyOpen} onOpenChange={setHistoryOpen}>
-                    <div className="flex items-center justify-between">
-                      <CollapsibleTrigger className="h-7 px-0 text-xs font-medium hover:bg-transparent">
-                        <HugeiconsIcon
-                          icon={historyOpen ? ArrowDown01Icon : ArrowRight01Icon}
-                          size={20}
-                          strokeWidth={1.5}
-                        />
-                        History
-                      </CollapsibleTrigger>
-                      <span className="rounded-full bg-primary-300/70 px-2 py-0.5 text-[11px] text-primary-800 tabular-nums">
-                        {historyAgents.length}
-                      </span>
-                    </div>
-                    <CollapsiblePanel contentClassName="pt-1">
-                      <div className="flex flex-wrap gap-2">
-                        {historyAgents.slice(0, 10).map(function renderHistoryPill(item) {
-                          return (
-                            <button
-                              key={item.id}
-                              type="button"
-                              className={cn(
-                                'inline-flex max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] tabular-nums',
-                                getHistoryPillClassName(item.status),
-                              )}
-                              onClick={function handleHistoryView() {
-                                // Navigate to agent swarm for detailed history view
-                                setOpen(false)
-                                navigate({ to: '/agent-swarm' })
-                              }}
-                            >
-                              <HugeiconsIcon icon={Link01Icon} size={20} strokeWidth={1.5} />
-                              <span className="truncate">{item.name}</span>
-                              <span className="opacity-80">{formatCost(item.cost)}</span>
-                            </button>
-                          )
-                        })}
+                  <section className="rounded-2xl border border-primary-300/70 bg-primary-200/35 p-2">
+                    <Collapsible open={historyOpen} onOpenChange={setHistoryOpen}>
+                      <div className="flex items-center justify-between">
+                        <CollapsibleTrigger className="h-7 px-0 text-xs font-medium hover:bg-transparent">
+                          <HugeiconsIcon
+                            icon={historyOpen ? ArrowDown01Icon : ArrowRight01Icon}
+                            size={20}
+                            strokeWidth={1.5}
+                          />
+                          History
+                        </CollapsibleTrigger>
+                        <span className="rounded-full bg-primary-300/70 px-2 py-0.5 text-[11px] text-primary-800 tabular-nums">
+                          {historyAgents.length}
+                        </span>
                       </div>
-                    </CollapsiblePanel>
-                  </Collapsible>
+                      <CollapsiblePanel contentClassName="pt-1">
+                        <div className="flex flex-wrap gap-1.5">
+                          {historyAgents.slice(0, 10).map(function renderHistoryPill(item) {
+                            return (
+                              <button
+                                key={item.id}
+                                type="button"
+                                className={cn(
+                                  'inline-flex max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] tabular-nums',
+                                  getHistoryPillClassName(item.status),
+                                )}
+                                onClick={function handleHistoryView() {
+                                  setOpen(false)
+                                  navigate({ to: '/agent-swarm' })
+                                }}
+                              >
+                                <HugeiconsIcon icon={Link01Icon} size={20} strokeWidth={1.5} />
+                                <span className="truncate">{item.name}</span>
+                                <span className="opacity-80">{formatCost(item.cost)}</span>
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </CollapsiblePanel>
+                    </Collapsible>
+                  </section>
                 ) : null}
 
                 <section className="rounded-2xl border border-primary-300/70 bg-primary-200/35 p-2">
