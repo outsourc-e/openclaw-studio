@@ -54,6 +54,25 @@ function normalizeStatusPayload(payload: unknown): BrowserStatusResponse {
 
 async function fetchBrowserStatus(): Promise<BrowserStatusResponse> {
   try {
+    // Try local Playwright browser first
+    const localRes = await fetch('/api/browser', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'screenshot' }),
+    })
+    if (localRes.ok) {
+      const data = (await localRes.json()) as Record<string, unknown>
+      if (data.running) {
+        return {
+          active: true,
+          url: readString(data.url),
+          screenshotUrl: readString(data.screenshot),
+          message: readString(data.title) || 'Browser active',
+        }
+      }
+    }
+
+    // Fallback to gateway browser status
     const response = await fetch('/api/browser/status')
     if (!response.ok) return FALLBACK_STATUS
 
@@ -70,8 +89,12 @@ function BrowserSidebarPreview() {
   const browserStatusQuery = useQuery({
     queryKey: ['browser', 'sidebar-preview', 'status'],
     queryFn: fetchBrowserStatus,
-    refetchInterval: 10_000,
-    refetchIntervalInBackground: true,
+    refetchInterval: (query) => {
+      // Poll faster when browser is active
+      const data = query.state.data
+      return data?.active ? 2000 : 10_000
+    },
+    refetchIntervalInBackground: false,
     retry: false,
   })
 
