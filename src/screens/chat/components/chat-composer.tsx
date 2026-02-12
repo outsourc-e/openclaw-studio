@@ -3,10 +3,6 @@ import {
   ArrowDown01Icon,
   ArrowUp02Icon,
   Cancel01Icon,
-  FlashIcon,
-  GlobeIcon,
-  Mic01Icon,
-  SourceCodeIcon,
   StopIcon,
 } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
@@ -284,8 +280,6 @@ function ChatComposerComponent({
   const modelSelectorRef = useRef<HTMLDivElement | null>(null)
   const composerWrapperRef = useRef<HTMLDivElement | null>(null)
   const focusFrameRef = useRef<number | null>(null)
-  const isVoiceInputDisabled = true
-  const isSupplementalActionDisabled = true
   
   // Phase 4.2: Pinned models
   const { pinned, togglePin, isPinned } = usePinnedModels()
@@ -888,51 +882,6 @@ function ChatComposerComponent({
                 <HugeiconsIcon icon={Add01Icon} size={20} strokeWidth={1.5} />
               </Button>
             </PromptInputAction>
-            <PromptInputAction tooltip="Unavailable">
-              <Button
-                size="icon-sm"
-                variant="ghost"
-                className={cn(
-                  'rounded-lg text-primary-500 hover:bg-primary-100 hover:text-primary-500',
-                  isSupplementalActionDisabled && 'cursor-not-allowed opacity-50',
-                )}
-                aria-label="Web Search"
-                aria-disabled={isSupplementalActionDisabled}
-                disabled={isSupplementalActionDisabled}
-              >
-                <HugeiconsIcon icon={GlobeIcon} size={20} strokeWidth={1.5} />
-              </Button>
-            </PromptInputAction>
-            <PromptInputAction tooltip="Unavailable">
-              <Button
-                size="icon-sm"
-                variant="ghost"
-                className={cn(
-                  'rounded-lg text-primary-500 hover:bg-primary-100 hover:text-primary-500',
-                  isSupplementalActionDisabled && 'cursor-not-allowed opacity-50',
-                )}
-                aria-label="Quick Commands"
-                aria-disabled={isSupplementalActionDisabled}
-                disabled={isSupplementalActionDisabled}
-              >
-                <HugeiconsIcon icon={FlashIcon} size={20} strokeWidth={1.5} />
-              </Button>
-            </PromptInputAction>
-            <PromptInputAction tooltip="Unavailable">
-              <Button
-                size="icon-sm"
-                variant="ghost"
-                className={cn(
-                  'rounded-lg text-primary-500 hover:bg-primary-100 hover:text-primary-500',
-                  isSupplementalActionDisabled && 'cursor-not-allowed opacity-50',
-                )}
-                aria-label="Code"
-                aria-disabled={isSupplementalActionDisabled}
-                disabled={isSupplementalActionDisabled}
-              >
-                <HugeiconsIcon icon={SourceCodeIcon} size={20} strokeWidth={1.5} />
-              </Button>
-            </PromptInputAction>
             <div className="relative ml-1 flex items-center gap-2" ref={modelSelectorRef}>
               <button
                 type="button"
@@ -1139,21 +1088,6 @@ function ChatComposerComponent({
             */}
           </div>
           <div className="flex items-center gap-1">
-            <PromptInputAction tooltip="Voice input unavailable">
-              <Button
-                size="icon-sm"
-                variant="ghost"
-                className={cn(
-                  'rounded-lg text-primary-500 hover:bg-primary-100 hover:text-primary-500',
-                  isVoiceInputDisabled && 'cursor-not-allowed opacity-50',
-                )}
-                aria-label="Voice input"
-                aria-disabled={isVoiceInputDisabled}
-                disabled={isVoiceInputDisabled}
-              >
-                <HugeiconsIcon icon={Mic01Icon} size={20} strokeWidth={1.5} />
-              </Button>
-            </PromptInputAction>
             {isLoading ? (
               <PromptInputAction tooltip="Stop generation">
                 <Button
