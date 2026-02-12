@@ -27,11 +27,12 @@ import {
 import { AnimatePresence, motion } from 'motion/react'
 import { memo, useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
+import { Link, useRouterState } from '@tanstack/react-router'
 import { useChatSettings as useSidebarSettings } from '../hooks/use-chat-settings'
 import { useDeleteSession } from '../hooks/use-delete-session'
 import { useRenameSession } from '../hooks/use-rename-session'
 import { SettingsDialog } from './settings-dialog'
+import { ProvidersDialog } from './providers-dialog'
 import { SessionRenameDialog } from './sidebar/session-rename-dialog'
 import { SessionDeleteDialog } from './sidebar/session-delete-dialog'
 import { SidebarSessions } from './sidebar/sidebar-sessions'
@@ -455,7 +456,6 @@ function ChatSidebarComponent({
   sessionsError,
   onRetrySessions,
 }: ChatSidebarProps) {
-  const navigate = useNavigate()
   const {
     settingsOpen,
     setSettingsOpen,
@@ -546,6 +546,7 @@ function ChatSidebarComponent({
   const [deleteSessionKey, setDeleteSessionKey] = useState<string | null>(null)
   const [deleteFriendlyId, setDeleteFriendlyId] = useState<string | null>(null)
   const [deleteSessionTitle, setDeleteSessionTitle] = useState('')
+  const [providersOpen, setProvidersOpen] = useState(false)
 
   function handleOpenRename(session: SessionMeta) {
     setRenameSessionKey(session.key)
@@ -944,16 +945,26 @@ function ChatSidebarComponent({
             </AnimatePresence>
           </MenuTrigger>
           <MenuContent side="top" align="start" className="min-w-[200px]">
-            <MenuItem onClick={() => navigate({ to: '/settings' })} className="justify-between">
+            <MenuItem
+              onClick={function onOpenSettings() {
+                setSettingsOpen(true)
+              }}
+              className="justify-between"
+            >
               <span className="flex items-center gap-2">
-                <HugeiconsIcon icon={Settings01Icon} size={16} strokeWidth={1.5} />
+                <HugeiconsIcon icon={Settings01Icon} size={20} strokeWidth={1.5} />
                 Config
               </span>
               <kbd className="ml-auto text-[10px] text-primary-500 font-mono">⌘,</kbd>
             </MenuItem>
-            <MenuItem onClick={() => navigate({ to: '/settings/providers' })} className="justify-between">
+            <MenuItem
+              onClick={function onOpenProviders() {
+                setProvidersOpen(true)
+              }}
+              className="justify-between"
+            >
               <span className="flex items-center gap-2">
-                <HugeiconsIcon icon={ApiIcon} size={16} strokeWidth={1.5} />
+                <HugeiconsIcon icon={ApiIcon} size={20} strokeWidth={1.5} />
                 Providers
               </span>
               <kbd className="ml-auto text-[10px] text-primary-500 font-mono">⌘P</kbd>
@@ -975,7 +986,13 @@ function ChatSidebarComponent({
         onClose={closeSettings}
         onCopySessionsDir={copySessionsDir}
         onCopyStorePath={copyStorePath}
+        onOpenProviders={function onOpenProviders() {
+          setSettingsOpen(false)
+          setProvidersOpen(true)
+        }}
       />
+
+      <ProvidersDialog open={providersOpen} onOpenChange={setProvidersOpen} />
 
       <SessionRenameDialog
         open={renameDialogOpen}

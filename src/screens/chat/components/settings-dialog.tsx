@@ -148,12 +148,14 @@ type SettingsDialogProps = {
   onClose: () => void
   onCopySessionsDir: () => void
   onCopyStorePath: () => void
+  onOpenProviders?: () => void
 }
 
 export function SettingsDialog({
   open,
   onOpenChange,
   onClose,
+  onOpenProviders,
 }: SettingsDialogProps) {
   const { settings, updateSettings } = useChatSettings()
   const { updateSettings: updateStudioSettings } = useSettings()
@@ -216,6 +218,12 @@ export function SettingsDialog({
   function clearAvatar() {
     setProfileError(null)
     updateSettings({ avatarDataUrl: null })
+  }
+
+  function handleOpenProviders() {
+    if (!onOpenProviders) return
+    onOpenChange(false)
+    onOpenProviders()
   }
 
   return (
@@ -380,6 +388,19 @@ export function SettingsDialog({
                 />
               </SettingsRow>
             </SettingsSection>
+
+            {onOpenProviders ? (
+              <SettingsSection title="Providers">
+                <SettingsRow
+                  label="Provider setup"
+                  description="Open provider credentials and setup instructions."
+                >
+                  <Button size="sm" onClick={handleOpenProviders}>
+                    Open providers
+                  </Button>
+                </SettingsRow>
+              </SettingsSection>
+            ) : null}
 
             <SettingsSection title="About">
               <div className="text-sm text-primary-800 text-pretty">

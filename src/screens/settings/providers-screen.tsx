@@ -24,6 +24,10 @@ type ProviderSummary = {
   status: ProviderStatus
 }
 
+type ProvidersScreenProps = {
+  embedded?: boolean
+}
+
 function readProviderId(entry: GatewayModelCatalogEntry): string | null {
   if (typeof entry === 'string') return null
   const provider = typeof entry.provider === 'string' ? entry.provider : ''
@@ -93,7 +97,7 @@ function ProviderStatusBadge({ status }: { status: ProviderStatus }) {
   )
 }
 
-export function ProvidersScreen() {
+export function ProvidersScreen({ embedded = false }: ProvidersScreenProps) {
   const [wizardOpen, setWizardOpen] = useState(false)
 
   const modelsQuery = useQuery({
@@ -113,8 +117,18 @@ export function ProvidersScreen() {
   }, [modelsQuery.data?.configuredProviders, modelsQuery.data?.models])
 
   return (
-    <div className="h-full overflow-y-auto bg-surface text-primary-900">
-      <main className="mx-auto flex w-full max-w-5xl flex-col gap-4 px-4 py-6 sm:px-6 lg:py-8">
+    <div
+      className={cn(
+        'h-full text-primary-900',
+        embedded ? 'bg-primary-50' : 'overflow-y-auto bg-surface',
+      )}
+    >
+      <main
+        className={cn(
+          'mx-auto flex w-full max-w-5xl flex-col gap-4 px-4 py-6 sm:px-6 lg:py-8',
+          embedded && 'lg:py-6',
+        )}
+      >
         <header className="rounded-2xl border border-primary-200 bg-primary-50/85 p-4 shadow-sm backdrop-blur-xl md:p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="space-y-1.5">
