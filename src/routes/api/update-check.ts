@@ -11,6 +11,12 @@ import { json } from '@tanstack/react-start'
 const CHECK_COOLDOWN_MS = 5 * 60 * 1000 // 5 min cache
 let lastCheck: { at: number; result: UpdateCheckResult } | null = null
 
+type CommitEntry = {
+  hash: string
+  subject: string
+  date: string
+}
+
 type UpdateCheckResult = {
   updateAvailable: boolean
   localCommit: string
@@ -19,6 +25,7 @@ type UpdateCheckResult = {
   remoteDate: string
   behindBy: number
   repoPath: string
+  changelog: Array<CommitEntry>
 }
 
 function runGit(args: string, cwd: string): string {
@@ -48,6 +55,22 @@ function checkForUpdates(): UpdateCheckResult {
   const behindCount = runGit(`rev-list --count HEAD..${remoteRef}`, repoPath)
   const behindBy = parseInt(behindCount, 10) || 0
 
+  // Get changelog (up to 20 commits)
+  const changelog: Array<CommitEntry> = []
+  if (behindBy > 0) {
+    const logOutput = runGit(
+      `log HEAD..${remoteRef} --format=%h||%s||%ci -n 20`,
+      repoPath,
+    )
+    for (const line of logOutput.split('\n')) {
+      if (!line.trim()) continue
+      const [hash, subject, date] = line.split('||')
+      if (hash && subject) {
+        changelog.push({ hash: hash.trim(), subject: subject.trim(), date: (date || '').trim() })
+      }
+    }
+  }
+
   return {
     updateAvailable: behindBy > 0,
     localCommit,
@@ -56,6 +79,7 @@ function checkForUpdates(): UpdateCheckResult {
     remoteDate: remoteDate || localDate,
     behindBy,
     repoPath,
+    changelog,
   }
 }
 
