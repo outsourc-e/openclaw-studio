@@ -59,6 +59,40 @@ function checkForUpdates(): UpdateCheckResult {
   }
 }
 
+function runUpdate(): { ok: boolean; output: string } {
+  const repoPath = path.resolve(process.cwd())
+  const currentBranch = runGit('rev-parse --abbrev-ref HEAD', repoPath) || 'main'
+
+  try {
+    // Pull latest
+    const pullOutput = execSync(`git pull origin ${currentBranch}`, {
+      cwd: repoPath,
+      timeout: 30_000,
+      encoding: 'utf8',
+    }).trim()
+
+    // Install deps
+    const installOutput = execSync('npm install --prefer-offline', {
+      cwd: repoPath,
+      timeout: 120_000,
+      encoding: 'utf8',
+    }).trim()
+
+    // Clear update cache so next check shows up-to-date
+    lastCheck = null
+
+    return {
+      ok: true,
+      output: `${pullOutput}\n\n${installOutput}`,
+    }
+  } catch (err) {
+    return {
+      ok: false,
+      output: err instanceof Error ? err.message : String(err),
+    }
+  }
+}
+
 export const Route = createFileRoute('/api/update-check')({
   server: {
     handlers: {
@@ -75,6 +109,17 @@ export const Route = createFileRoute('/api/update-check')({
         } catch (err) {
           return json(
             { error: err instanceof Error ? err.message : String(err) },
+            { status: 500 },
+          )
+        }
+      },
+      POST: async () => {
+        try {
+          const result = runUpdate()
+          return json(result)
+        } catch (err) {
+          return json(
+            { ok: false, output: err instanceof Error ? err.message : String(err) },
             { status: 500 },
           )
         }
