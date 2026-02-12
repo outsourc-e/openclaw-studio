@@ -45,13 +45,14 @@ export async function launchBrowser(): Promise<BrowserState> {
   isLaunching = true
   try {
     const pw = await getPlaywright()
+    // Launch VISIBLE browser — user interacts with it directly like a real browser
+    // Agent controls it programmatically via Playwright API
     browserInstance = await pw.chromium.launch({
-      headless: true,
+      headless: false,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
+        '--start-maximized',
       ],
     })
 

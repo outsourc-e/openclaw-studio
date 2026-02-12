@@ -6,10 +6,10 @@ import {
   Refresh01Icon,
   Cancel01Icon,
   GlobeIcon,
-  ArrowDown01Icon,
-  ArrowUp01Icon,
-  SentIcon,
   AiChat02Icon,
+  SentIcon,
+  Tick01Icon,
+  ComputerTerminal01Icon,
 } from '@hugeicons/core-free-icons'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -37,15 +37,13 @@ async function browserAction(action: string, params?: Record<string, unknown>): 
 
 export function LocalBrowser() {
   const queryClient = useQueryClient()
-  const navigate = useNavigate()
-  const [urlInput, setUrlInput] = useState('')
-  const [isLaunched, setIsLaunched] = useState(false)
+  const navigateTo = useNavigate()
   const [agentPrompt, setAgentPrompt] = useState('')
   const [handingOff, setHandingOff] = useState(false)
-  const screenshotRef = useRef<HTMLDivElement>(null)
-  const imgRef = useRef<HTMLImageElement>(null)
+  const [isLaunched, setIsLaunched] = useState(false)
+  const [urlInput, setUrlInput] = useState('')
 
-  // Check if browser is already running on mount (persist across page nav)
+  // Check if browser is already running
   useEffect(() => {
     browserAction('screenshot').then((state) => {
       if (state.running) {
@@ -56,57 +54,35 @@ export function LocalBrowser() {
     }).catch(() => {})
   }, [queryClient])
 
-  // Poll for screenshot updates — faster (800ms) for responsiveness
+  // Poll state (for URL/title updates + sidebar preview)
   const stateQuery = useQuery<BrowserState>({
     queryKey: ['local-browser', 'state'],
     queryFn: () => browserAction('screenshot'),
     enabled: isLaunched,
-    refetchInterval: 800,
-    staleTime: 400,
+    refetchInterval: 3000,
+    staleTime: 2000,
   })
 
   const currentState = stateQuery.data
   const currentUrl = currentState?.url || ''
   const currentTitle = currentState?.title || ''
 
-  // Sync URL bar when page changes
   useEffect(() => {
-    if (currentUrl && currentUrl !== urlInput && !document.activeElement?.matches('input[type="text"]')) {
+    if (currentUrl && currentUrl !== 'about:blank') {
       setUrlInput(currentUrl)
     }
   }, [currentUrl])
 
-  // Mutations — all immediately refetch screenshot
   const launchMutation = useMutation({
     mutationFn: () => browserAction('launch'),
     onSuccess: (data) => {
       setIsLaunched(true)
       queryClient.setQueryData(['local-browser', 'state'], data)
-      setUrlInput(data.url || '')
     },
   })
 
   const navMutation = useMutation({
     mutationFn: (url: string) => browserAction('navigate', { url }),
-    onSuccess: (data) => {
-      queryClient.setQueryData(['local-browser', 'state'], data)
-      setUrlInput(data.url || '')
-    },
-  })
-
-  const clickMutation = useMutation({
-    mutationFn: (coords: { x: number; y: number }) => browserAction('click', coords),
-    onSuccess: (data) => {
-      queryClient.setQueryData(['local-browser', 'state'], data)
-      if (data.url) setUrlInput(data.url)
-    },
-  })
-
-  const actionMutation = useMutation({
-    mutationFn: (params: { action: string } & Record<string, unknown>) => {
-      const { action, ...rest } = params
-      return browserAction(action, rest)
-    },
     onSuccess: (data) => {
       queryClient.setQueryData(['local-browser', 'state'], data)
       if (data.url) setUrlInput(data.url)
@@ -121,22 +97,6 @@ export function LocalBrowser() {
     },
   })
 
-  const isLoading = launchMutation.isPending || navMutation.isPending
-
-  // Handle click on screenshot — map pixel coords to viewport
-  const handleScreenshotClick = useCallback(
-    (e: React.MouseEvent<HTMLImageElement>) => {
-      if (!imgRef.current) return
-      const rect = imgRef.current.getBoundingClientRect()
-      const scaleX = 1280 / rect.width
-      const scaleY = 800 / rect.height
-      const x = Math.round((e.clientX - rect.left) * scaleX)
-      const y = Math.round((e.clientY - rect.top) * scaleY)
-      clickMutation.mutate({ x, y })
-    },
-    [clickMutation],
-  )
-
   const handleNavigate = useCallback(
     (e: React.FormEvent) => {
       e.preventDefault()
@@ -146,53 +106,119 @@ export function LocalBrowser() {
     [urlInput, navMutation],
   )
 
-  // Not launched yet — show launch screen
+  async function handleHandoff() {
+    if (!agentPrompt.trim() && !currentUrl) return
+    setHandingOff(true)
+
+    try {
+      const contentRes = await fetch('/api/browser', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'content' }),
+      })
+      const content = await contentRes.json() as { url: string; title: string; text: string }
+
+      const instruction = agentPrompt.trim() || 'Take over this browser session and help me with this page.'
+      const contextMsg = [
+        `🌐 **Browser Handoff**`,
+        `**URL:** ${content.url || currentUrl}`,
+        `**Page:** ${content.title || currentTitle}`,
+        '',
+        `**Task:** ${instruction}`,
+        '',
+        `<page_content>`,
+        (content.text || '').slice(0, 4000),
+        `</page_content>`,
+        '',
+        `The browser is running locally via Playwright (visible window). Control it with POST /api/browser — actions: navigate, click (x,y), type (text), press (key), scroll (direction), back, forward, refresh, content, screenshot.`,
+      ].join('\n')
+
+      const sendRes = await fetch('/api/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionKey: '', friendlyId: 'new', message: contextMsg }),
+      })
+      const sendResult = await sendRes.json() as { ok?: boolean; friendlyId?: string }
+
+      setAgentPrompt('')
+      if (sendResult.friendlyId) {
+        void navigateTo({ to: '/chat/$sessionKey', params: { sessionKey: sendResult.friendlyId } })
+      }
+    } catch {
+      void navigateTo({ to: '/chat/$sessionKey', params: { sessionKey: 'new' } })
+    } finally {
+      setHandingOff(false)
+    }
+  }
+
+  // ── Not launched ──────────────────────────────────────────────
   if (!isLaunched) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-6 p-8">
-        <div className="flex size-16 items-center justify-center rounded-2xl bg-accent-500/10">
-          <HugeiconsIcon icon={GlobeIcon} size={32} strokeWidth={1.5} className="text-accent-500" />
+        <div className="flex size-20 items-center justify-center rounded-2xl bg-accent-500/10">
+          <HugeiconsIcon icon={GlobeIcon} size={40} strokeWidth={1.5} className="text-accent-500" />
         </div>
-        <div className="text-center max-w-md">
-          <h2 className="text-xl font-semibold text-ink">Built-in Browser</h2>
-          <p className="mt-2 text-sm text-primary-500">
-            Browse the web directly in ClawSuite. Click, type, navigate — your AI agent can control it too.
+        <div className="text-center max-w-lg">
+          <h2 className="text-2xl font-semibold text-ink">Browser</h2>
+          <p className="mt-3 text-sm text-primary-500 leading-relaxed">
+            Opens a real Chrome window on your machine. Browse normally — log in, navigate, interact.
+            Then hand it to your AI agent to automate workflows with your session intact.
           </p>
         </div>
         <Button
           onClick={() => launchMutation.mutate()}
           disabled={launchMutation.isPending}
-          className="gap-2"
+          size="lg"
+          className="gap-2.5 px-6"
         >
           {launchMutation.isPending ? (
             <>
-              <HugeiconsIcon icon={Loading03Icon} size={16} className="animate-spin" />
-              Launching...
+              <HugeiconsIcon icon={Loading03Icon} size={18} className="animate-spin" />
+              Opening Chrome...
             </>
           ) : (
             <>
-              <HugeiconsIcon icon={GlobeIcon} size={16} />
-              Launch Browser
+              <HugeiconsIcon icon={ComputerTerminal01Icon} size={18} />
+              Open Browser
             </>
           )}
         </Button>
         {launchMutation.isError && (
-          <p className="text-sm text-red-500">
-            {launchMutation.error?.message || 'Failed to launch browser'}
-          </p>
+          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 max-w-md text-center">
+            <p className="font-medium">Failed to launch browser</p>
+            <p className="text-xs mt-1 text-red-500">{launchMutation.error?.message || 'Make sure Playwright is installed: npx playwright install chromium'}</p>
+          </div>
         )}
+
+        <div className="mt-4 grid grid-cols-3 gap-4 max-w-lg text-center">
+          <div className="rounded-xl border border-primary-200 bg-primary-50/50 p-3">
+            <p className="text-lg mb-1">🔐</p>
+            <p className="text-xs font-medium text-ink">You Log In</p>
+            <p className="text-[10px] text-primary-500 mt-0.5">Handle auth yourself</p>
+          </div>
+          <div className="rounded-xl border border-primary-200 bg-primary-50/50 p-3">
+            <p className="text-lg mb-1">🤖</p>
+            <p className="text-xs font-medium text-ink">Agent Takes Over</p>
+            <p className="text-[10px] text-primary-500 mt-0.5">Automate from there</p>
+          </div>
+          <div className="rounded-xl border border-primary-200 bg-primary-50/50 p-3">
+            <p className="text-lg mb-1">🍪</p>
+            <p className="text-xs font-medium text-ink">Session Persists</p>
+            <p className="text-[10px] text-primary-500 mt-0.5">Cookies stay intact</p>
+          </div>
+        </div>
       </div>
     )
   }
 
+  // ── Browser running — control panel ──────────────────────────
   return (
     <div className="flex h-full flex-col">
-      {/* Chrome-like toolbar */}
-      <div className="flex items-center gap-1.5 border-b border-primary-200 bg-primary-50/80 px-3 py-2">
-        {/* Nav buttons */}
+      {/* Toolbar */}
+      <div className="flex items-center gap-1.5 border-b border-primary-200 bg-primary-50/80 px-3 py-2 shrink-0">
         <button
           type="button"
-          onClick={() => actionMutation.mutate({ action: 'back' })}
+          onClick={() => browserAction('back').then((d) => queryClient.setQueryData(['local-browser', 'state'], d))}
           className="rounded-lg p-1.5 text-primary-500 hover:bg-primary-200 hover:text-primary-700 transition-colors"
           title="Back"
         >
@@ -200,7 +226,7 @@ export function LocalBrowser() {
         </button>
         <button
           type="button"
-          onClick={() => actionMutation.mutate({ action: 'forward' })}
+          onClick={() => browserAction('forward').then((d) => queryClient.setQueryData(['local-browser', 'state'], d))}
           className="rounded-lg p-1.5 text-primary-500 hover:bg-primary-200 hover:text-primary-700 transition-colors"
           title="Forward"
         >
@@ -208,207 +234,122 @@ export function LocalBrowser() {
         </button>
         <button
           type="button"
-          onClick={() => actionMutation.mutate({ action: 'refresh' })}
+          onClick={() => browserAction('refresh').then((d) => queryClient.setQueryData(['local-browser', 'state'], d))}
           className="rounded-lg p-1.5 text-primary-500 hover:bg-primary-200 hover:text-primary-700 transition-colors"
           title="Refresh"
         >
           <HugeiconsIcon icon={Refresh01Icon} size={16} strokeWidth={2} />
         </button>
 
-        {/* URL bar */}
         <form onSubmit={handleNavigate} className="flex-1 mx-2">
-          <div className="relative">
-            <input
-              type="text"
-              value={urlInput || currentUrl}
-              onChange={(e) => setUrlInput(e.target.value)}
-              onFocus={() => setUrlInput(currentUrl)}
-              placeholder="Search or enter URL..."
-              className={cn(
-                'w-full rounded-xl border border-primary-200 bg-surface px-4 py-1.5 text-sm text-ink',
-                'placeholder:text-primary-400',
-                'focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500/30',
-                isLoading && 'animate-pulse',
-              )}
-            />
-            {isLoading && (
-              <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                <HugeiconsIcon icon={Loading03Icon} size={14} className="animate-spin text-accent-500" />
-              </div>
+          <input
+            type="text"
+            value={urlInput}
+            onChange={(e) => setUrlInput(e.target.value)}
+            placeholder="Enter URL..."
+            className={cn(
+              'w-full rounded-xl border border-primary-200 bg-surface px-4 py-1.5 text-sm text-ink',
+              'placeholder:text-primary-400',
+              'focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500/30',
             )}
-          </div>
+          />
         </form>
 
-        {/* Scroll + Close */}
-        <div className="flex items-center gap-0.5">
-          <button
-            type="button"
-            onClick={() => actionMutation.mutate({ action: 'scroll', direction: 'up' })}
-            className="rounded-lg p-1.5 text-primary-500 hover:bg-primary-200 hover:text-primary-700 transition-colors"
-            title="Scroll up"
-          >
-            <HugeiconsIcon icon={ArrowUp01Icon} size={16} strokeWidth={2} />
-          </button>
-          <button
-            type="button"
-            onClick={() => actionMutation.mutate({ action: 'scroll', direction: 'down' })}
-            className="rounded-lg p-1.5 text-primary-500 hover:bg-primary-200 hover:text-primary-700 transition-colors"
-            title="Scroll down"
-          >
-            <HugeiconsIcon icon={ArrowDown01Icon} size={16} strokeWidth={2} />
-          </button>
-          <button
-            type="button"
-            onClick={() => closeMutation.mutate()}
-            className="rounded-lg p-1.5 text-red-400 hover:bg-red-100 hover:text-red-600 transition-colors ml-1"
-            title="Close browser"
-          >
-            <HugeiconsIcon icon={Cancel01Icon} size={16} strokeWidth={2} />
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => closeMutation.mutate()}
+          className="rounded-lg p-1.5 text-red-400 hover:bg-red-100 hover:text-red-600 transition-colors"
+          title="Close browser"
+        >
+          <HugeiconsIcon icon={Cancel01Icon} size={16} strokeWidth={2} />
+        </button>
       </div>
 
-      {/* Title bar */}
-      {currentTitle && (
-        <div className="border-b border-primary-100 bg-primary-25 px-4 py-1">
-          <p className="text-xs text-primary-500 truncate">{currentTitle}</p>
-        </div>
-      )}
-
-      {/* Screenshot viewport */}
-      <div
-        ref={screenshotRef}
-        className="flex-1 min-h-0 overflow-hidden bg-white relative cursor-crosshair"
-      >
-        {currentState?.screenshot ? (
-          <img
-            ref={imgRef}
-            src={currentState.screenshot}
-            alt="Browser viewport"
-            className="w-full h-full object-contain object-top"
-            onClick={handleScreenshotClick}
-            draggable={false}
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center text-primary-400">
-            <div className="text-center">
-              <HugeiconsIcon icon={GlobeIcon} size={40} strokeWidth={1} className="mx-auto mb-2 opacity-40" />
-              <p className="text-sm">Enter a URL to start browsing</p>
+      {/* Main content — status + preview */}
+      <div className="flex-1 min-h-0 overflow-y-auto p-6">
+        <div className="max-w-2xl mx-auto space-y-6">
+          {/* Status card */}
+          <div className="rounded-2xl border border-green-200 bg-green-50/50 p-5">
+            <div className="flex items-center gap-3">
+              <div className="flex size-10 items-center justify-center rounded-full bg-green-500/15">
+                <HugeiconsIcon icon={Tick01Icon} size={20} className="text-green-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-green-800">Browser Running</p>
+                <p className="text-xs text-green-600 truncate mt-0.5">
+                  {currentTitle || currentUrl || 'Chrome window is open on your desktop'}
+                </p>
+              </div>
+              <div className="flex size-3 rounded-full bg-green-500 animate-pulse" />
             </div>
           </div>
-        )}
 
-        {/* Click indicator */}
-        {clickMutation.isPending && (
-          <div className="absolute inset-0 bg-black/5 flex items-center justify-center pointer-events-none">
-            <HugeiconsIcon icon={Loading03Icon} size={24} className="animate-spin text-accent-500" />
+          {/* Live preview thumbnail */}
+          {currentState?.screenshot && (
+            <div className="rounded-2xl border border-primary-200 overflow-hidden shadow-sm">
+              <div className="border-b border-primary-200 bg-primary-50/80 px-3 py-2 flex items-center gap-2">
+                <HugeiconsIcon icon={GlobeIcon} size={14} className="text-primary-500" />
+                <span className="text-xs text-primary-500 truncate flex-1">{currentUrl}</span>
+                <span className="text-[10px] text-primary-400">Live preview</span>
+              </div>
+              <img
+                src={currentState.screenshot}
+                alt="Browser preview"
+                className="w-full"
+              />
+            </div>
+          )}
+
+          {/* Quick actions */}
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => navMutation.mutate('https://google.com')}
+              className="rounded-xl border border-primary-200 bg-primary-50/50 p-3 text-left hover:bg-primary-100 transition-colors"
+            >
+              <p className="text-sm font-medium text-ink">Google</p>
+              <p className="text-[10px] text-primary-500">google.com</p>
+            </button>
+            <button
+              type="button"
+              onClick={() => navMutation.mutate('https://x.com')}
+              className="rounded-xl border border-primary-200 bg-primary-50/50 p-3 text-left hover:bg-primary-100 transition-colors"
+            >
+              <p className="text-sm font-medium text-ink">X / Twitter</p>
+              <p className="text-[10px] text-primary-500">x.com</p>
+            </button>
+            <button
+              type="button"
+              onClick={() => navMutation.mutate('https://github.com')}
+              className="rounded-xl border border-primary-200 bg-primary-50/50 p-3 text-left hover:bg-primary-100 transition-colors"
+            >
+              <p className="text-sm font-medium text-ink">GitHub</p>
+              <p className="text-[10px] text-primary-500">github.com</p>
+            </button>
+            <button
+              type="button"
+              onClick={() => navMutation.mutate('https://chat.openai.com')}
+              className="rounded-xl border border-primary-200 bg-primary-50/50 p-3 text-left hover:bg-primary-100 transition-colors"
+            >
+              <p className="text-sm font-medium text-ink">ChatGPT</p>
+              <p className="text-[10px] text-primary-500">chat.openai.com</p>
+            </button>
           </div>
-        )}
-      </div>
 
-      {/* Keyboard input bar */}
-      <div className="border-t border-primary-200 bg-primary-50/80 px-3 py-2">
-        <div className="flex items-center gap-2">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault()
-              const input = e.currentTarget.querySelector('input') as HTMLInputElement
-              if (input.value) {
-                actionMutation.mutate({ action: 'type', text: input.value, submit: false })
-                input.value = ''
-              }
-            }}
-            className="flex flex-1 items-center gap-2"
-          >
-            <input
-              type="text"
-              placeholder="Type text into focused element..."
-              className="flex-1 rounded-lg border border-primary-200 bg-surface px-3 py-1.5 text-sm text-ink placeholder:text-primary-400 focus:border-accent-500 focus:outline-none"
-            />
-            <Button type="submit" variant="outline" size="sm">
-              Type
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => actionMutation.mutate({ action: 'press', key: 'Enter' })}
-            >
-              Enter ↵
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => actionMutation.mutate({ action: 'press', key: 'Tab' })}
-            >
-              Tab ⇥
-            </Button>
-          </form>
+          {/* Instructions */}
+          <div className="rounded-xl border border-primary-200 bg-primary-50/30 p-4 text-center">
+            <p className="text-sm text-primary-600">
+              Interact with the Chrome window on your desktop. When ready, use the agent bar below to hand control to your AI.
+            </p>
+          </div>
         </div>
       </div>
 
       {/* Agent handoff bar */}
-      <div className="border-t border-accent-200/50 bg-accent-50/30 px-3 py-2">
+      <div className="border-t border-accent-200/50 bg-accent-50/30 px-4 py-3 shrink-0">
         <form
-          onSubmit={async (e) => {
-            e.preventDefault()
-            if (!agentPrompt.trim() && !currentUrl) return
-            setHandingOff(true)
-
-            try {
-              // Get page content for context
-              const contentRes = await fetch('/api/browser', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'content' }),
-              })
-              const content = await contentRes.json() as { url: string; title: string; text: string }
-
-              // Build the message with browser context
-              const instruction = agentPrompt.trim() || 'Take over this browser session and help me with this page.'
-              const contextMsg = [
-                `🌐 **Browser Handoff**`,
-                `**URL:** ${content.url || currentUrl}`,
-                `**Page:** ${content.title || currentTitle}`,
-                '',
-                `**Task:** ${instruction}`,
-                '',
-                `<page_content>`,
-                (content.text || '').slice(0, 4000),
-                `</page_content>`,
-                '',
-                `The browser is running at \`/api/browser\`. You can control it with POST actions: navigate, click (x,y), type (text), press (key), scroll (direction), back, forward, refresh, content, screenshot.`,
-              ].join('\n')
-
-              // Send to chat via the send API
-              const sendRes = await fetch('/api/send', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  sessionKey: '',
-                  friendlyId: 'new',
-                  message: contextMsg,
-                }),
-              })
-              const sendResult = await sendRes.json() as { ok?: boolean; friendlyId?: string }
-
-              setAgentPrompt('')
-
-              // Navigate to the chat session
-              if (sendResult.friendlyId) {
-                void navigate({ to: '/chat/$sessionKey', params: { sessionKey: sendResult.friendlyId } })
-              } else {
-                void navigate({ to: '/chat/$sessionKey', params: { sessionKey: 'new' } })
-              }
-            } catch {
-              // Fallback: just navigate to chat
-              void navigate({ to: '/chat/$sessionKey', params: { sessionKey: 'new' } })
-            } finally {
-              setHandingOff(false)
-            }
-          }}
-          className="flex items-center gap-2"
+          onSubmit={(e) => { e.preventDefault(); handleHandoff() }}
+          className="flex items-center gap-2 max-w-4xl mx-auto"
         >
           <div className="flex items-center gap-1.5 shrink-0">
             <HugeiconsIcon icon={AiChat02Icon} size={16} className="text-accent-500" />
