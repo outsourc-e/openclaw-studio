@@ -14,11 +14,11 @@ export const Route = createFileRoute('/api/terminal-stream')({
         const rows = typeof body.rows === 'number' ? body.rows : undefined
         const command = Array.isArray(body.command)
           ? body.command.map(String)
-          : ['/bin/zsh']
+          : undefined
 
         const encoder = new TextEncoder()
         const stream = new ReadableStream({
-          async start(controller) {
+          start(controller) {
             let isStreamActive = true
 
             const send = (event: string, data: unknown) => {
@@ -34,26 +34,30 @@ export const Route = createFileRoute('/api/terminal-stream')({
               }
             }
 
-            let session: Awaited<ReturnType<typeof createTerminalSession>>
+            let session: ReturnType<typeof createTerminalSession>
 
             try {
-              session = await createTerminalSession({
+              session = createTerminalSession({
                 command,
                 cwd,
                 cols,
                 rows,
-                pty: true,
               })
             } catch (error) {
+              console.error('[terminal-stream] Failed to create session:', error)
               send('error', { message: String(error) })
               try { controller.close() } catch { /* */ }
               return
             }
 
-            send('session', { sessionId: session.id, execId: session.execId })
+            send('session', { sessionId: session.id })
 
-            const handleEvent = (payload: unknown) => {
-              send('event', payload)
+            const handleEvent = (evt: { event: string; payload: unknown }) => {
+              if (evt.event === 'data') {
+                send('data', evt.payload)
+              } else if (evt.event === 'exit') {
+                send('exit', evt.payload)
+              }
             }
 
             const handleClose = () => {
@@ -75,7 +79,7 @@ export const Route = createFileRoute('/api/terminal-stream')({
               clearInterval(keepAlive)
               session.emitter.off('event', handleEvent)
               session.emitter.off('close', handleClose)
-              void session.close()
+              session.close()
             }
 
             request.signal.addEventListener('abort', abort)

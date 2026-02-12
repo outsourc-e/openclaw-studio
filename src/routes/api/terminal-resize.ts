@@ -19,7 +19,7 @@ export const Route = createFileRoute('/api/terminal-resize')({
             headers: { 'Content-Type': 'application/json' },
           })
         }
-        await session.resize(cols, rows)
+        session.resize(cols, rows)
         return new Response(JSON.stringify({ ok: true }), {
           headers: { 'Content-Type': 'application/json' },
         })

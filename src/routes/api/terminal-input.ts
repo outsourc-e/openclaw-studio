@@ -18,7 +18,7 @@ export const Route = createFileRoute('/api/terminal-input')({
             headers: { 'Content-Type': 'application/json' },
           })
         }
-        await session.sendInput(data)
+        session.sendInput(data)
         return new Response(JSON.stringify({ ok: true }), {
           headers: { 'Content-Type': 'application/json' },
         })

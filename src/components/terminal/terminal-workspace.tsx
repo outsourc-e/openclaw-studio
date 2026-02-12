@@ -263,23 +263,17 @@ export function TerminalWorkspace({
             continue
           }
 
-          if (eventName === 'event' && eventData) {
-            const payload = JSON.parse(eventData) as {
-              payload?: {
-                data?: string
-                text?: string
-                chunk?: string
-                output?: string
-              }
+          if (eventName === 'data' && eventData) {
+            const payload = JSON.parse(eventData) as { data?: string }
+            if (typeof payload.data === 'string') {
+              terminal.write(payload.data)
             }
-            const chunk =
-              payload.payload?.data ??
-              payload.payload?.text ??
-              payload.payload?.chunk ??
-              payload.payload?.output
-            if (typeof chunk === 'string') {
-              terminal.write(chunk)
-            }
+            continue
+          }
+
+          if (eventName === 'exit' && eventData) {
+            const payload = JSON.parse(eventData) as { exitCode?: number; signal?: number }
+            terminal.writeln(`\r\n[process exited${payload.exitCode != null ? ` code=${payload.exitCode}` : ''}]\r\n`)
             continue
           }
 

@@ -10,7 +10,7 @@ export const Route = createFileRoute('/api/terminal-close')({
           unknown
         >
         const sessionId = typeof body.sessionId === 'string' ? body.sessionId : ''
-        await closeTerminalSession(sessionId)
+        closeTerminalSession(sessionId)
         return new Response(JSON.stringify({ ok: true }), {
           headers: { 'Content-Type': 'application/json' },
         })
