@@ -21,7 +21,6 @@ import {
   chatQueryKeys,
   clearHistoryMessages,
   fetchGatewayStatus,
-  removeHistoryMessageByClientId,
   updateHistoryMessageByClientId,
   updateSessionLastMessage,
 } from './chat-queries'
@@ -37,8 +36,6 @@ import {
   isRecentSession,
   resetPendingSend,
   setPendingGeneration,
-  setRecentSession,
-  stashPendingSend,
 } from './pending-send'
 import { useChatMeasurements } from './hooks/use-chat-measurements'
 import { useChatHistory } from './hooks/use-chat-history'
@@ -665,50 +662,29 @@ export function ChatScreen({
       )
 
       if (isNewChat) {
-        const { clientId, optimisticId, optimisticMessage } =
+        const { optimisticMessage } =
           createOptimisticMessage(trimmedBody, attachmentPayload)
         appendHistoryMessage(queryClient, 'new', 'new', optimisticMessage)
         setPendingGeneration(true)
         setSending(true)
         setWaitingForResponse(true)
 
-        createSessionForMessage()
-          .then(({ sessionKey, friendlyId }) => {
-            setRecentSession(friendlyId)
-            stashPendingSend({
-              sessionKey,
-              friendlyId,
-              message: trimmedBody,
-              attachments: attachmentPayload,
-              optimisticMessage,
-            })
-            if (onSessionResolved) {
-              onSessionResolved({ sessionKey, friendlyId })
-              return
-            }
-            navigate({
-              to: '/chat/$sessionKey',
-              params: { sessionKey: friendlyId },
-              replace: true,
-            })
-          })
-          .catch((err: unknown) => {
-            removeHistoryMessageByClientId(
-              queryClient,
-              'new',
-              'new',
-              clientId,
-              optimisticId,
-            )
-            helpers.setValue(trimmedBody)
-            helpers.setAttachments(attachments)
-            setError(
-              `Failed to create session. ${err instanceof Error ? err.message : String(err)}`,
-            )
-            setPendingGeneration(false)
-            setWaitingForResponse(false)
-            setSending(false)
-          })
+        // Send directly to main session — gateway routes all chat.send to main anyway
+        navigate({
+          to: '/chat/$sessionKey',
+          params: { sessionKey: 'main' },
+          replace: true,
+        })
+        sendMessage(
+          'main',
+          'main',
+          trimmedBody,
+          attachmentPayload,
+          true,
+          typeof optimisticMessage.clientId === 'string'
+            ? optimisticMessage.clientId
+            : '',
+        )
         return
       }
 

@@ -1,9 +1,9 @@
 import { useMemo, useRef } from 'react'
-import {  useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 
 import { chatQueryKeys, fetchHistory } from '../chat-queries'
 import { getMessageTimestamp, textFromMessage } from '../utils'
-import type {QueryClient} from '@tanstack/react-query';
+import type { QueryClient } from '@tanstack/react-query'
 import type { GatewayMessage, HistoryResponse } from '../types'
 
 type UseChatHistoryInput = {
@@ -17,6 +17,14 @@ type UseChatHistoryInput = {
   queryClient: QueryClient
 }
 
+function normalizeSessionCandidate(value: string | undefined): string {
+  if (!value) return ''
+  const trimmed = value.trim()
+  if (!trimmed) return ''
+  if (trimmed === 'new') return ''
+  return trimmed
+}
+
 export function useChatHistory({
   activeFriendlyId,
   activeSessionKey,
@@ -27,8 +35,23 @@ export function useChatHistory({
   sessionsReady,
   queryClient,
 }: UseChatHistoryInput) {
-  const sessionKeyForHistory =
-    forcedSessionKey || activeSessionKey || activeFriendlyId
+  const explicitRouteSessionKey = useMemo(() => {
+    const normalizedFriendlyId = normalizeSessionCandidate(activeFriendlyId)
+    if (!normalizedFriendlyId) return ''
+    if (normalizedFriendlyId === 'main') return ''
+    return normalizedFriendlyId
+  }, [activeFriendlyId])
+
+  const sessionKeyForHistory = useMemo(() => {
+    const candidates = [
+      normalizeSessionCandidate(forcedSessionKey),
+      normalizeSessionCandidate(activeSessionKey),
+      explicitRouteSessionKey,
+    ]
+    const match = candidates.find((candidate) => candidate.length > 0)
+    return match || 'main'
+  }, [activeSessionKey, explicitRouteSessionKey, forcedSessionKey])
+
   const historyKey = chatQueryKeys.history(
     activeFriendlyId,
     sessionKeyForHistory,
@@ -62,10 +85,9 @@ export function useChatHistory({
       }
     },
     enabled:
-      !isNewChat &&
-      Boolean(activeFriendlyId) &&
+      Boolean(sessionKeyForHistory) &&
       !isRedirecting &&
-      (!sessionsReady || activeExists),
+      (!sessionsReady || activeExists || Boolean(explicitRouteSessionKey) || isNewChat),
     placeholderData: function useCachedHistory(): HistoryResponse | undefined {
       return queryClient.getQueryData(historyKey)
     },
@@ -139,14 +161,23 @@ export function useChatHistory({
   const historyError =
     historyQuery.error instanceof Error ? historyQuery.error.message : null
   const resolvedSessionKey = useMemo(() => {
-    if (forcedSessionKey) return forcedSessionKey
+    const normalizedForced = normalizeSessionCandidate(forcedSessionKey)
+    if (normalizedForced) return normalizedForced
     const key = historyQuery.data?.sessionKey
-    if (typeof key === 'string' && key.trim().length > 0) return key.trim()
-    return activeSessionKey
-  }, [activeSessionKey, forcedSessionKey, historyQuery.data?.sessionKey])
-  const activeCanonicalKey = isNewChat
-    ? 'new'
-    : resolvedSessionKey || activeFriendlyId
+    if (typeof key === 'string' && key.trim().length > 0) {
+      return key.trim()
+    }
+    const normalizedActive = normalizeSessionCandidate(activeSessionKey)
+    if (normalizedActive) return normalizedActive
+    if (explicitRouteSessionKey) return explicitRouteSessionKey
+    return 'main'
+  }, [
+    activeSessionKey,
+    explicitRouteSessionKey,
+    forcedSessionKey,
+    historyQuery.data?.sessionKey,
+  ])
+  const activeCanonicalKey = resolvedSessionKey || sessionKeyForHistory || 'main'
 
   return {
     historyQuery,
