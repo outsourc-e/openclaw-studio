@@ -49,6 +49,24 @@ export function LocalBrowser() {
         setProxyState((s) => ({ ...s, started: true, proxyUrl: data.url }))
       }
     }).catch(() => {})
+
+    // Listen for URL changes from the injected script
+    function handleMessage(e: MessageEvent) {
+      if (e.data?.type === 'proxy-navigate' && typeof e.data.url === 'string') {
+        const url = e.data.url
+        // Extract real URL from proxy URL
+        try {
+          const parsed = new URL(url)
+          const realUrl = parsed.searchParams.get('url') || url
+          setUrlInput(realUrl)
+          setProxyState((s) => ({ ...s, currentUrl: realUrl }))
+        } catch {
+          setUrlInput(url)
+        }
+      }
+    }
+    window.addEventListener('message', handleMessage)
+    return () => window.removeEventListener('message', handleMessage)
   }, [])
 
   const handleNavigate = useCallback(
@@ -178,7 +196,7 @@ export function LocalBrowser() {
             src={proxyState.iframeSrc}
             onLoad={handleIframeLoad}
             className="w-full h-full border-0"
-            sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals allow-downloads"
+            /* No sandbox — local proxy only, full interactivity needed */
             title="Browser"
           />
         ) : (

@@ -145,8 +145,61 @@ export async function startProxy(): Promise<{ port: number; url: string }> {
             }
           }
 
-          clientRes.writeHead(proxyRes.statusCode || 200, headers)
-          proxyRes.pipe(clientRes)
+          const contentType = (headers['content-type'] || '') as string
+          const isHtml = contentType.includes('text/html')
+
+          if (isHtml) {
+            // Buffer HTML to inject <base> tag so relative URLs resolve to the real origin
+            const chunks: Buffer[] = []
+            proxyRes.on('data', (chunk: Buffer) => chunks.push(chunk))
+            proxyRes.on('end', () => {
+              let html = Buffer.concat(chunks).toString('utf8')
+
+              // Inject <base> tag + navigation interceptor
+              const proxyOrigin = `http://localhost:${PROXY_PORT}`
+              const baseTag = `<base href="${parsed.origin}/">
+<script>
+// Intercept link clicks to route through proxy
+document.addEventListener('click', function(e) {
+  var a = e.target.closest('a');
+  if (a && a.href && a.href.startsWith('http') && !a.href.startsWith('${proxyOrigin}')) {
+    e.preventDefault();
+    window.location.href = '${proxyOrigin}/?url=' + encodeURIComponent(a.href);
+  }
+}, true);
+// Intercept form submissions
+document.addEventListener('submit', function(e) {
+  var form = e.target;
+  if (form.action && form.action.startsWith('http') && !form.action.startsWith('${proxyOrigin}')) {
+    form.action = '${proxyOrigin}/?url=' + encodeURIComponent(form.action);
+  }
+}, true);
+// Notify parent of URL changes
+try { window.parent.postMessage({ type: 'proxy-navigate', url: window.location.href }, '*'); } catch(e) {}
+</script>`
+              if (html.includes('<head>')) {
+                html = html.replace('<head>', `<head>${baseTag}`)
+              } else if (html.includes('<HEAD>')) {
+                html = html.replace('<HEAD>', `<HEAD>${baseTag}`)
+              } else if (html.includes('<html')) {
+                html = html.replace(/(<html[^>]*>)/i, `$1<head>${baseTag}</head>`)
+              } else {
+                html = baseTag + html
+              }
+
+              // Remove content-length since we modified the body
+              delete headers['content-length']
+              // Remove content-encoding since we decoded it
+              delete headers['content-encoding']
+              delete headers['transfer-encoding']
+
+              clientRes.writeHead(proxyRes.statusCode || 200, headers)
+              clientRes.end(html)
+            })
+          } else {
+            clientRes.writeHead(proxyRes.statusCode || 200, headers)
+            proxyRes.pipe(clientRes)
+          }
         },
       )
 
