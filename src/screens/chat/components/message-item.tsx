@@ -502,7 +502,27 @@ function MessageItemComponent({
           </Collapsible>
         </div>
       )}
-      {(hasText || hasAttachments || effectiveIsStreaming) && (
+      {/* Narration messages (tool-call activity) — compact collapsible row */}
+      {!isUser && (message as any).__isNarration && hasText && (
+        <div className="w-full max-w-[900px]">
+          <details className="group/narration">
+            <summary className="flex items-center gap-2 cursor-pointer select-none py-1 text-primary-500 hover:text-primary-700 transition-colors">
+              <span className="size-5 flex items-center justify-center rounded-full bg-accent-500/10">
+                <span className="text-[10px]">⚡</span>
+              </span>
+              <span className="text-xs font-medium truncate flex-1">
+                {displayText.slice(0, 120)}{displayText.length > 120 ? '...' : ''}
+              </span>
+              <span className="text-[10px] text-primary-400 shrink-0 group-open/narration:hidden">▸</span>
+              <span className="text-[10px] text-primary-400 shrink-0 hidden group-open/narration:inline">▾</span>
+            </summary>
+            <div className="mt-1 ml-7 rounded-lg border border-primary-200/60 bg-primary-50/50 p-3 text-[13px] text-primary-600 whitespace-pre-wrap text-pretty">
+              {displayText}
+            </div>
+          </details>
+        </div>
+      )}
+      {(hasText || hasAttachments || effectiveIsStreaming) && !(message as any).__isNarration && (
         <Message className={cn(isUser ? 'flex-row-reverse' : '')}>
           {isUser ? (
             <UserAvatar
