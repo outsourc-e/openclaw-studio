@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useGatewayChatStream } from '../../../hooks/use-gateway-chat-stream'
 import { useGatewayChatStore } from '../../../stores/gateway-chat-store'
-import { appendHistoryMessage } from '../chat-queries'
+import { appendHistoryMessage, chatQueryKeys } from '../chat-queries'
+import { toast } from '../../../components/ui/toast'
 import type { GatewayMessage } from '../types'
 
 type UseRealtimeChatHistoryOptions = {
@@ -51,8 +52,30 @@ export function useRealtimeChatHistory({
       // Track when generation completes for this session
       if (eventSessionKey === sessionKey || !sessionKey || sessionKey === 'new') {
         setLastCompletedRunAt(Date.now())
+        // Refetch history after generation completes — keeps chat in sync
+        if (sessionKey && sessionKey !== 'new') {
+          const key = chatQueryKeys.history(friendlyId, sessionKey)
+          const prevData = queryClient.getQueryData(key) as { messages?: GatewayMessage[] } | undefined
+          const prevCount = prevData?.messages?.length ?? 0
+
+          // Small delay to let gateway persist the final message
+          setTimeout(() => {
+            queryClient.invalidateQueries({ queryKey: key }).then(() => {
+              // Check for compaction — significant message count drop
+              const newData = queryClient.getQueryData(key) as { messages?: GatewayMessage[] } | undefined
+              const newCount = newData?.messages?.length ?? 0
+              if (prevCount > 10 && newCount > 0 && newCount < prevCount * 0.6) {
+                toast('Context compacted — older messages were summarized to free up space', {
+                  type: 'info',
+                  icon: '🗜️',
+                  duration: 8000,
+                })
+              }
+            })
+          }, 500)
+        }
       }
-    }, [sessionKey]),
+    }, [sessionKey, friendlyId, queryClient]),
   })
 
   const { 
@@ -71,6 +94,19 @@ export function useRealtimeChatHistory({
     if (sessionKey === 'new') return historyMessages
     return mergeHistoryMessages(sessionKey, historyMessages)
   }, [sessionKey, historyMessages, mergeHistoryMessages])
+
+  // Periodic history sync — catch missed messages every 30s
+  const syncIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  useEffect(() => {
+    if (!sessionKey || sessionKey === 'new' || !enabled) return
+    syncIntervalRef.current = setInterval(() => {
+      const key = chatQueryKeys.history(friendlyId, sessionKey)
+      queryClient.invalidateQueries({ queryKey: key })
+    }, 30000)
+    return () => {
+      if (syncIntervalRef.current) clearInterval(syncIntervalRef.current)
+    }
+  }, [sessionKey, friendlyId, enabled, queryClient])
 
   // Clear realtime buffer when session changes
   useEffect(() => {
