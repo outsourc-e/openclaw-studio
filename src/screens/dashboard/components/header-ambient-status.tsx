@@ -1,10 +1,8 @@
 /**
  * Compact ambient time + weather readout for the dashboard header.
  */
-import { Edit02Icon } from '@hugeicons/core-free-icons'
-import { HugeiconsIcon } from '@hugeicons/react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { useEffect, useMemo, useState } from 'react'
 import { useDashboardSettings } from '../hooks/use-dashboard-settings'
 
 type WttrCurrentCondition = {
@@ -59,13 +57,8 @@ async function fetchCompactWeather(
 }
 
 export function HeaderAmbientStatus() {
-  const { settings, update } = useDashboardSettings()
-  const queryClient = useQueryClient()
+  const { settings } = useDashboardSettings()
   const is12h = settings.clockFormat === '12h'
-  const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState(settings.weatherLocation)
-  const inputRef = useRef<HTMLInputElement>(null)
-  const popoverRef = useRef<HTMLDivElement>(null)
 
   const [now, setNow] = useState(() => new Date())
 
@@ -73,26 +66,6 @@ export function HeaderAmbientStatus() {
     const id = setInterval(() => setNow(new Date()), 30_000)
     return () => clearInterval(id)
   }, [])
-
-  // Close popover on outside click
-  useEffect(() => {
-    if (!editing) return
-    function handleClick(e: MouseEvent) {
-      if (
-        popoverRef.current &&
-        !popoverRef.current.contains(e.target as Node)
-      ) {
-        setEditing(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
-  }, [editing])
-
-  // Focus input on open
-  useEffect(() => {
-    if (editing) inputRef.current?.focus()
-  }, [editing])
 
   const timeStr = useMemo(
     function buildTimeString() {
@@ -126,14 +99,8 @@ export function HeaderAmbientStatus() {
 
   const weather = weatherQuery.data
 
-  function handleSave() {
-    update({ weatherLocation: draft.trim() })
-    void queryClient.invalidateQueries({ queryKey: ['dashboard', 'weather'] })
-    setEditing(false)
-  }
-
   return (
-    <div className="relative hidden text-right sm:block">
+    <div className="hidden text-right sm:block">
       <div className="inline-flex items-center justify-end gap-2 rounded-full border border-primary-200 bg-primary-100/65 px-3 py-1 text-[11px] text-primary-600 tabular-nums shadow-sm">
         <span className="font-medium text-ink">{timeStr}</span>
         <span className="text-primary-400">·</span>
@@ -149,94 +116,7 @@ export function HeaderAmbientStatus() {
             </span>
           </>
         ) : null}
-        <button
-          type="button"
-          onClick={() => {
-            setDraft(settings.weatherLocation)
-            setEditing(!editing)
-          }}
-          className="ml-0.5 rounded-full p-1 text-primary-500 transition-colors hover:bg-primary-50 hover:text-orange-600"
-          aria-label="Edit time and weather settings"
-          title="Edit settings"
-        >
-          <HugeiconsIcon icon={Edit02Icon} size={14} strokeWidth={1.5} />
-        </button>
       </div>
-
-      {editing ? (
-        <div
-          ref={popoverRef}
-          className="absolute right-0 top-full z-50 mt-2 w-64 rounded-xl border border-primary-200 bg-primary-50 p-4 shadow-lg"
-        >
-          <div className="space-y-3">
-            <div>
-              <label className="text-[11px] font-medium uppercase tracking-wide text-primary-500">
-                Weather Location
-              </label>
-              <input
-                ref={inputRef}
-                type="text"
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleSave()
-                }}
-                placeholder="ZIP or city (blank = auto)"
-                className="mt-1 w-full rounded-lg border border-primary-200 bg-primary-50 px-2.5 py-1.5 text-sm text-ink placeholder:text-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400 dark:bg-primary-50"
-              />
-            </div>
-
-            <div>
-              <label className="text-[11px] font-medium uppercase tracking-wide text-primary-500">
-                Time Format
-              </label>
-              <div className="mt-1 flex gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    update({ clockFormat: '12h' })
-                  }}
-                  className={`flex-1 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors ${is12h ? 'border-primary-400 bg-primary-200/60 text-ink' : 'border-primary-200 text-primary-500 hover:bg-primary-100'}`}
-                >
-                  12h
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    update({ clockFormat: '24h' })
-                  }}
-                  className={`flex-1 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors ${!is12h ? 'border-primary-400 bg-primary-200/60 text-ink' : 'border-primary-200 text-primary-500 hover:bg-primary-100'}`}
-                >
-                  24h
-                </button>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => {
-                  update({ weatherLocation: '' })
-                  setDraft('')
-                  void queryClient.invalidateQueries({
-                    queryKey: ['dashboard', 'weather'],
-                  })
-                }}
-                className="text-[11px] text-primary-400 underline-offset-2 hover:text-primary-600 hover:underline"
-              >
-                Reset to auto
-              </button>
-              <button
-                type="button"
-                onClick={handleSave}
-                className="rounded-lg bg-orange-600 px-3 py-1.5 text-xs font-medium text-primary-50 hover:bg-orange-700"
-              >
-                Save
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
     </div>
   )
 }

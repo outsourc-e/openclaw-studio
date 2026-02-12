@@ -102,7 +102,7 @@ export function DashboardScreen() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [gridLayouts, setGridLayouts] = useState<ResponsiveLayouts>(loadLayouts)
-  const [isRefreshing, setIsRefreshing] = useState(false)
+  // refresh removed from header — data auto-refreshes via query intervals
   const { visibleIds, addWidget, removeWidget, resetVisible } =
     useVisibleWidgets()
   const containerRef = useRef<HTMLDivElement>(null)
@@ -164,9 +164,8 @@ export function DashboardScreen() {
     refetchInterval: 60_000,
   })
 
-  const handleRefresh = useCallback(
-    async function handleRefresh() {
-      setIsRefreshing(true)
+  const handleRefreshAll = useCallback(
+    async function handleRefreshAll() {
       await Promise.allSettled([
         sessionsQuery.refetch(),
         gatewayStatusQuery.refetch(),
@@ -175,7 +174,6 @@ export function DashboardScreen() {
         queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
         queryClient.invalidateQueries({ queryKey: chatQueryKeys.sessions }),
       ])
-      setIsRefreshing(false)
     },
     [
       gatewayStatusQuery,
@@ -237,64 +235,36 @@ export function DashboardScreen() {
       <section className="mx-auto w-full max-w-[1600px]">
         <header className="relative z-20 mb-4 rounded-xl border border-primary-200 bg-primary-50/95 px-4 py-3 shadow-sm md:mb-5 md:px-5">
           <div className="flex items-center justify-between gap-4">
+            {/* Left: Logo + name + status */}
             <div className="flex items-center gap-3">
               <OpenClawStudioIcon className="size-8 shrink-0 rounded-xl shadow-sm" />
-              <div className="flex flex-col gap-1 leading-tight">
+              <div className="flex items-center gap-2.5">
                 <h1 className="text-base font-semibold text-ink">ClawSuite</h1>
-                <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                <span
+                  className={cn(
+                    'inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-medium',
+                    systemStatus.gateway.connected
+                      ? 'border-emerald-200 bg-emerald-100/70 text-emerald-700'
+                      : 'border-red-200 bg-red-100/80 text-red-700',
+                  )}
+                >
                   <span
                     className={cn(
-                      'inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 font-medium tabular-nums',
-                      systemStatus.gateway.connected
-                        ? 'border-emerald-200 bg-emerald-100/70 text-emerald-700'
-                        : 'border-red-200 bg-red-100/80 text-red-700',
+                      'size-1.5 shrink-0 rounded-full',
+                      systemStatus.gateway.connected ? 'bg-emerald-500' : 'bg-red-500',
                     )}
-                  >
-                    <span
-                      className={cn(
-                        'size-1.5 shrink-0 rounded-full',
-                        systemStatus.gateway.connected
-                          ? 'bg-emerald-500'
-                          : 'bg-red-500',
-                      )}
-                    />
-                    <span>
-                      {systemStatus.gateway.connected
-                        ? 'Connected'
-                        : 'Disconnected'}
-                    </span>
-                  </span>
-                  <span className="text-primary-500">Model</span>
-                  <span className="font-medium text-primary-600">
-                    {systemStatus.currentModel || '—'}
-                  </span>
-                </div>
+                  />
+                  {systemStatus.gateway.connected ? 'Connected' : 'Disconnected'}
+                </span>
               </div>
             </div>
 
+            {/* Right: Clock → Theme → Bell → Gear */}
             <div className="ml-auto flex items-center gap-3">
               <HeaderAmbientStatus />
-
-              {/* Theme toggle — prominent pill */}
-              <ThemeToggle variant="pill" />
-
+              <ThemeToggle />
               <div className="flex items-center gap-1 rounded-full border border-primary-200 bg-primary-100/65 p-1">
                 <NotificationsPopover />
-                <button
-                  type="button"
-                  onClick={() => void handleRefresh()}
-                  className="inline-flex size-7 items-center justify-center rounded-full text-primary-600 transition-colors hover:bg-primary-50 hover:text-orange-600 disabled:opacity-50"
-                  aria-label="Refresh Dashboard Data"
-                  title="Refresh Dashboard Data"
-                  disabled={isRefreshing}
-                >
-                  <HugeiconsIcon
-                    icon={RefreshIcon}
-                    size={15}
-                    strokeWidth={1.5}
-                    className={isRefreshing ? 'animate-spin' : undefined}
-                  />
-                </button>
                 <button
                   type="button"
                   onClick={() => void navigate({ to: '/settings' })}

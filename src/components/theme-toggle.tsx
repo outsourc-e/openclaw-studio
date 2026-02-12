@@ -1,4 +1,4 @@
-import { Moon01Icon, Sun01Icon } from '@hugeicons/core-free-icons'
+import { ComputerIcon, Moon01Icon, Sun01Icon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { useChatSettingsStore } from '@/hooks/use-chat-settings'
 import type { ThemeMode } from '@/hooks/use-chat-settings'
@@ -20,54 +20,62 @@ function resolvedIsDark(): boolean {
   return document.documentElement.classList.contains('dark')
 }
 
+const MODES: Array<{ value: ThemeMode; icon: typeof ComputerIcon; label: string }> = [
+  { value: 'system', icon: ComputerIcon, label: 'System' },
+  { value: 'light', icon: Sun01Icon, label: 'Light' },
+  { value: 'dark', icon: Moon01Icon, label: 'Dark' },
+]
+
 type ThemeToggleProps = {
-  /** "icon" = small icon button (default), "pill" = prominent pill toggle */
+  /** "icon" = small icon button, "pill" = 3-way pill toggle (default) */
   variant?: 'icon' | 'pill'
 }
 
-export function ThemeToggle({ variant = 'icon' }: ThemeToggleProps) {
+export function ThemeToggle({ variant = 'pill' }: ThemeToggleProps) {
   const { settings, updateSettings } = useChatSettingsStore()
   const isDark = settings.theme === 'dark' || (settings.theme === 'system' && resolvedIsDark())
 
-  function toggle() {
-    const next: ThemeMode = isDark ? 'light' : 'dark'
-    applyTheme(next)
-    updateSettings({ theme: next })
+  function setTheme(theme: ThemeMode) {
+    applyTheme(theme)
+    updateSettings({ theme })
   }
 
-  if (variant === 'pill') {
+  if (variant === 'icon') {
     return (
       <button
         type="button"
-        onClick={toggle}
-        className={cn(
-          'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-all duration-200',
-          isDark
-            ? 'border-primary-600 bg-primary-800 text-primary-200 hover:bg-primary-700'
-            : 'border-primary-200 bg-primary-100/80 text-primary-700 hover:bg-primary-200',
-        )}
+        onClick={() => setTheme(isDark ? 'light' : 'dark')}
+        className="inline-flex size-7 items-center justify-center rounded-md text-primary-400 transition-colors hover:text-primary-700 dark:hover:text-primary-300"
         aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
         title={isDark ? 'Light mode' : 'Dark mode'}
       >
-        <HugeiconsIcon
-          icon={isDark ? Sun01Icon : Moon01Icon}
-          size={14}
-          strokeWidth={1.5}
-        />
-        <span>{isDark ? 'Light' : 'Dark'}</span>
+        <HugeiconsIcon icon={isDark ? Sun01Icon : Moon01Icon} size={16} strokeWidth={1.5} />
       </button>
     )
   }
 
   return (
-    <button
-      type="button"
-      onClick={toggle}
-      className="inline-flex size-7 items-center justify-center rounded-md text-primary-400 transition-colors hover:text-primary-700 dark:hover:text-primary-300"
-      aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-      title={isDark ? 'Light mode' : 'Dark mode'}
-    >
-      <HugeiconsIcon icon={isDark ? Sun01Icon : Moon01Icon} size={16} strokeWidth={1.5} />
-    </button>
+    <div className="inline-flex items-center gap-0.5 rounded-full border border-primary-200 bg-primary-100/70 p-0.5 dark:border-primary-700 dark:bg-primary-800/80">
+      {MODES.map((mode) => {
+        const active = settings.theme === mode.value
+        return (
+          <button
+            key={mode.value}
+            type="button"
+            onClick={() => setTheme(mode.value)}
+            className={cn(
+              'inline-flex size-7 items-center justify-center rounded-full transition-all duration-200',
+              active
+                ? 'bg-orange-500 text-white shadow-sm'
+                : 'text-primary-500 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-200',
+            )}
+            aria-label={mode.label}
+            title={mode.label}
+          >
+            <HugeiconsIcon icon={mode.icon} size={14} strokeWidth={1.8} />
+          </button>
+        )
+      })}
+    </div>
   )
 }
