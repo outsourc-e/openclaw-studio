@@ -200,98 +200,64 @@ export function LocalBrowser() {
     )
   }
 
-  // ── Running — control panel ──────────────────────────────────
+  // ── Running — compact control panel ───────────────────────────
   return (
     <div className="flex h-full flex-col">
-      {/* Header */}
-      <div className="flex items-center gap-3 border-b border-primary-200 bg-primary-50/80 px-4 py-3 shrink-0">
-        <div className="flex size-8 items-center justify-center rounded-lg bg-green-500/15">
-          <div className="size-2.5 rounded-full bg-green-500 animate-pulse" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-ink truncate">{status.title || 'Browser Active'}</p>
-          <p className="text-[11px] text-primary-500 truncate">{status.url || 'about:blank'}</p>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
+      {/* Compact header: status + URL + close */}
+      <div className="flex items-center gap-2 border-b border-primary-200 bg-primary-50/80 px-3 py-1.5 shrink-0">
+        <div className="size-2 rounded-full bg-green-500 animate-pulse shrink-0" />
+        <form onSubmit={handleNavigate} className="flex-1 min-w-0 flex items-center">
+          <input
+            type="text"
+            value={urlInput}
+            onChange={(e) => setUrlInput(e.target.value)}
+            placeholder="Enter URL..."
+            className="url-input flex-1 bg-transparent text-[12px] text-primary-600 placeholder:text-primary-400 focus:outline-none truncate"
+          />
+        </form>
+        <button
+          type="button"
           onClick={handleClose}
           disabled={closing}
-          className="h-7 px-2.5 text-[11px] text-primary-500 hover:text-red-500 hover:border-red-300"
+          className="rounded p-1 text-primary-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+          title="Close browser"
         >
-          {closing ? <HugeiconsIcon icon={Loading03Icon} size={12} className="animate-spin" /> : <HugeiconsIcon icon={Cancel01Icon} size={12} />}
-          Close
-        </Button>
+          <HugeiconsIcon icon={Cancel01Icon} size={12} />
+        </button>
       </div>
 
-      {/* URL bar */}
-      <form onSubmit={handleNavigate} className="flex items-center gap-2 border-b border-primary-200 bg-primary-100/40 px-4 py-2 shrink-0">
-        <HugeiconsIcon icon={GlobeIcon} size={14} className="text-primary-400 shrink-0" />
-        <input
-          type="text"
-          value={urlInput}
-          onChange={(e) => setUrlInput(e.target.value)}
-          placeholder="Enter URL and press Enter..."
-          className="url-input flex-1 bg-transparent text-[13px] text-ink placeholder:text-primary-400 focus:outline-none"
-        />
-        <Button type="submit" variant="outline" size="sm" className="h-6 px-2 text-[10px]">
-          <HugeiconsIcon icon={ArrowRight01Icon} size={11} /> Go
-        </Button>
-      </form>
-
-      {/* Live thumbnail + info */}
-      <div className="flex-1 min-h-0 overflow-y-auto p-6">
-        {/* Thumbnail */}
-        <div className="rounded-xl border border-primary-200 overflow-hidden shadow-sm bg-white">
-          {thumbnail ? (
-            <img
-              src={thumbnail}
-              alt="Browser screenshot"
-              className="w-full object-contain"
-            />
-          ) : (
-            <div className="flex h-48 items-center justify-center bg-primary-50">
-              <p className="text-xs text-primary-400">Waiting for screenshot...</p>
-            </div>
-          )}
-        </div>
-
-        {/* Status info */}
-        <div className="mt-4 rounded-xl border border-primary-200 bg-primary-50/50 p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="size-2 rounded-full bg-green-500" />
-            <span className="text-xs font-medium text-ink uppercase tracking-wider">Browser Window Active</span>
-          </div>
-          <p className="text-[13px] text-primary-600 leading-relaxed">
-            The browser is running in a separate window on your desktop. Log in to any site, navigate where you need, then use the handoff below to give your agent control.
-          </p>
-          <div className="mt-3 flex gap-2 flex-wrap">
-            <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-0.5 text-[10px] font-medium text-green-700">
-              ✓ Real browser — full compatibility
-            </span>
-            <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-0.5 text-[10px] font-medium text-blue-700">
-              ✓ Session persists after handoff
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Agent handoff */}
-      <div className="border-t border-primary-200 bg-primary-50/80 px-4 py-3 shrink-0">
-        <form onSubmit={(e) => { e.preventDefault(); handleHandoff() }} className="flex items-center gap-2">
-          <HugeiconsIcon icon={AiChat02Icon} size={16} className="text-accent-500 shrink-0" />
+      {/* Agent handoff — right at the top */}
+      <div className="border-b border-primary-200 bg-surface px-3 py-2 shrink-0">
+        <form onSubmit={(e) => { e.preventDefault(); handleHandoff() }} className="flex items-center gap-1.5">
+          <HugeiconsIcon icon={AiChat02Icon} size={14} className="text-accent-500 shrink-0" />
           <input
             type="text"
             value={agentPrompt}
             onChange={(e) => setAgentPrompt(e.target.value)}
-            placeholder="Tell the agent what to do with this page..."
-            className="flex-1 rounded-lg border border-primary-200 bg-surface px-3 py-2 text-[13px] text-ink placeholder:text-primary-400 focus:border-accent-500 focus:outline-none"
+            placeholder="Tell the agent what to do on this page..."
+            className="flex-1 rounded border border-primary-200 bg-primary-50 px-2.5 py-1.5 text-[12px] text-ink placeholder:text-primary-400 focus:border-accent-500 focus:outline-none"
           />
-          <Button type="submit" disabled={handingOff} className="gap-1.5 bg-accent-500 hover:bg-accent-400 px-4" size="sm">
-            {handingOff ? <HugeiconsIcon icon={Loading03Icon} size={14} className="animate-spin" /> : <HugeiconsIcon icon={SentIcon} size={14} />}
+          <Button type="submit" disabled={handingOff} className="gap-1 bg-accent-500 hover:bg-accent-400 text-[11px] px-2.5 h-7" size="sm">
+            {handingOff ? <HugeiconsIcon icon={Loading03Icon} size={12} className="animate-spin" /> : <HugeiconsIcon icon={SentIcon} size={12} />}
             Hand to Agent
           </Button>
         </form>
+      </div>
+
+      {/* Thumbnail + status */}
+      <div className="flex-1 min-h-0 overflow-y-auto p-3">
+        <div className="rounded-lg border border-primary-200 overflow-hidden bg-white">
+          {thumbnail ? (
+            <img src={thumbnail} alt="Browser" className="w-full object-contain max-h-[300px]" />
+          ) : (
+            <div className="flex h-32 items-center justify-center bg-primary-50">
+              <p className="text-[11px] text-primary-400">Waiting for screenshot...</p>
+            </div>
+          )}
+        </div>
+        <p className="mt-2 text-[11px] text-primary-500 truncate px-1">
+          {status.title || 'Browser window active on your desktop'}
+        </p>
       </div>
     </div>
   )
