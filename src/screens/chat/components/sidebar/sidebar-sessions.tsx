@@ -69,10 +69,8 @@ export const SidebarSessions = memo(function SidebarSessions({
       className="flex h-full flex-col flex-1 min-h-0 w-full"
       defaultOpen={defaultOpen}
     >
-      <CollapsibleTrigger className="w-full flex items-center gap-1.5 px-3 pt-3 pb-1 shrink-0">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-primary-500 select-none">
-          Sessions
-        </span>
+      <CollapsibleTrigger className="w-full flex items-center gap-1.5 rounded-none px-5 pt-3 pb-1 shrink-0 text-[10px] font-semibold uppercase tracking-wider hover:bg-transparent data-panel-open:text-primary-500">
+        <span className="select-none">Sessions</span>
         <span className="ml-auto p-0.5 rounded hover:bg-primary-200 transition-colors">
           <HugeiconsIcon
             icon={ArrowDown01Icon}
@@ -85,7 +83,7 @@ export const SidebarSessions = memo(function SidebarSessions({
 
       {/* Pinned sessions — always visible (outside collapsible panel) */}
       {pinnedSessions.length > 0 ? (
-        <div className="flex shrink-0 flex-col gap-px pl-2 pr-2 pt-1">
+        <div className="flex shrink-0 flex-col gap-px pl-3 pr-2 pt-1">
           {pinnedSessions.map((session) => (
             <SessionItem
               key={session.key}
@@ -107,7 +105,7 @@ export const SidebarSessions = memo(function SidebarSessions({
       >
         <ScrollAreaRoot className="flex-1 min-h-0">
           <ScrollAreaViewport className="min-h-0">
-            <div className="flex flex-col gap-px pl-2 pr-2">
+            <div className="flex flex-col gap-px pl-3 pr-2">
               {loading ? (
                 <div className="px-2 py-2 text-xs text-primary-500">
                   Loading sessions…
