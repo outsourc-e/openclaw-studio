@@ -5,10 +5,13 @@
  */
 
 import http from 'node:http'
+import path from 'node:path'
+import os from 'node:os'
 import type { Browser, BrowserContext, Page } from 'playwright'
 
 const WS_PORT = 9223
 const VIEWPORT = { width: 1280, height: 800 }
+const PROFILE_DIR = path.join(os.homedir(), '.clawsuite', 'browser-profile')
 
 let server: http.Server | null = null
 let browser: Browser | null = null
@@ -42,18 +45,31 @@ async function launchBrowserInstance() {
   isLaunching = true
 
   try {
-    const pw = await import('playwright')
-    browser = await pw.chromium.launch({
+    // Use playwright-extra with stealth plugin for anti-detection
+    const { chromium } = await import('playwright-extra')
+    const StealthPlugin = (await import('puppeteer-extra-plugin-stealth')).default
+    chromium.use(StealthPlugin())
+
+    // Persistent context = cookies/sessions survive restarts
+    context = await chromium.launchPersistentContext(PROFILE_DIR, {
       headless: false,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
-    })
-
-    context = await browser.newContext({
       viewport: VIEWPORT,
+      channel: 'chromium',
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-blink-features=AutomationControlled',
+      ],
+      ignoreDefaultArgs: ['--enable-automation'],
       userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+      locale: 'en-US',
+      timezoneId: 'America/New_York',
     })
+    browser = null // persistentContext doesn't expose browser separately
 
-    page = await context.newPage()
+    // Persistent context may already have pages open
+    page = context.pages()[0] || await context.newPage()
 
     // Track URL changes
     page.on('framenavigated', async (frame) => {
@@ -101,6 +117,7 @@ async function closeBrowserInstance() {
   lastFrame = null
   currentUrl = ''
   currentTitle = ''
+  broadcastState()
   broadcast({ type: 'closed' })
 }
 
