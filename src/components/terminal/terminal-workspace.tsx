@@ -106,6 +106,7 @@ export function TerminalWorkspace({
   const sendInput = useCallback(async function sendInput(tabId: string, data: string) {
     // Look up session ID from store at call time (not stale closure)
     const currentTab = useTerminalPanelStore.getState().tabs.find((t) => t.id === tabId)
+    console.log('[terminal] sendInput:', { tabId, hasSession: !!currentTab?.sessionId, dataLen: data.length })
     if (!currentTab?.sessionId) return
     await fetch('/api/terminal-input', {
       method: 'POST',
@@ -210,6 +211,8 @@ export function TerminalWorkspace({
         return null
       })
 
+      console.log('[terminal] fetch response:', response?.status, response?.ok, !!response?.body)
+
       if (!response || !response.ok || !response.body) {
         terminal.writeln('\r\n[terminal] failed to connect\r\n')
         connectedRef.current.delete(tab.id)
@@ -255,9 +258,12 @@ export function TerminalWorkspace({
           }
           if (!eventName || eventName === 'ping') continue
 
+          console.log('[terminal] SSE event:', eventName, eventData.slice(0, 100))
+
           if (eventName === 'session' && eventData) {
             const payload = JSON.parse(eventData) as TerminalSessionResponse
             if (payload.sessionId) {
+              console.log('[terminal] session connected:', payload.sessionId)
               setTabSessionId(tab.id, payload.sessionId)
               const nextTitle = tab.cwd === '~' ? tab.title : tab.cwd
               renameTab(tab.id, nextTitle)
@@ -268,6 +274,7 @@ export function TerminalWorkspace({
           if (eventName === 'data' && eventData) {
             const payload = JSON.parse(eventData) as { data?: string }
             if (typeof payload.data === 'string') {
+              console.log('[terminal] writing data:', payload.data.length, 'chars')
               terminal.write(payload.data)
             }
             continue

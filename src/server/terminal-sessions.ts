@@ -35,7 +35,11 @@ export function createTerminalSession(params: {
   const sessionId = randomUUID()
 
   const shell = params.command?.[0] ?? process.env.SHELL ?? '/bin/zsh'
-  const shellArgs = params.command?.slice(1) ?? ['-i']
+  // Always include -i for interactive mode (needed for prompt + pipe I/O)
+  const shellArgs = params.command?.slice(1) ?? []
+  if (!shellArgs.includes('-i')) {
+    shellArgs.unshift('-i')
+  }
 
   // Resolve ~ to home directory
   let cwd = params.cwd ?? process.env.HOME ?? '/tmp'
@@ -57,6 +61,23 @@ export function createTerminalSession(params: {
 
   let proc: ChildProcess
 
+  // Buffer early output before any listener registers
+  const earlyBuffer: TerminalSessionEvent[] = []
+  let hasListeners = false
+
+  emitter.on('newListener', (eventName) => {
+    if (eventName === 'event' && !hasListeners) {
+      hasListeners = true
+      // Flush buffered events on next tick so listener is fully registered
+      process.nextTick(() => {
+        for (const evt of earlyBuffer) {
+          emitter.emit('event', evt)
+        }
+        earlyBuffer.length = 0
+      })
+    }
+  })
+
   // Spawn shell directly with pipes. Colors still work via TERM=xterm-256color.
   // No PTY resize, but fully functional for running commands.
   proc = spawn(shell, shellArgs, {
@@ -65,18 +86,26 @@ export function createTerminalSession(params: {
     stdio: ['pipe', 'pipe', 'pipe'],
   })
 
+  const pushEvent = (evt: TerminalSessionEvent) => {
+    if (hasListeners) {
+      emitter.emit('event', evt)
+    } else {
+      earlyBuffer.push(evt)
+    }
+  }
+
   const onData = (data: Buffer) => {
-    emitter.emit('event', {
+    pushEvent({
       event: 'data',
       payload: { data: data.toString() },
-    } as TerminalSessionEvent)
+    })
   }
 
   proc.stdout?.on('data', onData)
   proc.stderr?.on('data', onData)
 
   proc.on('exit', (exitCode, signal) => {
-    emitter.emit('event', {
+    pushEvent({
       event: 'exit',
       payload: { exitCode, signal: signal ?? undefined },
     } as TerminalSessionEvent)
@@ -85,10 +114,10 @@ export function createTerminalSession(params: {
   })
 
   proc.on('error', (err) => {
-    emitter.emit('event', {
+    pushEvent({
       event: 'error',
       payload: { message: err.message },
-    } as TerminalSessionEvent)
+    })
   })
 
   const session: TerminalSession = {
