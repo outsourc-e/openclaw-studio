@@ -6,7 +6,9 @@ import {
   useRef,
   useState,
 } from 'react'
-import { Robot01Icon } from '@hugeicons/core-free-icons'
+import {
+  Robot01Icon,
+} from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   getMessageTimestamp,
@@ -27,6 +29,19 @@ import { cn } from '@/lib/utils'
 const VIRTUAL_ROW_HEIGHT = 136
 const VIRTUAL_OVERSCAN = 8
 const NEAR_BOTTOM_THRESHOLD = 200
+
+type MessageSearchMatch = {
+  stableId: string
+  messageIndex: number
+}
+
+function escapeAttributeSelector(value: string): string {
+  if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') {
+    return CSS.escape(value)
+  }
+
+  return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+}
 
 type ChatMessageListProps = {
   messages: Array<GatewayMessage>
@@ -70,6 +85,7 @@ function ChatMessageListComponent({
 }: ChatMessageListProps) {
   const anchorRef = useRef<HTMLDivElement | null>(null)
   const lastUserRef = useRef<HTMLDivElement | null>(null)
+  const searchInputRef = useRef<HTMLInputElement | null>(null)
   const prevSessionKeyRef = useRef<string | undefined>(sessionKey)
   const stickToBottomRef = useRef(true)
   const messageSignatureRef = useRef<Map<string, string>>(new Map())
@@ -79,6 +95,9 @@ function ChatMessageListComponent({
   const [isNearBottom, setIsNearBottom] = useState(true)
   const [unreadCount, setUnreadCount] = useState(0)
   const [expandAllToolSections, setExpandAllToolSections] = useState(false)
+  const [isMessageSearchOpen, setIsMessageSearchOpen] = useState(false)
+  const [messageSearchValue, setMessageSearchValue] = useState('')
+  const [activeSearchMatchIndex, setActiveSearchMatchIndex] = useState(0)
   const [scrollMetrics] = useState({
     scrollTop: 0,
     scrollHeight: 0,
@@ -176,6 +195,101 @@ function ChatMessageListComponent({
       return true
     })
   }, [messages])
+
+  const normalizedMessageSearch = useMemo(function getNormalizedMessageSearch() {
+    return messageSearchValue.trim().toLocaleLowerCase()
+  }, [messageSearchValue])
+
+  const isMessageSearchActive =
+    isMessageSearchOpen && normalizedMessageSearch.length > 0
+
+  const messageSearchMatches = useMemo<Array<MessageSearchMatch>>(
+    function getMessageSearchMatches() {
+      if (!isMessageSearchActive) return []
+
+      const matches: Array<MessageSearchMatch> = []
+      for (const [index, message] of displayMessages.entries()) {
+        const messageText = textFromMessage(message).trim().toLocaleLowerCase()
+        if (!messageText.includes(normalizedMessageSearch)) continue
+        matches.push({
+          stableId: getStableMessageId(message, index),
+          messageIndex: index,
+        })
+      }
+      return matches
+    },
+    [displayMessages, isMessageSearchActive, normalizedMessageSearch],
+  )
+
+  const messageSearchMatchIndexById = useMemo(
+    function getMessageSearchMatchIndexById() {
+      const indexById = new Map<string, number>()
+      for (const [index, match] of messageSearchMatches.entries()) {
+        indexById.set(match.stableId, index)
+      }
+      return indexById
+    },
+    [messageSearchMatches],
+  )
+
+  const activeSearchMatch = messageSearchMatches[activeSearchMatchIndex] ?? null
+
+  const focusSearchInput = useCallback(function focusSearchInput() {
+    window.requestAnimationFrame(function focusSearchInputField() {
+      searchInputRef.current?.focus()
+      searchInputRef.current?.select()
+    })
+  }, [])
+
+  const closeMessageSearch = useCallback(function closeMessageSearch() {
+    setIsMessageSearchOpen(false)
+  }, [])
+
+  const openMessageSearch = useCallback(function openMessageSearch() {
+    setIsMessageSearchOpen(true)
+    setActiveSearchMatchIndex(0)
+    focusSearchInput()
+  }, [focusSearchInput])
+
+  const jumpToPreviousMatch = useCallback(function jumpToPreviousMatch() {
+    if (messageSearchMatches.length === 0) return
+    setActiveSearchMatchIndex(function setPreviousMatchIndex(currentIndex) {
+      return (
+        (currentIndex - 1 + messageSearchMatches.length) %
+        messageSearchMatches.length
+      )
+    })
+  }, [messageSearchMatches.length])
+
+  const jumpToNextMatch = useCallback(function jumpToNextMatch() {
+    if (messageSearchMatches.length === 0) return
+    setActiveSearchMatchIndex(function setNextMatchIndex(currentIndex) {
+      return (currentIndex + 1) % messageSearchMatches.length
+    })
+  }, [messageSearchMatches.length])
+
+  const scrollToMessageById = useCallback(function scrollToMessageById(
+    messageId: string,
+    behavior: ScrollBehavior = 'smooth',
+  ) {
+    const anchor = anchorRef.current
+    if (!anchor) return
+
+    const viewport = anchor.closest(
+      '[data-chat-scroll-viewport]',
+    ) as HTMLElement | null
+    if (!viewport) return
+
+    const escapedMessageId = escapeAttributeSelector(messageId)
+    const selector = `[data-chat-message-id="${escapedMessageId}"]`
+    const target = viewport.querySelector(selector) as HTMLElement | null
+    if (!target) return
+
+    stickToBottomRef.current = false
+    isNearBottomRef.current = false
+    setIsNearBottom(false)
+    target.scrollIntoView({ behavior, block: 'center', inline: 'nearest' })
+  }, [])
 
   const toolResultsByCallId = useMemo(() => {
     const map = new Map<string, GatewayMessage>()
@@ -362,6 +476,10 @@ function ChatMessageListComponent({
       chatMessage.role === 'assistant' &&
       getToolCallsFromMessage(chatMessage).length > 0
 
+    const searchMatchIndex = messageSearchMatchIndexById.get(stableId)
+    const isSearchMatch = typeof searchMatchIndex === 'number'
+    const isActiveMatch = isSearchMatch && searchMatchIndex === activeSearchMatchIndex
+
     return (
       <MessageItem
         key={stableId}
@@ -369,6 +487,14 @@ function ChatMessageListComponent({
         toolResultsByCallId={hasToolCalls ? toolResultsByCallId : undefined}
         forceActionsVisible={forceActionsVisible}
         wrapperClassName={spacingClass}
+        wrapperDataMessageId={stableId}
+        bubbleClassName={
+          isActiveMatch
+            ? 'ring-2 ring-amber-400 bg-amber-50/50'
+            : isSearchMatch
+              ? 'bg-amber-50/30'
+              : undefined
+        }
         isStreaming={messageIsStreaming}
         streamingText={messageIsStreaming ? streamingText : undefined}
         streamingThinking={messageIsStreaming ? streamingThinking : undefined}
@@ -421,6 +547,110 @@ function ChatMessageListComponent({
     setExpandAllToolSections(false)
   }, [sessionKey])
 
+  useEffect(() => {
+    if (!isMessageSearchOpen) return
+
+    function handleSearchShortcuts(event: KeyboardEvent) {
+      if (event.defaultPrevented || event.isComposing) return
+      if (event.altKey) return
+
+      const hasCommand = event.metaKey || event.ctrlKey
+      if (hasCommand && !event.shiftKey && event.key.toLowerCase() === 'f') {
+        event.preventDefault()
+        event.stopPropagation()
+        openMessageSearch()
+        return
+      }
+
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        event.stopPropagation()
+        closeMessageSearch()
+        return
+      }
+
+      if (event.key === 'Enter') {
+        event.preventDefault()
+        event.stopPropagation()
+        if (event.shiftKey) {
+          jumpToPreviousMatch()
+          return
+        }
+        jumpToNextMatch()
+        return
+      }
+
+      const isInputFocused = document.activeElement === searchInputRef.current
+      if (!isInputFocused) return
+
+      if (event.key === 'ArrowUp') {
+        event.preventDefault()
+        event.stopPropagation()
+        jumpToPreviousMatch()
+        return
+      }
+
+      if (event.key === 'ArrowDown') {
+        event.preventDefault()
+        event.stopPropagation()
+        jumpToNextMatch()
+      }
+    }
+
+    window.addEventListener('keydown', handleSearchShortcuts, true)
+    return () => {
+      window.removeEventListener('keydown', handleSearchShortcuts, true)
+    }
+  }, [
+    closeMessageSearch,
+    isMessageSearchOpen,
+    jumpToNextMatch,
+    jumpToPreviousMatch,
+    openMessageSearch,
+  ])
+
+  useEffect(() => {
+    function handleOpenSearchShortcut(event: KeyboardEvent) {
+      if (event.defaultPrevented || event.isComposing) return
+      if (event.altKey || event.shiftKey) return
+      if (!(event.metaKey || event.ctrlKey)) return
+      if (event.key.toLowerCase() !== 'f') return
+
+      event.preventDefault()
+      event.stopPropagation()
+      openMessageSearch()
+    }
+
+    window.addEventListener('keydown', handleOpenSearchShortcut, true)
+    return () => {
+      window.removeEventListener('keydown', handleOpenSearchShortcut, true)
+    }
+  }, [openMessageSearch])
+
+  useEffect(() => {
+    if (!isMessageSearchActive) {
+      setActiveSearchMatchIndex(0)
+      return
+    }
+
+    setActiveSearchMatchIndex(function clampActiveMatchIndex(currentIndex) {
+      if (messageSearchMatches.length === 0) return 0
+      return Math.min(currentIndex, messageSearchMatches.length - 1)
+    })
+  }, [isMessageSearchActive, messageSearchMatches.length])
+
+  useEffect(() => {
+    if (!activeSearchMatch) return
+
+    const frameId = window.requestAnimationFrame(function scrollToActiveMatch() {
+      scrollToMessageById(activeSearchMatch.stableId, 'smooth')
+    })
+
+    return () => {
+      window.cancelAnimationFrame(frameId)
+    }
+  }, [activeSearchMatch, scrollToMessageById])
+
   const handleScrollToBottom = useCallback(function handleScrollToBottom() {
     stickToBottomRef.current = true
     isNearBottomRef.current = true
@@ -459,6 +689,53 @@ function ChatMessageListComponent({
       onUserScroll={handleUserScroll}
       overlay={scrollToBottomOverlay}
     >
+      {isMessageSearchOpen && (
+        <div className="sticky top-0 z-30 flex items-center gap-2 border-b border-primary-200 bg-primary-50/95 px-3 py-2 backdrop-blur-sm">
+          <input
+            ref={searchInputRef}
+            type="text"
+            value={messageSearchValue}
+            onChange={(e) => setMessageSearchValue(e.target.value)}
+            placeholder="Search messages..."
+            className="min-w-0 flex-1 rounded-md border border-primary-200 bg-white px-2.5 py-1.5 text-sm text-primary-900 outline-none placeholder:text-primary-400 focus:border-primary-400 focus:ring-1 focus:ring-primary-400"
+          />
+          {isMessageSearchActive && (
+            <span className="shrink-0 text-xs text-primary-500">
+              {messageSearchMatches.length > 0
+                ? `${activeSearchMatchIndex + 1} of ${messageSearchMatches.length}`
+                : 'No matches'}
+            </span>
+          )}
+          <div className="flex shrink-0 items-center gap-0.5">
+            <button
+              type="button"
+              onClick={jumpToPreviousMatch}
+              disabled={messageSearchMatches.length === 0}
+              className="rounded p-1 text-primary-500 hover:bg-primary-200 hover:text-primary-700 disabled:opacity-30"
+              aria-label="Previous match"
+            >
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M4 10l4-4 4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </button>
+            <button
+              type="button"
+              onClick={jumpToNextMatch}
+              disabled={messageSearchMatches.length === 0}
+              className="rounded p-1 text-primary-500 hover:bg-primary-200 hover:text-primary-700 disabled:opacity-30"
+              aria-label="Next match"
+            >
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </button>
+            <button
+              type="button"
+              onClick={closeMessageSearch}
+              className="rounded p-1 text-primary-500 hover:bg-primary-200 hover:text-primary-700"
+              aria-label="Close search"
+            >
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+            </button>
+          </div>
+        </div>
+      )}
       <ChatContainerContent className="pt-6" style={contentStyle}>
         {notice && noticePosition === 'start' ? notice : null}
         {showToolOnlyNotice ? (

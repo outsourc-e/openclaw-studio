@@ -105,7 +105,9 @@ type MessageItemProps = {
   forceActionsVisible?: boolean
   wrapperRef?: React.RefObject<HTMLDivElement | null>
   wrapperClassName?: string
+  wrapperDataMessageId?: string
   wrapperScrollMarginTop?: number
+  bubbleClassName?: string
   isStreaming?: boolean
   streamingText?: string
   streamingThinking?: string
@@ -253,7 +255,9 @@ function MessageItemComponent({
   forceActionsVisible = false,
   wrapperRef,
   wrapperClassName,
+  wrapperDataMessageId,
   wrapperScrollMarginTop,
+  bubbleClassName,
   isStreaming = false,
   streamingText,
   streamingThinking,
@@ -453,6 +457,7 @@ function MessageItemComponent({
     <div
       ref={wrapperRef}
       data-chat-message-role={role}
+      data-chat-message-id={wrapperDataMessageId}
       style={
         typeof wrapperScrollMarginTop === 'number'
           ? { scrollMarginTop: `${wrapperScrollMarginTop}px` }
@@ -517,6 +522,7 @@ function MessageItemComponent({
               !isUser
                 ? 'bg-transparent w-full'
                 : 'bg-primary-100 max-w-[75%] rounded-2xl px-4 py-2.5',
+              bubbleClassName,
             )}
           >
             {hasAttachments && (
@@ -628,10 +634,14 @@ function areMessagesEqual(
     return false
   }
   if (prevProps.wrapperClassName !== nextProps.wrapperClassName) return false
+  if (prevProps.wrapperDataMessageId !== nextProps.wrapperDataMessageId) {
+    return false
+  }
   if (prevProps.wrapperRef !== nextProps.wrapperRef) return false
   if (prevProps.wrapperScrollMarginTop !== nextProps.wrapperScrollMarginTop) {
     return false
   }
+  if (prevProps.bubbleClassName !== nextProps.bubbleClassName) return false
   // Check streaming state
   if (prevProps.isStreaming !== nextProps.isStreaming) {
     return false
