@@ -99,9 +99,6 @@ function formatModelName(raw: string): string {
 
 /* Layout config imported from ./constants/grid-config */
 
-// Quick Actions removed — navigation lives in the WorkspaceShell sidebar.
-// Dashboard provides "Workspace →" to cross-link.
-
 // Removed mockSystemStatus - now built entirely from real API data
 
 export function DashboardScreen() {
