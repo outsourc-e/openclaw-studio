@@ -153,9 +153,19 @@ export function useChatHistory({
           (c) => c.type === 'toolCall' || (c as any).type === 'tool_use' || (c as any).type === 'toolUse'
         )
         if (hasToolCall) {
-          // Only show narration if "Show tool messages" is enabled
-          if (!showToolMessages) return false
-          ;(msg as any).__isNarration = true
+          // Check if this is the LAST assistant message — always show it
+          const idx = historyMessages.indexOf(msg)
+          const hasLaterAssistant = historyMessages.slice(idx + 1).some(
+            (m) => m.role === 'assistant' && Array.isArray(m.content) && m.content.some(
+              (c) => c.type === 'text' && typeof c.text === 'string' && c.text.trim().length > 0
+            )
+          )
+          if (hasLaterAssistant) {
+            // Not the last — treat as narration
+            if (!showToolMessages) return false
+            ;(msg as any).__isNarration = true
+          }
+          // Last assistant message with tool calls — show normally (not narration)
         }
         
         return true
