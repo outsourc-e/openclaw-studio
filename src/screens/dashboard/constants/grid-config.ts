@@ -52,7 +52,6 @@ export const SIZE_TIERS: Record<WidgetSizeTier, TierDimensions> = {
 
 /* ── Widget Registry ── */
 export type WidgetId =
-  | 'system-info'
   | 'skills'
   | 'usage-meter'
   | 'tasks'
@@ -79,7 +78,6 @@ export const WIDGET_REGISTRY: Array<WidgetRegistryEntry> = [
   { id: 'activity-log', defaultTier: 'M', allowedTiers: ['S', 'M'] },
   // ── Below fold: Secondary ──
   { id: 'notifications', defaultTier: 'M', allowedTiers: ['M', 'L'] },
-  { id: 'system-info', defaultTier: 'M', allowedTiers: ['S', 'M'] },
   // Time + Weather moved to header ambient status (no longer grid widgets)
 ]
 
@@ -149,7 +147,6 @@ function buildLgLayout(): Layout {
     { i: 'skills', x: 0, y: 10, ...c('skills', 'M') },
     { i: 'activity-log', x: 6, y: 10, ...c('activity-log', 'M') },
     { i: 'notifications', x: 0, y: 15, ...c('notifications', 'M') },
-    { i: 'system-info', x: 6, y: 15, ...c('system-info', 'M') },
   ] as Layout
 }
 

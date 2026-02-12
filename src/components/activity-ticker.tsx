@@ -1,90 +1,58 @@
+import { useEffect, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { useActivityEvents } from '@/screens/activity/use-activity-events'
-import type { ActivityEvent } from '@/types/activity-event'
 
-const EVENT_EMOJIS: Record<ActivityEvent['type'], string> = {
-  gateway: '⚡',
-  model: '🤖',
-  usage: '📊',
-  cron: '⏰',
-  tool: '🔧',
-  error: '❌',
-  session: '💬',
-}
-
-function formatTimeAgo(timestamp: number): string {
-  const now = Date.now()
-  const diff = Math.floor((now - timestamp) / 1000)
-  if (diff < 60) return `${diff}s`
-  if (diff < 3600) return `${Math.floor(diff / 60)}m`
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h`
-  return `${Math.floor(diff / 86400)}d`
-}
+const TIPS = [
+  { emoji: '⌨️', text: 'Press Cmd+K to search sessions, skills, and commands' },
+  { emoji: '🔧', text: 'Install skills from ClawdHub to extend your agent\'s capabilities' },
+  { emoji: '💬', text: 'Use /model to switch models mid-conversation' },
+  { emoji: '⚡', text: 'Agents run in the background — check Agent Hub for status' },
+  { emoji: '🎨', text: 'Customize your theme and accent color in Settings' },
+  { emoji: '📋', text: 'Cmd+F opens inline search across all messages' },
+  { emoji: '🔒', text: 'All data stays local — nothing leaves your machine' },
+  { emoji: '🖥️', text: 'Open the terminal with Cmd+` for quick shell access' },
+  { emoji: '🤖', text: 'Sub-agents handle heavy work while you keep chatting' },
+  { emoji: '📊', text: 'Track usage and costs in the dashboard metrics' },
+  { emoji: '🧠', text: 'Your agent has memory — it remembers context across sessions' },
+  { emoji: '🚀', text: 'ClawSuite works with any OpenClaw gateway instance' },
+  { emoji: '🎯', text: 'Pin important sessions to keep them at the top of your sidebar' },
+  { emoji: '⏰', text: 'Set up cron jobs to automate recurring agent tasks' },
+  { emoji: '🌙', text: 'Dark mode is the default — toggle in the top bar' },
+]
 
 export function ActivityTicker() {
   const navigate = useNavigate()
-  const { events, isConnected, isLoading } = useActivityEvents({
-    initialCount: 15,
-    maxEvents: 15,
-  })
+  const [index, setIndex] = useState(() => Math.floor(Math.random() * TIPS.length))
+  const [fading, setFading] = useState(false)
 
-  function handleClick() {
-    void navigate({ to: '/activity' })
-  }
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setFading(true)
+      setTimeout(() => {
+        setIndex((prev) => (prev + 1) % TIPS.length)
+        setFading(false)
+      }, 400)
+    }, 8000)
+    return () => clearInterval(interval)
+  }, [])
 
-  const barClass =
-    'mb-4 h-9 cursor-pointer overflow-hidden rounded-xl border border-primary-200 bg-primary-50/80 shadow-sm dark:border-primary-800 dark:bg-primary-900/60'
-
-  // Loading / disconnected / empty
-  if (isLoading || events.length === 0) {
-    return (
-      <div className={barClass} onClick={handleClick} role="button" tabIndex={0}>
-        <div className="flex h-full items-center px-4 text-xs text-primary-500">
-          <span className="mr-1.5 h-1.5 w-1.5 animate-pulse rounded-full bg-primary-400" />
-          Listening for events…
-        </div>
-      </div>
-    )
-  }
-
-  if (!isConnected) {
-    return (
-      <div className={barClass}>
-        <div className="flex h-full items-center px-4 text-xs text-orange-500">
-          ⚠ Gateway disconnected
-        </div>
-      </div>
-    )
-  }
+  const tip = TIPS[index]
 
   return (
     <div
-      className={barClass}
-      onClick={handleClick}
+      className="mb-4 flex h-9 cursor-pointer items-center overflow-hidden rounded-xl border border-primary-200 bg-primary-50/80 px-4 shadow-sm transition-colors hover:bg-primary-100/80 dark:border-primary-800 dark:bg-primary-900/60 dark:hover:bg-primary-800/60"
+      onClick={() => void navigate({ to: '/activity' })}
       role="button"
       tabIndex={0}
       onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') handleClick()
+        if (e.key === 'Enter' || e.key === ' ') void navigate({ to: '/activity' })
       }}
     >
-      <div className="ticker-container h-full">
-        <div className="ticker-content flex h-full items-center gap-5 px-4">
-          {[...events, ...events].map((event, index) => (
-            <span
-              key={`${event.id}-${index}`}
-              className="flex items-center gap-1.5 whitespace-nowrap text-xs"
-            >
-              <span>{EVENT_EMOJIS[event.type]}</span>
-              <span className="text-primary-700 dark:text-primary-300">
-                {event.title}
-              </span>
-              <span className="font-mono text-[10px] text-primary-400">
-                {formatTimeAgo(event.timestamp)}
-              </span>
-            </span>
-          ))}
-        </div>
-      </div>
+      <span
+        className={`flex items-center gap-2 text-xs text-primary-600 transition-opacity duration-400 dark:text-primary-400 ${fading ? 'opacity-0' : 'opacity-100'}`}
+      >
+        <span>{tip.emoji}</span>
+        <span>{tip.text}</span>
+      </span>
     </div>
   )
 }

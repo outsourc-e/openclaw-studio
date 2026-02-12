@@ -23,7 +23,7 @@ import { HeroMetricsRow } from './components/hero-metrics-row'
 import { NotificationsWidget } from './components/notifications-widget'
 import { RecentSessionsWidget } from './components/recent-sessions-widget'
 import { SkillsWidget } from './components/skills-widget'
-import { SystemInfoWidget } from './components/system-info-widget'
+// SystemInfoWidget removed — not useful enough for dashboard real estate
 import { TasksWidget } from './components/tasks-widget'
 import { UsageMeterWidget } from './components/usage-meter-widget'
 import { AddWidgetPopover } from './components/add-widget-popover'
@@ -350,14 +350,6 @@ export function DashboardScreen() {
             compactType="vertical"
             margin={GRID_MARGIN}
           >
-            {visibleIds.includes('system-info') ? (
-              <div key="system-info" className="h-full">
-                <SystemInfoWidget
-                  draggable
-                  onRemove={() => removeWidget('system-info')}
-                />
-              </div>
-            ) : null}
             {visibleIds.includes('skills') ? (
               <div key="skills" className="h-full">
                 <SkillsWidget draggable onRemove={() => removeWidget('skills')} />
