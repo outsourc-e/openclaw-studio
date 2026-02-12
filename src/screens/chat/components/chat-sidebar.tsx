@@ -505,16 +505,16 @@ function ChatSidebarComponent({
   const isLogsActive = pathname === '/activity' || pathname === '/logs'
 
   // Track last-visited route per section
-  const studioRoutes = ['/dashboard', '/agent-swarm', '/new', '/browser', '/terminal', '/tasks', '/skills', '/cron', '/activity', '/logs', '/debug', '/files', '/memory']
+  const suiteRoutes = ['/dashboard', '/agent-swarm', '/new', '/browser', '/terminal', '/tasks', '/skills', '/cron', '/activity', '/logs', '/debug', '/files', '/memory']
   const gatewayRoutes = ['/channels', '/instances', '/sessions', '/usage', '/agents', '/nodes']
 
   useEffect(() => {
-    if (studioRoutes.includes(pathname)) setLastRoute('studio', pathname)
+    if (suiteRoutes.includes(pathname)) setLastRoute('suite', pathname)
     else if (gatewayRoutes.includes(pathname)) setLastRoute('gateway', pathname)
   }, [pathname])
 
   // Resolve navigation targets (last visited or default)
-  const studioNav = getLastRoute('studio') || '/dashboard'
+  const suiteNav = getLastRoute('suite') || '/dashboard'
   const gatewayNav = getLastRoute('gateway') || '/channels'
 
   const transition = {
@@ -531,6 +531,10 @@ function ChatSidebarComponent({
   const showDebugErrorDot = Boolean(recentIssuesQuery.data)
 
   // Collapsible section states
+  const [suiteExpanded, toggleSuite] = usePersistedBool(
+    'openclaw-sidebar-suite-expanded',
+    true,
+  )
   const [gatewayExpanded, toggleGateway] = usePersistedBool(
     'openclaw-sidebar-gateway-expanded',
     false,
@@ -625,7 +629,7 @@ function ChatSidebarComponent({
     onClick: openSearchModal,
   }
 
-  const studioItems: NavItemDef[] = [
+  const suiteItems: NavItemDef[] = [
     {
       kind: 'link',
       to: '/dashboard',
@@ -641,12 +645,11 @@ function ChatSidebarComponent({
       active: isAgentSwarmActive,
     },
     {
-      kind: 'button',
+      kind: 'link',
+      to: '/new',
       icon: PencilEdit02Icon,
       label: 'New Session',
       active: isNewSessionActive,
-      onClick: onCreateSession,
-      disabled: creatingSession,
     },
     {
       kind: 'link',
@@ -760,6 +763,7 @@ function ChatSidebarComponent({
   ]
 
   // Auto-expand sections if any child route is active
+  const isAnySuiteActive = suiteItems.some((i) => i.active)
   const isAnyGatewayActive = gatewayItems.some((i) => i.active)
 
   return (
@@ -843,28 +847,23 @@ function ChatSidebarComponent({
 
       {/* ── Navigation sections ─────────────────────────────────────── */}
       <div className="mb-2 space-y-0.5 px-2 overflow-y-auto scrollbar-thin">
-        {/* STUDIO */}
+        {/* SUITE */}
         <SectionLabel
-          label="Studio"
+          label="Suite"
           isCollapsed={isCollapsed}
           transition={transition}
-          navigateTo={studioNav}
+          collapsible
+          expanded={suiteExpanded || isAnySuiteActive}
+          onToggle={toggleSuite}
+          navigateTo={suiteNav}
         />
-        {studioItems.map((item) => (
-          <motion.div
-            key={item.label}
-            layout
-            transition={{ layout: transition }}
-            className="w-full"
-          >
-            <NavItem
-              item={item}
-              isCollapsed={isCollapsed}
-              transition={transition}
-              onSelectSession={onSelectSession}
-            />
-          </motion.div>
-        ))}
+        <CollapsibleSection
+          expanded={suiteExpanded || isAnySuiteActive || isCollapsed}
+          items={suiteItems}
+          isCollapsed={isCollapsed}
+          transition={transition}
+          onSelectSession={onSelectSession}
+        />
 
         {/* GATEWAY (collapsible) */}
         <SectionLabel
