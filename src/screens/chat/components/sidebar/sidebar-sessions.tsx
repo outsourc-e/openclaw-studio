@@ -1,7 +1,7 @@
 'use client'
 
 import { HugeiconsIcon } from '@hugeicons/react'
-import { ArrowRight01Icon } from '@hugeicons/core-free-icons'
+import { ArrowDown01Icon } from '@hugeicons/core-free-icons'
 import { memo, useMemo } from 'react'
 import { SessionItem } from './session-item'
 import type { SessionMeta } from '../../types'
@@ -69,12 +69,16 @@ export const SidebarSessions = memo(function SidebarSessions({
       className="flex h-full flex-col flex-1 min-h-0 w-full"
       defaultOpen={defaultOpen}
     >
-      <CollapsibleTrigger className="w-full flex items-center justify-between px-3 shrink-0 mt-2">
-        <span>Sessions</span>
-        <span className="opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+      <CollapsibleTrigger className="w-full flex items-center gap-1.5 px-3 pt-3 pb-1 shrink-0">
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-primary-500 select-none">
+          Sessions
+        </span>
+        <span className="ml-auto p-0.5 rounded hover:bg-primary-200 transition-colors">
           <HugeiconsIcon
-            icon={ArrowRight01Icon}
-            className="size-3 transition-transform duration-150 group-data-panel-open:rotate-90"
+            icon={ArrowDown01Icon}
+            size={12}
+            strokeWidth={2}
+            className="text-primary-500 transition-transform duration-150 -rotate-90 group-data-panel-open:rotate-0"
           />
         </span>
       </CollapsibleTrigger>
