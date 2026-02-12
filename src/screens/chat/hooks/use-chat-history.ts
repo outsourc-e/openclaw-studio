@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 
 import { chatQueryKeys, fetchHistory } from '../chat-queries'
 import { getMessageTimestamp, textFromMessage } from '../utils'
+import { useChatSettingsStore } from '../../../hooks/use-chat-settings'
 import type { QueryClient } from '@tanstack/react-query'
 import type { GatewayMessage, HistoryResponse } from '../types'
 
@@ -117,6 +118,8 @@ export function useChatHistory({
     return messages
   }, [historyQuery.data?.messages])
 
+  const showToolMessages = useChatSettingsStore((s) => s.settings.showToolMessages)
+
   // Filter messages for display - hide tool calls, system events, etc.
   const displayMessages = useMemo(() => {
     return historyMessages.filter((msg) => {
@@ -145,11 +148,13 @@ export function useChatHistory({
         )
         if (!hasText) return false
 
-        // Mark messages with tool calls as activity narration (for compact rendering)
+        // Messages with tool calls are activity narration
         const hasToolCall = content.some(
-          (c) => c.type === 'toolCall' || c.type === 'tool_use' || c.type === 'toolUse'
+          (c) => c.type === 'toolCall' || (c as any).type === 'tool_use' || (c as any).type === 'toolUse'
         )
         if (hasToolCall) {
+          // Only show narration if "Show tool messages" is enabled
+          if (!showToolMessages) return false
           ;(msg as any).__isNarration = true
         }
         
@@ -159,7 +164,7 @@ export function useChatHistory({
       // Hide everything else (toolResult, tool, system messages)
       return false
     })
-  }, [historyMessages])
+  }, [historyMessages, showToolMessages])
 
   const messageCount = useMemo(() => {
     return historyMessages.filter((message) => {

@@ -211,7 +211,7 @@ function ChatContent() {
   return (
     <div className="space-y-3">
       <SectionHeader title="Chat Display" description="Control what's visible in chat messages." />
-      <Row label="Show tool messages" description="Display tool call/result blocks.">
+      <Row label="Show agent activity" description="Display narration text when the agent uses tools.">
         <Switch checked={cs.showToolMessages} onCheckedChange={(c) => updateCS({ showToolMessages: c })} />
       </Row>
       <Row label="Show reasoning blocks" description="Display model thinking/reasoning.">
