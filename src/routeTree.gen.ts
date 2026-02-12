@@ -65,6 +65,7 @@ import { Route as ApiConfigPatchRouteImport } from './routes/api/config-patch'
 import { Route as ApiCliAgentsRouteImport } from './routes/api/cli-agents'
 import { Route as ApiChatEventsRouteImport } from './routes/api/chat-events'
 import { Route as ApiChatAbortRouteImport } from './routes/api/chat-abort'
+import { Route as ApiBrowserRouteImport } from './routes/api/browser'
 import { Route as ApiTasksIndexRouteImport } from './routes/api/tasks/index'
 import { Route as ApiTasksTaskIdRouteImport } from './routes/api/tasks/$taskId'
 import { Route as ApiSessionsSendRouteImport } from './routes/api/sessions/send'
@@ -366,6 +367,11 @@ const ApiChatAbortRoute = ApiChatAbortRouteImport.update({
   path: '/api/chat-abort',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiBrowserRoute = ApiBrowserRouteImport.update({
+  id: '/api/browser',
+  path: '/api/browser',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiTasksIndexRoute = ApiTasksIndexRouteImport.update({
   id: '/api/tasks/',
   path: '/api/tasks/',
@@ -447,19 +453,19 @@ const ApiCronDeleteRoute = ApiCronDeleteRouteImport.update({
   getParentRoute: () => ApiCronRoute,
 } as any)
 const ApiBrowserTabsRoute = ApiBrowserTabsRouteImport.update({
-  id: '/api/browser/tabs',
-  path: '/api/browser/tabs',
-  getParentRoute: () => rootRouteImport,
+  id: '/tabs',
+  path: '/tabs',
+  getParentRoute: () => ApiBrowserRoute,
 } as any)
 const ApiBrowserStatusRoute = ApiBrowserStatusRouteImport.update({
-  id: '/api/browser/status',
-  path: '/api/browser/status',
-  getParentRoute: () => rootRouteImport,
+  id: '/status',
+  path: '/status',
+  getParentRoute: () => ApiBrowserRoute,
 } as any)
 const ApiBrowserScreenshotRoute = ApiBrowserScreenshotRouteImport.update({
-  id: '/api/browser/screenshot',
-  path: '/api/browser/screenshot',
-  getParentRoute: () => rootRouteImport,
+  id: '/screenshot',
+  path: '/screenshot',
+  getParentRoute: () => ApiBrowserRoute,
 } as any)
 const ApiCronRunsJobIdRoute = ApiCronRunsJobIdRouteImport.update({
   id: '/runs/$jobId',
@@ -490,6 +496,7 @@ export interface FileRoutesByFullPath {
   '/tasks': typeof TasksRoute
   '/terminal': typeof TerminalRoute
   '/usage': typeof UsageRoute
+  '/api/browser': typeof ApiBrowserRouteWithChildren
   '/api/chat-abort': typeof ApiChatAbortRoute
   '/api/chat-events': typeof ApiChatEventsRoute
   '/api/cli-agents': typeof ApiCliAgentsRoute
@@ -567,6 +574,7 @@ export interface FileRoutesByTo {
   '/tasks': typeof TasksRoute
   '/terminal': typeof TerminalRoute
   '/usage': typeof UsageRoute
+  '/api/browser': typeof ApiBrowserRouteWithChildren
   '/api/chat-abort': typeof ApiChatAbortRoute
   '/api/chat-events': typeof ApiChatEventsRoute
   '/api/cli-agents': typeof ApiCliAgentsRoute
@@ -646,6 +654,7 @@ export interface FileRoutesById {
   '/tasks': typeof TasksRoute
   '/terminal': typeof TerminalRoute
   '/usage': typeof UsageRoute
+  '/api/browser': typeof ApiBrowserRouteWithChildren
   '/api/chat-abort': typeof ApiChatAbortRoute
   '/api/chat-events': typeof ApiChatEventsRoute
   '/api/cli-agents': typeof ApiCliAgentsRoute
@@ -726,6 +735,7 @@ export interface FileRouteTypes {
     | '/tasks'
     | '/terminal'
     | '/usage'
+    | '/api/browser'
     | '/api/chat-abort'
     | '/api/chat-events'
     | '/api/cli-agents'
@@ -803,6 +813,7 @@ export interface FileRouteTypes {
     | '/tasks'
     | '/terminal'
     | '/usage'
+    | '/api/browser'
     | '/api/chat-abort'
     | '/api/chat-events'
     | '/api/cli-agents'
@@ -881,6 +892,7 @@ export interface FileRouteTypes {
     | '/tasks'
     | '/terminal'
     | '/usage'
+    | '/api/browser'
     | '/api/chat-abort'
     | '/api/chat-events'
     | '/api/cli-agents'
@@ -960,6 +972,7 @@ export interface RootRouteChildren {
   TasksRoute: typeof TasksRoute
   TerminalRoute: typeof TerminalRoute
   UsageRoute: typeof UsageRoute
+  ApiBrowserRoute: typeof ApiBrowserRouteWithChildren
   ApiChatAbortRoute: typeof ApiChatAbortRoute
   ApiChatEventsRoute: typeof ApiChatEventsRoute
   ApiCliAgentsRoute: typeof ApiCliAgentsRoute
@@ -992,9 +1005,6 @@ export interface RootRouteChildren {
   ApiWorkspaceRoute: typeof ApiWorkspaceRoute
   ChatSessionKeyRoute: typeof ChatSessionKeyRoute
   ChatIndexRoute: typeof ChatIndexRoute
-  ApiBrowserScreenshotRoute: typeof ApiBrowserScreenshotRoute
-  ApiBrowserStatusRoute: typeof ApiBrowserStatusRoute
-  ApiBrowserTabsRoute: typeof ApiBrowserTabsRoute
   ApiDebugReconnectRoute: typeof ApiDebugReconnectRoute
   ApiDebugStatusRoute: typeof ApiDebugStatusRoute
   ApiGatewayAgentsRoute: typeof ApiGatewayAgentsRoute
@@ -1400,6 +1410,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiChatAbortRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/browser': {
+      id: '/api/browser'
+      path: '/api/browser'
+      fullPath: '/api/browser'
+      preLoaderRoute: typeof ApiBrowserRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/tasks/': {
       id: '/api/tasks/'
       path: '/api/tasks'
@@ -1514,24 +1531,24 @@ declare module '@tanstack/react-router' {
     }
     '/api/browser/tabs': {
       id: '/api/browser/tabs'
-      path: '/api/browser/tabs'
+      path: '/tabs'
       fullPath: '/api/browser/tabs'
       preLoaderRoute: typeof ApiBrowserTabsRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof ApiBrowserRoute
     }
     '/api/browser/status': {
       id: '/api/browser/status'
-      path: '/api/browser/status'
+      path: '/status'
       fullPath: '/api/browser/status'
       preLoaderRoute: typeof ApiBrowserStatusRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof ApiBrowserRoute
     }
     '/api/browser/screenshot': {
       id: '/api/browser/screenshot'
-      path: '/api/browser/screenshot'
+      path: '/screenshot'
       fullPath: '/api/browser/screenshot'
       preLoaderRoute: typeof ApiBrowserScreenshotRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof ApiBrowserRoute
     }
     '/api/cron/runs/$jobId': {
       id: '/api/cron/runs/$jobId'
@@ -1555,6 +1572,22 @@ const SettingsRouteChildren: SettingsRouteChildren = {
 
 const SettingsRouteWithChildren = SettingsRoute._addFileChildren(
   SettingsRouteChildren,
+)
+
+interface ApiBrowserRouteChildren {
+  ApiBrowserScreenshotRoute: typeof ApiBrowserScreenshotRoute
+  ApiBrowserStatusRoute: typeof ApiBrowserStatusRoute
+  ApiBrowserTabsRoute: typeof ApiBrowserTabsRoute
+}
+
+const ApiBrowserRouteChildren: ApiBrowserRouteChildren = {
+  ApiBrowserScreenshotRoute: ApiBrowserScreenshotRoute,
+  ApiBrowserStatusRoute: ApiBrowserStatusRoute,
+  ApiBrowserTabsRoute: ApiBrowserTabsRoute,
+}
+
+const ApiBrowserRouteWithChildren = ApiBrowserRoute._addFileChildren(
+  ApiBrowserRouteChildren,
 )
 
 interface ApiCronRouteChildren {
@@ -1625,6 +1658,7 @@ const rootRouteChildren: RootRouteChildren = {
   TasksRoute: TasksRoute,
   TerminalRoute: TerminalRoute,
   UsageRoute: UsageRoute,
+  ApiBrowserRoute: ApiBrowserRouteWithChildren,
   ApiChatAbortRoute: ApiChatAbortRoute,
   ApiChatEventsRoute: ApiChatEventsRoute,
   ApiCliAgentsRoute: ApiCliAgentsRoute,
@@ -1657,9 +1691,6 @@ const rootRouteChildren: RootRouteChildren = {
   ApiWorkspaceRoute: ApiWorkspaceRoute,
   ChatSessionKeyRoute: ChatSessionKeyRoute,
   ChatIndexRoute: ChatIndexRoute,
-  ApiBrowserScreenshotRoute: ApiBrowserScreenshotRoute,
-  ApiBrowserStatusRoute: ApiBrowserStatusRoute,
-  ApiBrowserTabsRoute: ApiBrowserTabsRoute,
   ApiDebugReconnectRoute: ApiDebugReconnectRoute,
   ApiDebugStatusRoute: ApiDebugStatusRoute,
   ApiGatewayAgentsRoute: ApiGatewayAgentsRoute,

@@ -39,6 +39,7 @@
     "marked": "^17.0.1",
     "motion": "^12.29.2",
     "nitro": "npm:nitro-nightly@latest",
+    "playwright": "^1.58.2",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-grid-layout": "^2.2.2",
@@ -55,8 +56,8 @@
     "xterm-addon-fit": "^0.8.0",
     "xterm-addon-search": "^0.13.0",
     "xterm-addon-web-links": "^0.9.0",
-    "zustand": "^5.0.11",
-    "zod": "^3.25.76"
+    "zod": "^3.25.76",
+    "zustand": "^5.0.11"
   },
   "devDependencies": {
     "@tanstack/eslint-config": "^0.3.0",

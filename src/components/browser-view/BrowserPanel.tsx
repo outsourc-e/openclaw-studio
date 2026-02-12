@@ -6,6 +6,7 @@ import { useMemo, useState } from 'react'
 import { BrowserControls } from './BrowserControls'
 import { BrowserScreenshot } from './BrowserScreenshot'
 import { BrowserTabs } from './BrowserTabs'
+import { LocalBrowser } from './LocalBrowser'
 
 type BrowserTab = {
   id: string
@@ -206,6 +207,21 @@ function BrowserPanel() {
     Boolean(screenshotQuery.data?.gatewaySupportRequired) ||
     isGatewaySupportError(errorText)
   const showGatewaySupportPlaceholder = demoMode && gatewaySupportRequired
+  const [useLocalBrowser, setUseLocalBrowser] = useState(false)
+
+  // Auto-switch to local browser when gateway doesn't support it
+  if (showGatewaySupportPlaceholder || useLocalBrowser) {
+    return (
+      <motion.main
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.22 }}
+        className="h-screen bg-surface text-primary-900"
+      >
+        <LocalBrowser />
+      </motion.main>
+    )
+  }
 
   function handleSelectTab(tabId: string) {
     setSelectedTabId(tabId)
