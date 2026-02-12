@@ -165,27 +165,148 @@ export const DEFAULT_LAYOUTS: ResponsiveLayouts = {
 
 /* ── Layout Persistence ── */
 const LAYOUT_STORAGE_KEY = 'openclaw-dashboard-layouts-v3'
+const LEGACY_LAYOUT_STORAGE_KEY = 'openclaw-dashboard-layout'
+
+const BREAKPOINT_KEYS = Object.keys(GRID_COLS) as Array<keyof typeof GRID_COLS>
+const WIDGET_IDS = new Set<WidgetId>(WIDGET_REGISTRY.map(function mapWidget(widget) {
+  return widget.id
+}))
+
+function cloneLayout(layout: Layout): Layout {
+  return layout.map(function cloneItem(item) {
+    return { ...item }
+  })
+}
+
+function buildDefaultLayouts(): ResponsiveLayouts {
+  return {
+    lg: cloneLayout(DEFAULT_LAYOUTS.lg ?? []),
+    md: cloneLayout(DEFAULT_LAYOUTS.md ?? []),
+    sm: cloneLayout(DEFAULT_LAYOUTS.sm ?? []),
+    xs: cloneLayout(DEFAULT_LAYOUTS.xs ?? []),
+  }
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value)
+}
+
+function toInteger(value: unknown): number | null {
+  if (!isFiniteNumber(value)) return null
+  return Math.floor(value)
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value))
+}
+
+function sanitizeLayoutItem(
+  rawItem: unknown,
+  breakpoint: keyof typeof GRID_COLS,
+): LayoutItem | null {
+  if (!rawItem || typeof rawItem !== 'object') return null
+
+  const source = rawItem as Partial<LayoutItem> & { i?: unknown }
+  if (typeof source.i !== 'string' || !WIDGET_IDS.has(source.i as WidgetId)) {
+    return null
+  }
+
+  const x = toInteger(source.x)
+  const y = toInteger(source.y)
+  const w = toInteger(source.w)
+  const h = toInteger(source.h)
+
+  if (x === null || y === null || w === null || h === null) return null
+
+  const maxCols = GRID_COLS[breakpoint]
+  const safeW = clamp(w, 1, maxCols)
+  const safeH = clamp(h, 1, 100)
+
+  return {
+    ...source,
+    i: source.i,
+    x: clamp(x, 0, Math.max(0, maxCols - 1)),
+    y: Math.max(0, y),
+    w: safeW,
+    h: safeH,
+    minW: clamp(toInteger(source.minW) ?? safeW, 1, maxCols),
+    maxW: clamp(toInteger(source.maxW) ?? safeW, 1, maxCols),
+    minH: Math.max(1, toInteger(source.minH) ?? safeH),
+    maxH: Math.max(1, toInteger(source.maxH) ?? safeH),
+  }
+}
+
+function sanitizeLayoutForBreakpoint(
+  rawValue: unknown,
+  breakpoint: keyof typeof GRID_COLS,
+): Layout {
+  if (!Array.isArray(rawValue)) {
+    return cloneLayout(DEFAULT_LAYOUTS[breakpoint] ?? [])
+  }
+
+  const sanitized = rawValue
+    .map(function mapLayoutItem(item) {
+      return sanitizeLayoutItem(item, breakpoint)
+    })
+    .filter(function keepItem(item): item is LayoutItem {
+      return item !== null
+    })
+
+  if (sanitized.length === 0) {
+    return cloneLayout(DEFAULT_LAYOUTS[breakpoint] ?? [])
+  }
+
+  return sanitized
+}
+
+function normalizeLayouts(rawLayouts: unknown): ResponsiveLayouts {
+  const source =
+    rawLayouts && typeof rawLayouts === 'object'
+      ? (rawLayouts as Record<string, unknown>)
+      : {}
+  const nextLayouts = {} as ResponsiveLayouts
+
+  for (const breakpoint of BREAKPOINT_KEYS) {
+    nextLayouts[breakpoint] = sanitizeLayoutForBreakpoint(
+      source[breakpoint],
+      breakpoint,
+    )
+  }
+
+  return nextLayouts
+}
 
 export function loadLayouts(): ResponsiveLayouts {
+  if (typeof window === 'undefined') return buildDefaultLayouts()
+
   try {
     const raw = localStorage.getItem(LAYOUT_STORAGE_KEY)
-    if (raw) {
-      const parsed = JSON.parse(raw) as ResponsiveLayouts
-      if (parsed && typeof parsed === 'object' && parsed.lg) {
-        return parsed
-      }
-    }
+    if (!raw) return buildDefaultLayouts()
+    const parsed = JSON.parse(raw) as unknown
+    return normalizeLayouts(parsed)
   } catch { /* ignore */ }
-  return DEFAULT_LAYOUTS
+  return buildDefaultLayouts()
 }
 
 export function saveLayouts(allLayouts: ResponsiveLayouts) {
-  localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(allLayouts))
+  if (typeof window === 'undefined') return
+
+  try {
+    const normalized = normalizeLayouts(allLayouts)
+    localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(normalized))
+  } catch {
+    // Ignore persistence errors (private mode / quota exceeded).
+  }
 }
 
 export function resetLayouts(): ResponsiveLayouts {
-  localStorage.removeItem(LAYOUT_STORAGE_KEY)
-  // Also clear legacy v1 key
-  localStorage.removeItem('openclaw-dashboard-layout')
-  return DEFAULT_LAYOUTS
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.removeItem(LAYOUT_STORAGE_KEY)
+      localStorage.removeItem(LEGACY_LAYOUT_STORAGE_KEY)
+    } catch {
+      // Ignore storage reset failures.
+    }
+  }
+  return buildDefaultLayouts()
 }

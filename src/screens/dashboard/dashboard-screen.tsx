@@ -4,7 +4,7 @@ import {
 } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { OpenClawStudioIcon } from '@/components/icons/clawsuite'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Responsive as ResponsiveGridLayout } from 'react-grid-layout/legacy'
@@ -30,22 +30,20 @@ import { NotificationsWidget } from './components/notifications-widget'
 import { RecentSessionsWidget } from './components/recent-sessions-widget'
 import { TasksWidget } from './components/tasks-widget'
 import { UsageMeterWidget } from './components/usage-meter-widget'
-import type {
-  RecentSession,
-} from './components/dashboard-types'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { AddWidgetPopover } from './components/add-widget-popover'
 import { HeaderAmbientStatus } from './components/header-ambient-status'
 import { NotificationsPopover } from './components/notifications-popover'
 import { SettingsDialog } from './components/settings-dialog'
 import { useVisibleWidgets } from './hooks/use-visible-widgets'
-import type { SessionMeta } from '@/screens/chat/types'
-import { getMessageTimestamp, textFromMessage } from '@/screens/chat/utils'
 import { chatQueryKeys, fetchGatewayStatus, fetchSessions } from '@/screens/chat/chat-queries'
 
 type SessionStatusPayload = {
   ok?: boolean
   payload?: {
+    model?: string
+    currentModel?: string
+    modelAlias?: string
     sessions?: {
       defaults?: { model?: string; contextTokens?: number }
       count?: number
@@ -100,66 +98,12 @@ function formatModelName(raw: string): string {
 
 // Removed mockSystemStatus - now built entirely from real API data
 
-const fallbackRecentSessions: Array<RecentSession> = [
-  {
-    friendlyId: 'main',
-    title: 'Main Session',
-    preview: 'Studio is ready. Open a chat to get started.',
-    updatedAt: Date.now() - 4 * 60 * 1000,
-  },
-  {
-    friendlyId: 'new',
-    title: 'New Session',
-    preview: 'Create a new thread to start experimenting with fresh context.',
-    updatedAt: Date.now() - 15 * 60 * 1000,
-  },
-]
-
-function cleanTitle(raw: string): string {
-  if (!raw) return ''
-  // Strip system prompt leaks
-  if (/^a new session was started/i.test(raw)) return ''
-  // Strip bracketed timestamps
-  let cleaned = raw.replace(/^\[.*?\]\s*/, '')
-  // Strip message_id references
-  cleaned = cleaned.replace(/\[?message_id:\s*\S+\]?/gi, '').trim()
-  return cleaned
-}
-
-function toSessionTitle(session: SessionMeta): string {
-  const label = cleanTitle(session.label ?? '')
-  if (label) return label
-  const title = cleanTitle(session.title ?? '')
-  if (title) return title
-  const derived = cleanTitle(session.derivedTitle ?? '')
-  if (derived) return derived
-  return session.friendlyId === 'main' ? 'Main Session' : `Session ${session.friendlyId}`
-}
-
-function toSessionPreview(session: SessionMeta): string {
-  if (session.lastMessage) {
-    const preview = textFromMessage(session.lastMessage)
-    // Don't show raw system prompt text as preview
-    if (preview.length > 0 && !/^a new session was started/i.test(preview)) {
-      return preview.length > 120 ? `${preview.slice(0, 117)}…` : preview
-    }
-  }
-  // Cron sessions: show "Cron job" instead of generic placeholder
-  const title = (session.label ?? session.title ?? '').toLowerCase()
-  if (title.startsWith('cron:') || title.includes('cron')) return 'Scheduled task'
-  return 'New session'
-}
-
-function toSessionUpdatedAt(session: SessionMeta): number {
-  if (typeof session.updatedAt === 'number') return session.updatedAt
-  if (session.lastMessage) return getMessageTimestamp(session.lastMessage)
-  return 0
-}
-
 export function DashboardScreen() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [gridLayouts, setGridLayouts] = useState<ResponsiveLayouts>(loadLayouts)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const { visibleIds, addWidget, removeWidget, resetVisible } = useVisibleWidgets()
   const containerRef = useRef<HTMLDivElement>(null)
   const [containerWidth, setContainerWidth] = useState(1200)
@@ -173,9 +117,18 @@ export function DashboardScreen() {
     return () => ro.disconnect()
   }, [])
 
-  const handleLayoutChange = useCallback((_current: unknown, allLayouts: ResponsiveLayouts) => {
-    setGridLayouts(allLayouts)
-    saveLayouts(allLayouts)
+  const handleLayoutChange = useCallback(function handleLayoutChange(
+    _current: unknown,
+    allLayouts: ResponsiveLayouts,
+  ) {
+    setGridLayouts(function mergeLayoutChanges(previousLayouts) {
+      const mergedLayouts = {
+        ...previousLayouts,
+        ...allLayouts,
+      }
+      saveLayouts(mergedLayouts)
+      return mergedLayouts
+    })
   }, [])
 
   const handleResetLayout = useCallback(() => {
@@ -211,24 +164,18 @@ export function DashboardScreen() {
     refetchInterval: 60_000,
   })
 
-  const recentSessions = useMemo(function buildRecentSessions() {
-    const sessions = Array.isArray(sessionsQuery.data) ? sessionsQuery.data : []
-    if (sessions.length === 0) return fallbackRecentSessions
-
-    return [...sessions]
-      .sort(function sortByMostRecent(a, b) {
-        return toSessionUpdatedAt(b) - toSessionUpdatedAt(a)
-      })
-      .slice(0, 5)
-      .map(function mapSession(session) {
-        return {
-          friendlyId: session.friendlyId,
-          title: toSessionTitle(session),
-          preview: toSessionPreview(session),
-          updatedAt: toSessionUpdatedAt(session),
-        }
-      })
-  }, [sessionsQuery.data])
+  const handleRefresh = useCallback(async function handleRefresh() {
+    setIsRefreshing(true)
+    await Promise.allSettled([
+      sessionsQuery.refetch(),
+      gatewayStatusQuery.refetch(),
+      sessionStatusQuery.refetch(),
+      heroCostQuery.refetch(),
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
+      queryClient.invalidateQueries({ queryKey: chatQueryKeys.sessions }),
+    ])
+    setIsRefreshing(false)
+  }, [gatewayStatusQuery, heroCostQuery, queryClient, sessionStatusQuery, sessionsQuery])
 
   const systemStatus = useMemo(function buildSystemStatus() {
     const nowIso = new Date().toISOString()
@@ -237,15 +184,24 @@ export function DashboardScreen() {
     
     // Get active model from main session, fall back to gateway default
     const mainSessionModel = ssPayload?.recent?.[0]?.model ?? ''
-    const rawModel = mainSessionModel || ssPayload?.defaults?.model || ''
+    const payloadModel = sessionStatusQuery.data?.payload?.model ?? ''
+    const payloadCurrentModel = sessionStatusQuery.data?.payload?.currentModel ?? ''
+    const payloadAlias = sessionStatusQuery.data?.payload?.modelAlias ?? ''
+    const rawModel =
+      mainSessionModel ||
+      payloadModel ||
+      payloadCurrentModel ||
+      payloadAlias ||
+      ssPayload?.defaults?.model ||
+      ''
     const currentModel = formatModelName(rawModel)
     
     // Derive uptime from main session age (milliseconds → seconds)
     const mainSession = ssPayload?.recent?.[0]
     const uptimeSeconds = mainSession?.age ? Math.floor(mainSession.age / 1000) : 0
     
-    // Session count from session-status (canonical) or fallback to sessions list
-    const sessionCount = ssPayload?.count ?? sessions.length
+    const totalSessions = ssPayload?.count ?? sessions.length
+    const activeAgents = ssPayload?.recent?.length ?? sessions.length
     
     return {
       gateway: {
@@ -254,7 +210,8 @@ export function DashboardScreen() {
       },
       uptimeSeconds,
       currentModel,
-      sessionCount,
+      totalSessions,
+      activeAgents,
     }
   }, [gatewayStatusQuery.data?.ok, sessionsQuery.data, sessionStatusQuery.data])
 
@@ -290,6 +247,21 @@ export function DashboardScreen() {
                 <ThemeToggle />
                 <button
                   type="button"
+                  onClick={() => void handleRefresh()}
+                  className="inline-flex size-7 items-center justify-center rounded-md text-primary-400 transition-colors hover:text-primary-700 disabled:opacity-50 dark:hover:text-primary-300"
+                  aria-label="Refresh Dashboard Data"
+                  title="Refresh Dashboard Data"
+                  disabled={isRefreshing}
+                >
+                  <HugeiconsIcon
+                    icon={RefreshIcon}
+                    size={15}
+                    strokeWidth={1.5}
+                    className={isRefreshing ? 'animate-spin' : undefined}
+                  />
+                </button>
+                <button
+                  type="button"
                   onClick={() => setSettingsOpen(true)}
                   className="inline-flex size-7 items-center justify-center rounded-md text-primary-400 transition-colors hover:text-primary-700 dark:hover:text-primary-300"
                   aria-label="Settings"
@@ -303,11 +275,10 @@ export function DashboardScreen() {
         </header>
 
         <HeroMetricsRow
-          currentModel={systemStatus.currentModel}
+          totalSessions={systemStatus.totalSessions}
+          activeAgents={systemStatus.activeAgents}
           uptimeSeconds={systemStatus.uptimeSeconds}
-          sessionCount={systemStatus.sessionCount}
           totalSpend={heroCostQuery.data ?? '—'}
-          gatewayConnected={systemStatus.gateway.connected}
         />
 
         {/* Inline widget controls — belongs with the grid, not the header */}
@@ -363,7 +334,6 @@ export function DashboardScreen() {
             {visibleIds.includes('recent-sessions') ? (
               <div key="recent-sessions" className="h-full">
                 <RecentSessionsWidget
-                  sessions={recentSessions}
                   onOpenSession={(sessionKey) => navigate({ to: '/chat/$sessionKey', params: { sessionKey } })}
                   draggable
                   onRemove={() => removeWidget('recent-sessions')}

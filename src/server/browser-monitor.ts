@@ -16,6 +16,7 @@ export type BrowserTabsResponse = {
   updatedAt: string
   demoMode: boolean
   error?: string
+  gatewaySupportRequired?: boolean
 }
 
 export type BrowserScreenshotResponse = {
@@ -26,6 +27,7 @@ export type BrowserScreenshotResponse = {
   capturedAt: string
   demoMode: boolean
   error?: string
+  gatewaySupportRequired?: boolean
 }
 
 const BROWSER_TABS_METHODS = [
@@ -50,6 +52,34 @@ function readString(value: unknown): string {
 
 function readBoolean(value: unknown): boolean {
   return typeof value === 'boolean' ? value : false
+}
+
+function readErrorReason(error: unknown): string | undefined {
+  if (error instanceof Error) return error.message
+  if (typeof error === 'string') return error
+  return undefined
+}
+
+const GATEWAY_SUPPORT_ERROR_PATTERNS = [
+  'missing gateway auth',
+  'gateway connection closed',
+  'connect econnrefused',
+  'method not found',
+  'unknown method',
+  'not implemented',
+  'unsupported',
+  'browser api unavailable',
+  'browser tool request failed',
+]
+
+function isGatewaySupportRequired(error: unknown): boolean {
+  const reason = readErrorReason(error)
+  if (!reason) return false
+
+  const normalizedReason = reason.toLowerCase()
+  return GATEWAY_SUPPORT_ERROR_PATTERNS.some(function hasPattern(pattern) {
+    return normalizedReason.includes(pattern)
+  })
 }
 
 function escapeHtml(value: string): string {
@@ -199,12 +229,7 @@ function coerceImageDataUrl(payload: UnknownRecord): string {
 export function buildDemoTabsResponse(error?: unknown): BrowserTabsResponse {
   const tabs = getDemoTabs()
   const nowIso = new Date().toISOString()
-  const reason =
-    error instanceof Error
-      ? error.message
-      : typeof error === 'string'
-        ? error
-        : undefined
+  const reason = readErrorReason(error)
 
   return {
     ok: true,
@@ -213,6 +238,7 @@ export function buildDemoTabsResponse(error?: unknown): BrowserTabsResponse {
     updatedAt: nowIso,
     demoMode: true,
     error: reason,
+    gatewaySupportRequired: isGatewaySupportRequired(error),
   }
 }
 
@@ -231,12 +257,7 @@ export function buildDemoScreenshotResponse(params?: {
 
   const currentUrl = params?.currentUrl || selectedTab.url || 'about:blank'
   const title = selectedTab.title || 'OpenClaw Browser Demo'
-  const reason =
-    params?.error instanceof Error
-      ? params.error.message
-      : typeof params?.error === 'string'
-        ? params.error
-        : undefined
+  const reason = readErrorReason(params?.error)
 
   return {
     ok: true,
@@ -246,6 +267,7 @@ export function buildDemoScreenshotResponse(params?: {
     capturedAt: nowIso,
     demoMode: true,
     error: reason,
+    gatewaySupportRequired: isGatewaySupportRequired(params?.error),
   }
 }
 

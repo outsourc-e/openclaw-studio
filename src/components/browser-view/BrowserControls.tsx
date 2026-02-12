@@ -22,6 +22,10 @@ function BrowserControls({
   demoMode,
   onRefresh,
 }: BrowserControlsProps) {
+  const navigationHint = demoMode
+    ? 'Browser navigation requires gateway browser RPC support.'
+    : 'Browser navigation RPC is not available yet.'
+
   return (
     <motion.header
       initial={{ opacity: 0, y: -8 }}
@@ -30,10 +34,22 @@ function BrowserControls({
       className="rounded-2xl border border-primary-200 bg-primary-100/40 p-3 shadow-sm backdrop-blur-xl"
     >
       <div className="flex flex-wrap items-center gap-2">
-        <Button variant="outline" size="icon-sm" disabled aria-label="Navigate back">
+        <Button
+          variant="outline"
+          size="icon-sm"
+          disabled
+          aria-label="Navigate back"
+          title={navigationHint}
+        >
           <HugeiconsIcon icon={ArrowLeft01Icon} size={20} strokeWidth={1.5} />
         </Button>
-        <Button variant="outline" size="icon-sm" disabled aria-label="Navigate forward">
+        <Button
+          variant="outline"
+          size="icon-sm"
+          disabled
+          aria-label="Navigate forward"
+          title={navigationHint}
+        >
           <HugeiconsIcon icon={ArrowRight01Icon} size={20} strokeWidth={1.5} />
         </Button>
         <Button

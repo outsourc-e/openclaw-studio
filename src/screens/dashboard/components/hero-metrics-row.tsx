@@ -1,8 +1,8 @@
 import {
   Activity01Icon,
-  AiChipIcon,
   ChartLineData02Icon,
   Timer02Icon,
+  UserGroupIcon,
 } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import type { DashboardIcon } from './dashboard-types'
@@ -14,11 +14,10 @@ type HeroMetric = {
 }
 
 type HeroMetricsRowProps = {
-  currentModel: string
+  totalSessions: number
+  activeAgents: number
   uptimeSeconds: number
-  sessionCount: number
   totalSpend: string
-  gatewayConnected: boolean
 }
 
 function formatUptime(seconds: number): string {
@@ -32,16 +31,16 @@ function formatUptime(seconds: number): string {
 }
 
 export function HeroMetricsRow({
-  currentModel,
+  totalSessions,
+  activeAgents,
   uptimeSeconds,
-  sessionCount,
   totalSpend,
 }: HeroMetricsRowProps) {
   const metrics: HeroMetric[] = [
-    { label: 'Model', value: currentModel || '—', icon: AiChipIcon },
-    { label: 'Sessions', value: `${sessionCount}`, icon: Activity01Icon },
+    { label: 'Total Sessions', value: `${totalSessions}`, icon: Activity01Icon },
+    { label: 'Active Agents', value: `${activeAgents}`, icon: UserGroupIcon },
     { label: 'Uptime', value: formatUptime(uptimeSeconds), icon: Timer02Icon },
-    { label: 'Spend', value: totalSpend, icon: ChartLineData02Icon },
+    { label: 'Cost', value: totalSpend, icon: ChartLineData02Icon },
   ]
 
   return (

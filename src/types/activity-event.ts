@@ -4,6 +4,6 @@ export type ActivityEvent = {
   type: 'gateway' | 'model' | 'usage' | 'cron' | 'tool' | 'error' | 'session'
   title: string
   detail?: string
-  level: 'info' | 'warn' | 'error'
+  level: 'debug' | 'info' | 'warn' | 'error'
   source?: string
 }

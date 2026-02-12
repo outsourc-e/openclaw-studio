@@ -21,6 +21,7 @@ type BrowserTabsResponse = {
   updatedAt: string
   demoMode: boolean
   error?: string
+  gatewaySupportRequired?: boolean
 }
 
 type BrowserScreenshotResponse = {
@@ -31,7 +32,20 @@ type BrowserScreenshotResponse = {
   capturedAt: string
   demoMode: boolean
   error?: string
+  gatewaySupportRequired?: boolean
 }
+
+const GATEWAY_SUPPORT_PATTERNS = [
+  'missing gateway auth',
+  'gateway connection closed',
+  'connect econnrefused',
+  'method not found',
+  'unknown method',
+  'not implemented',
+  'unsupported',
+  'browser api unavailable',
+  'browser tool request failed',
+]
 
 function readError(response: Response): Promise<string> {
   return response
@@ -45,13 +59,23 @@ function readError(response: Response): Promise<string> {
     })
 }
 
+function readErrorMessage(error: unknown, fallbackMessage: string): string {
+  if (error instanceof Error) return error.message || fallbackMessage
+  if (typeof error === 'string' && error.trim()) return error
+  return fallbackMessage
+}
+
+function isGatewaySupportError(message: string): boolean {
+  const normalizedMessage = message.trim().toLowerCase()
+  if (!normalizedMessage) return false
+
+  return GATEWAY_SUPPORT_PATTERNS.some(function hasPattern(pattern) {
+    return normalizedMessage.includes(pattern)
+  })
+}
+
 function createLocalFallbackTabs(error: unknown): BrowserTabsResponse {
-  const reason =
-    error instanceof Error
-      ? error.message
-      : typeof error === 'string'
-        ? error
-        : 'Browser tabs unavailable'
+  const reason = readErrorMessage(error, 'Browser tabs unavailable')
 
   return {
     ok: true,
@@ -67,13 +91,16 @@ function createLocalFallbackTabs(error: unknown): BrowserTabsResponse {
     updatedAt: new Date().toISOString(),
     demoMode: true,
     error: reason,
+    gatewaySupportRequired: true,
   }
 }
 
 function createLocalFallbackScreenshot(
   tabId?: string | null,
+  error?: unknown,
 ): BrowserScreenshotResponse {
   const timestamp = new Date().toISOString()
+  const reason = readErrorMessage(error, 'Browser screenshot unavailable')
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720">
   <defs>
     <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
@@ -95,6 +122,8 @@ function createLocalFallbackScreenshot(
     activeTabId: tabId || 'local-demo-tab',
     capturedAt: timestamp,
     demoMode: true,
+    error: reason,
+    gatewaySupportRequired: true,
   }
 }
 
@@ -126,8 +155,8 @@ async function fetchBrowserScreenshot(
     }
 
     return (await response.json()) as BrowserScreenshotResponse
-  } catch {
-    return createLocalFallbackScreenshot(activeTabId)
+  } catch (error) {
+    return createLocalFallbackScreenshot(activeTabId, error)
   }
 }
 
@@ -172,6 +201,11 @@ function BrowserPanel() {
     Boolean(tabsQuery.data?.demoMode) || Boolean(screenshotQuery.data?.demoMode)
   const screenshotUrl = screenshotQuery.data?.imageDataUrl || ''
   const errorText = tabsQuery.data?.error || screenshotQuery.data?.error || ''
+  const gatewaySupportRequired =
+    Boolean(tabsQuery.data?.gatewaySupportRequired) ||
+    Boolean(screenshotQuery.data?.gatewaySupportRequired) ||
+    isGatewaySupportError(errorText)
+  const showGatewaySupportPlaceholder = demoMode && gatewaySupportRequired
 
   function handleSelectTab(tabId: string) {
     setSelectedTabId(tabId)
@@ -211,7 +245,7 @@ function BrowserPanel() {
         {demoMode ? (
           <div className="flex items-center gap-3 rounded-xl border border-amber-500/30 bg-amber-500/5 px-4 py-3">
             <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-amber-500/15">
-              <HugeiconsIcon icon={GlobeIcon} size={16} strokeWidth={1.5} className="text-amber-600" />
+              <HugeiconsIcon icon={GlobeIcon} size={20} strokeWidth={1.5} className="text-amber-600" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
@@ -220,7 +254,9 @@ function BrowserPanel() {
                 </span>
               </div>
               <p className="mt-0.5 text-xs text-amber-700 text-pretty">
-                Connect a browser to use live features. Configure the browser plugin in your Gateway settings.
+                {showGatewaySupportPlaceholder
+                  ? 'Browser control requires gateway support. Enable browser RPC in your Gateway configuration.'
+                  : 'Connect a browser to use live features. Configure the browser plugin in your Gateway settings.'}
                 {errorText ? <span className="text-amber-600/80"> ({errorText})</span> : null}
               </p>
             </div>
@@ -235,13 +271,25 @@ function BrowserPanel() {
             onSelect={handleSelectTab}
           />
 
-          {screenshotUrl ? (
+          {showGatewaySupportPlaceholder ? (
+            <div className="flex min-h-[320px] flex-col items-center justify-center gap-3 rounded-2xl border border-primary-200 bg-primary-100/35 p-6 text-center lg:min-h-[560px]">
+              <div className="flex size-10 items-center justify-center rounded-full border border-primary-300 bg-primary-50 text-primary-700">
+                <HugeiconsIcon icon={GlobeIcon} size={20} strokeWidth={1.5} />
+              </div>
+              <h3 className="text-base font-medium text-primary-900 text-balance">
+                Browser control requires gateway support
+              </h3>
+              <p className="max-w-md text-sm text-primary-600 text-pretty">
+                This gateway does not expose browser RPC methods. Enable browser tooling in the gateway and reconnect a controlled browser.
+              </p>
+            </div>
+          ) : screenshotUrl ? (
             <BrowserScreenshot
               imageDataUrl={screenshotUrl}
               loading={screenshotQuery.isPending}
               capturedAt={screenshotQuery.data?.capturedAt || ''}
             />
-          ) : (
+          ) : screenshotQuery.isPending ? (
             <div className="flex min-h-[320px] items-center justify-center rounded-2xl border border-primary-200 bg-primary-100/35 text-primary-500">
               <HugeiconsIcon
                 icon={Loading03Icon}
@@ -249,6 +297,15 @@ function BrowserPanel() {
                 strokeWidth={1.5}
                 className="animate-spin"
               />
+            </div>
+          ) : (
+            <div className="flex min-h-[320px] flex-col items-center justify-center gap-2 rounded-2xl border border-primary-200 bg-primary-100/35 px-6 text-center lg:min-h-[560px]">
+              <h3 className="text-base font-medium text-primary-900 text-balance">
+                Screenshot unavailable
+              </h3>
+              <p className="max-w-md text-sm text-primary-600 text-pretty">
+                {errorText || 'No screenshot was returned by the gateway. Use refresh to retry.'}
+              </p>
             </div>
           )}
         </section>

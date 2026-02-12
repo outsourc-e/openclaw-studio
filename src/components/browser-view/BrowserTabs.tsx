@@ -59,7 +59,7 @@ function BrowserTabs({ tabs, activeTabId, loading, onSelect }: BrowserTabsProps)
         <ul className="space-y-2">
           <AnimatePresence initial={false}>
             {tabs.map(function mapTab(tab) {
-              const isActive = tab.id === activeTabId || tab.isActive
+              const isActive = activeTabId ? tab.id === activeTabId : tab.isActive
               return (
                 <motion.li
                   key={tab.id}

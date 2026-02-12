@@ -21,7 +21,7 @@ const EVENT_TYPES: Array<ActivityEvent['type']> = [
   'session',
 ]
 
-const EVENT_LEVELS: Array<ActivityEvent['level']> = ['info', 'warn', 'error']
+const EVENT_LEVELS: Array<ActivityEvent['level']> = ['debug', 'info', 'warn', 'error']
 
 function toRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== 'object') return null
@@ -49,6 +49,7 @@ function normalizeActivityEvent(value: unknown): ActivityEvent | null {
   const type = record.type
   const title = typeof record.title === 'string' ? record.title : ''
   const detail = typeof record.detail === 'string' ? record.detail : undefined
+  const source = typeof record.source === 'string' ? record.source : undefined
   const level = record.level
 
   if (!id || !timestamp || !isEventType(type) || !title || !isEventLevel(level)) {
@@ -62,6 +63,7 @@ function normalizeActivityEvent(value: unknown): ActivityEvent | null {
     title,
     detail,
     level,
+    source,
   }
 }
 
