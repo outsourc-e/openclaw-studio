@@ -49,7 +49,10 @@ function loadImage(source: string): Promise<HTMLImageElement> {
   })
 }
 
-function toAvatarSize(width: number, height: number): {
+function toAvatarSize(
+  width: number,
+  height: number,
+): {
   width: number
   height: number
 } {
@@ -178,7 +181,9 @@ export function SettingsDialog({
     updateSettings({ displayName: event.target.value })
   }
 
-  async function handleAvatarUpload(event: React.ChangeEvent<HTMLInputElement>) {
+  async function handleAvatarUpload(
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) {
     const file = event.target.files?.[0]
     event.target.value = ''
     if (!file) return
@@ -215,7 +220,7 @@ export function SettingsDialog({
 
   return (
     <DialogRoot open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="h-[min(80dvh,760px)] w-[min(480px,92vw)] max-h-[calc(100dvh-2rem)] overflow-hidden">
+      <DialogContent className="left-auto right-0 top-0 h-[100dvh] w-screen translate-x-0 translate-y-0 overflow-hidden rounded-none border-primary-200 bg-primary-50 duration-300 ease-out sm:w-[min(560px,100vw)] sm:rounded-l-2xl data-[state=open]:scale-100 data-[state=closed]:scale-100 data-[state=open]:translate-x-0 data-[state=closed]:translate-x-full">
         <div className="flex h-full min-h-0 flex-col">
           <div className="flex items-start justify-between border-b border-primary-200 p-4 pb-3">
             <div>
@@ -300,7 +305,9 @@ export function SettingsDialog({
                     Remove photo
                   </Button>
                   {profileProcessing ? (
-                    <span className="text-xs text-primary-500">Processing...</span>
+                    <span className="text-xs text-primary-500">
+                      Processing...
+                    </span>
                   ) : null}
                 </div>
                 {profileError ? (
@@ -397,11 +404,11 @@ export function SettingsDialog({
                 </a>
               </div>
             </SettingsSection>
-          </div>
 
-          <div className="border-t border-primary-200 p-4 pt-3">
-            <div className="flex justify-end">
-              <DialogClose onClick={onClose}>Close</DialogClose>
+            <div className="border-t border-primary-200 p-4 pt-3">
+              <div className="flex justify-end">
+                <DialogClose onClick={onClose}>Close</DialogClose>
+              </div>
             </div>
           </div>
         </div>

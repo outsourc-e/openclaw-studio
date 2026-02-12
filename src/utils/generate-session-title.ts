@@ -1,5 +1,5 @@
 const DEFAULT_MAX_LENGTH = 40
-const DEFAULT_MAX_WORDS = 7
+const DEFAULT_MAX_WORDS = 6
 
 type SessionCategory =
   | 'coding'
@@ -195,6 +195,89 @@ const TOKEN_OVERRIDES: Record<string, string> = {
   tailwind: 'Tailwind',
 }
 
+const ACTION_PATTERNS: Array<{ pattern: RegExp; verb: string }> = [
+  { pattern: /\b(?:fix|fixing|fixed|bug|bugs|error|errors|resolve|resolved|resolving)\b/, verb: 'Fix' },
+  { pattern: /\b(?:debug|debugging|debugged|diagnose|diagnosing|diagnosed)\b/, verb: 'Debug' },
+  { pattern: /\b(?:refactor|refactoring|refactored|cleanup|cleaning|cleaned)\b/, verb: 'Refactor' },
+  { pattern: /\b(?:optimize|optimizing|optimized|optimise|optimising|performance)\b/, verb: 'Optimize' },
+  { pattern: /\b(?:implement|implementing|implemented|build|building|create|creating|add|adding|write|writing)\b/, verb: 'Build' },
+  { pattern: /\b(?:update|updating|updated|upgrade|upgrading|upgraded)\b/, verb: 'Update' },
+  { pattern: /\b(?:test|testing|tested|verify|verifying|validate|validating|validated)\b/, verb: 'Test' },
+  { pattern: /\b(?:analyze|analyzing|analyzed|analyse|analysing|analysis|evaluate|evaluating|investigate|investigating|review|reviewing)\b/, verb: 'Analyze' },
+  { pattern: /\b(?:compare|comparing|comparison)\b/, verb: 'Compare' },
+  { pattern: /\b(?:research|researching|search|searching|find|finding|lookup|look up)\b/, verb: 'Research' },
+  { pattern: /\b(?:configure|config|configuration|setup|set up|install|deploy|deploying|deployed)\b/, verb: 'Configure' },
+  { pattern: /\b(?:summarize|summarizing|summarized|summarise|summarising|summarised|summary)\b/, verb: 'Summarize' },
+  { pattern: /\b(?:draft|drafting|drafted|brainstorm|brainstorming|rewrite|rewriting|name|naming)\b/, verb: 'Draft' },
+  { pattern: /\b(?:explain|explaining|walkthrough)\b/, verb: 'Explain' },
+]
+
+const ACTION_TOKENS = new Set([
+  'add',
+  'analyze',
+  'analyse',
+  'analysis',
+  'brainstorm',
+  'build',
+  'cleanup',
+  'compare',
+  'config',
+  'configuration',
+  'configure',
+  'create',
+  'debug',
+  'deploy',
+  'diagnose',
+  'draft',
+  'error',
+  'errors',
+  'evaluate',
+  'explain',
+  'find',
+  'fix',
+  'implement',
+  'install',
+  'investigate',
+  'lookup',
+  'name',
+  'optimize',
+  'optimise',
+  'performance',
+  'refactor',
+  'research',
+  'resolve',
+  'review',
+  'search',
+  'setup',
+  'summarize',
+  'summarise',
+  'summary',
+  'test',
+  'update',
+  'upgrade',
+  'validate',
+  'verify',
+  'write',
+])
+
+const CATEGORY_DEFAULT_ACTION: Record<SessionCategory, string> = {
+  coding: 'Fix',
+  research: 'Research',
+  config: 'Configure',
+  creative: 'Draft',
+  analysis: 'Analyze',
+  chat: 'Discuss',
+}
+
+const CATEGORY_SUBJECT_FALLBACK: Record<SessionCategory, string> = {
+  coding: 'Issue',
+  research: 'Topic',
+  config: 'Setup',
+  creative: 'Idea',
+  analysis: 'Results',
+  chat: 'Chat',
+}
+
 export type SessionTitleSnippet = Array<{ role: string; text: string }>
 
 function stripNoisePrefixes(text: string): string {
@@ -314,6 +397,45 @@ function scoreContextTokens(snippet: SessionTitleSnippet): Array<string> {
     .map(([token]) => token)
 }
 
+function detectAction(snippet: SessionTitleSnippet, category: SessionCategory): string {
+  const firstUser = snippet.find((message) => message.role === 'user')
+  const firstUserText = firstUser ? cleanText(firstUser.text).toLowerCase() : ''
+  const userText = snippet
+    .filter((message) => message.role === 'user')
+    .map((message) => cleanText(message.text).toLowerCase())
+    .join(' ')
+  const allText = snippet
+    .map((message) => cleanText(message.text).toLowerCase())
+    .join(' ')
+  const candidates = [firstUserText, userText, allText].filter(Boolean)
+
+  for (const text of candidates) {
+    for (const actionPattern of ACTION_PATTERNS) {
+      if (actionPattern.pattern.test(text)) {
+        return actionPattern.verb
+      }
+    }
+  }
+
+  return CATEGORY_DEFAULT_ACTION[category]
+}
+
+function selectFocusTokens(
+  primaryTokens: Array<string>,
+  contextTokens: Array<string>,
+  maxTokens: number,
+): Array<string> {
+  const selected: Array<string> = []
+  const combined = [...primaryTokens, ...contextTokens]
+  for (const token of combined) {
+    if (selected.length >= maxTokens) break
+    if (selected.includes(token)) continue
+    if (ACTION_TOKENS.has(token)) continue
+    selected.push(token)
+  }
+  return selected
+}
+
 type GenerateSessionTitleOptions = {
   maxLength?: number
   maxWords?: number
@@ -330,32 +452,17 @@ export function generateSessionTitle(
   const primary = primaryCandidate(snippet)
   const titleTokens = tokenizeMeaningful(primary)
   const contextTokens = scoreContextTokens(snippet)
-  const selected: Array<string> = []
-
-  for (const token of titleTokens) {
-    if (!selected.includes(token)) selected.push(token)
-    if (selected.length >= maxWords) break
-  }
-
-  for (const token of contextTokens) {
-    if (!selected.includes(token)) selected.push(token)
-    if (selected.length >= maxWords) break
-  }
-
-  if (selected.length === 0) {
-    const fallbackWords = cleanText(primary)
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, maxWords)
-      .map((word) => `${word.charAt(0).toUpperCase()}${word.slice(1)}`)
-    if (!fallbackWords.length) return ''
-    return truncateToLength(
-      `${CATEGORY_EMOJI[category]} ${fallbackWords.join(' ')}`,
-      maxLength,
-    )
-  }
-
-  const coreTitle = selected.map(formatToken).join(' ')
-  const decorated = `${CATEGORY_EMOJI[category]} ${coreTitle}`
+  const action = detectAction(snippet, category)
+  const maxFocusTokens = Math.max(1, maxWords - 1)
+  const focusTokens = selectFocusTokens(titleTokens, contextTokens, maxFocusTokens)
+  const subjectTokens =
+    focusTokens.length > 0
+      ? focusTokens
+      : [normalizeToken(CATEGORY_SUBJECT_FALLBACK[category])]
+  const coreTokens = [action, ...subjectTokens]
+  const truncatedCoreTokens = coreTokens.slice(0, maxWords)
+  const decorated = `${CATEGORY_EMOJI[category]} ${truncatedCoreTokens
+    .map(formatToken)
+    .join(' ')}`
   return truncateToLength(decorated, maxLength)
 }

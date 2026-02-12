@@ -14,12 +14,13 @@ const GENERIC_TITLE_PATTERNS = [
   /^session \d/i,
   /^conversation$/i,
   /^chat$/i,
+  /^[0-9a-f]{6,}/i,
   /^\w{8} \(\d{4}-\d{2}-\d{2}\)$/,
 ]
 
 function isGenericTitle(title: string): boolean {
   const trimmed = title.trim()
-  if (!trimmed) return true
+  if (!trimmed || trimmed === 'New Session') return true
   return GENERIC_TITLE_PATTERNS.some((pattern) => pattern.test(trimmed))
 }
 
@@ -61,6 +62,15 @@ function fallbackTitle(
     maxLength: 48,
     maxWords,
   })
+}
+
+function resolveLocalTitle(
+  messages: Array<{ role: string; text: string }>,
+  maxWords: number,
+): string {
+  const fallback = fallbackTitle(messages, maxWords).trim()
+  if (!fallback || isGenericTitle(fallback)) return ''
+  return fallback
 }
 
 type GatewayTitleResponse = {
@@ -110,6 +120,7 @@ export const Route = createFileRoute('/api/session-title')({
           let title = ''
           let usedFallback = false
           let gatewayError = ''
+          const snippet = [...messages]
 
           try {
             const payload = await gatewayRpc<GatewayTitleResponse>(
@@ -117,7 +128,7 @@ export const Route = createFileRoute('/api/session-title')({
               {
                 sessionKey: sessionKey || undefined,
                 friendlyId: friendlyId || undefined,
-                messages,
+                messages: snippet,
                 maxWords,
               },
             )
@@ -130,15 +141,11 @@ export const Route = createFileRoute('/api/session-title')({
           }
 
           if (title && isGenericTitle(title)) {
-            const fallback = fallbackTitle(messages, maxWords)
-            if (fallback) {
-              title = fallback
-              usedFallback = true
-            }
+            title = ''
           }
 
           if (!title) {
-            const fallback = fallbackTitle(messages, maxWords)
+            const fallback = resolveLocalTitle(messages, maxWords)
             if (fallback) {
               title = fallback
               usedFallback = true

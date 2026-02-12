@@ -40,26 +40,37 @@ export const Route = createFileRoute('/api/send')({
             )
           }
 
-          let sessionKey = rawSessionKey.length > 0 ? rawSessionKey : ''
+          // Try to resolve session key — it might be a friendlyId that needs resolution
+          const keysToResolve = [rawSessionKey, friendlyId].filter(
+            (k) => k.length > 0,
+          )
+          let sessionKey = ''
 
-          if (!sessionKey && friendlyId) {
-            const resolved = await gatewayRpc<SessionsResolveResponse>(
-              'sessions.resolve',
-              {
-                key: friendlyId,
-                includeUnknown: true,
-                includeGlobal: true,
-              },
-            )
-            const resolvedKey =
-              typeof resolved.key === 'string' ? resolved.key.trim() : ''
-            if (resolvedKey.length === 0) {
-              return json(
-                { ok: false, error: 'session not found' },
-                { status: 404 },
+          for (const candidate of keysToResolve) {
+            try {
+              const resolved = await gatewayRpc<SessionsResolveResponse>(
+                'sessions.resolve',
+                {
+                  key: candidate,
+                  includeUnknown: true,
+                  includeGlobal: true,
+                },
               )
+              const resolvedKey =
+                typeof resolved.key === 'string' ? resolved.key.trim() : ''
+              if (resolvedKey.length > 0) {
+                sessionKey = resolvedKey
+                break
+              }
+            } catch {
+              // Resolution failed, try next candidate
             }
-            sessionKey = resolvedKey
+          }
+
+          // If resolution failed but we have a raw key, use it directly
+          // (it might be a full gateway key like agent:codex:main)
+          if (!sessionKey && rawSessionKey.length > 0) {
+            sessionKey = rawSessionKey
           }
 
           if (sessionKey.length === 0) {
