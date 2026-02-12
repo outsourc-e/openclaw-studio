@@ -4,13 +4,35 @@ import { cn } from '@/lib/utils'
 type AvatarProps = {
   size?: number
   className?: string
+  src?: string | null
+  alt?: string
 }
 
 /**
  * User avatar — same logo family as assistant.
  * Dark slate rounded square with orange person silhouette + subtle claw accent.
  */
-function UserAvatarComponent({ size = 28, className }: AvatarProps) {
+function UserAvatarComponent({
+  size = 28,
+  className,
+  src,
+  alt = 'User avatar',
+}: AvatarProps) {
+  if (src && src.trim().length > 0) {
+    return (
+      <img
+        src={src}
+        alt={alt}
+        className={cn('shrink-0 object-cover', className)}
+        style={{
+          width: size,
+          height: size,
+          borderRadius: Math.max(6, Math.round(size * 0.2)),
+        }}
+      />
+    )
+  }
+
   return (
     <svg
       viewBox="0 0 100 100"

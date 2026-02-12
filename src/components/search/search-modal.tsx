@@ -371,10 +371,13 @@ export function SearchModal() {
 
   useEffect(() => {
     if (!isOpen) return
-    window.requestAnimationFrame(() => {
+    const frameId = window.requestAnimationFrame(function focusSearchInput() {
       inputRef.current?.focus()
       inputRef.current?.select()
     })
+    return function cleanupFocusSearchInput() {
+      window.cancelAnimationFrame(frameId)
+    }
   }, [isOpen])
 
   const resultItems = useMemo<Array<SearchResultItemData>>(() => {
