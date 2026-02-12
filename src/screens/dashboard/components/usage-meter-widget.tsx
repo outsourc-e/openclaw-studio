@@ -81,14 +81,12 @@ function readString(value: unknown): string {
 }
 
 function toRecord(value: unknown): Record<string, unknown> {
-  if (value && typeof value === 'object') return value as Record<string, unknown>
+  if (value && typeof value === 'object')
+    return value as Record<string, unknown>
   return {}
 }
 
-function parseProviderUsage(
-  provider: string,
-  value: unknown,
-): ProviderUsage {
+function parseProviderUsage(provider: string, value: unknown): ProviderUsage {
   const source = toRecord(value)
   const input = readNumber(source.input)
   const output = readNumber(source.output)
@@ -146,7 +144,10 @@ function parseUsagePayload(payload: unknown): UsageMeterData {
           return total + provider.cost
         }, 0)
 
-  const totalDirectCost = providers.reduce(function sumDirectCost(total, provider) {
+  const totalDirectCost = providers.reduce(function sumDirectCost(
+    total,
+    provider,
+  ) {
     return total + provider.directCost
   }, 0)
 
@@ -238,7 +239,10 @@ type UsageMeterWidgetProps = {
   onRemove?: () => void
 }
 
-export function UsageMeterWidget({ draggable = false, onRemove }: UsageMeterWidgetProps) {
+export function UsageMeterWidget({
+  draggable = false,
+  onRemove,
+}: UsageMeterWidgetProps) {
   const [view, setView] = useState<'gateway' | 'providers'>('gateway')
 
   const usageQuery = useQuery({
@@ -264,10 +268,14 @@ export function UsageMeterWidget({ draggable = false, onRemove }: UsageMeterWidg
   })
 
   const activeProviders = providerQuery.data?.providers ?? []
+  const providerCount = activeProviders.length
 
   const [loadingTimedOut, setLoadingTimedOut] = useState(false)
   useEffect(() => {
-    if (usageQuery.data) { setLoadingTimedOut(false); return }
+    if (usageQuery.data) {
+      setLoadingTimedOut(false)
+      return
+    }
     const timer = setTimeout(() => setLoadingTimedOut(true), 5000)
     return () => clearTimeout(timer)
   }, [usageQuery.data])
@@ -276,11 +284,14 @@ export function UsageMeterWidget({ draggable = false, onRemove }: UsageMeterWidg
   const usageData = queryResult?.kind === 'ok' ? queryResult.data : null
   const rows = (usageData?.providers ?? []).slice(0, 4)
 
-  const maxUsage = useMemo(function computeMaxUsage() {
-    return rows.reduce(function reduceMax(currentMax, row) {
-      return row.inputOutput > currentMax ? row.inputOutput : currentMax
-    }, 0)
-  }, [rows])
+  const maxUsage = useMemo(
+    function computeMaxUsage() {
+      return rows.reduce(function reduceMax(currentMax, row) {
+        return row.inputOutput > currentMax ? row.inputOutput : currentMax
+      }, 0)
+    },
+    [rows],
+  )
 
   const radius = 52
   const circumference = 2 * Math.PI * radius
@@ -294,24 +305,32 @@ export function UsageMeterWidget({ draggable = false, onRemove }: UsageMeterWidg
       icon={ChartLineData02Icon}
       draggable={draggable}
       onRemove={onRemove}
-      className="h-full"
+      className="h-full rounded-xl border-primary-200 p-4 shadow-sm [&_h2]:text-sm [&_h2]:font-semibold [&_h2]:normal-case [&_h2]:text-ink"
       titleAccessory={
-        <div className="flex items-center gap-0.5 rounded-full border border-primary-100 bg-primary-50 p-0.5 text-[10px]">
-          {(['gateway', 'providers'] as const).map((tab) => (
-            <button
-              key={tab}
-              type="button"
-              onClick={(e) => { e.stopPropagation(); setView(tab) }}
-              className={cn(
-                'rounded-full px-2 py-0.5 font-medium transition',
-                view === tab
-                  ? 'bg-primary-50 text-primary-900 shadow-sm dark:bg-primary-100 dark:text-primary-900'
-                  : 'text-primary-500 hover:text-primary-700',
-              )}
-            >
-              {tab === 'gateway' ? 'Gateway' : 'Providers'}
-            </button>
-          ))}
+        <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5 rounded-full border border-primary-200 bg-primary-100/70 p-0.5 text-[10px]">
+            {(['gateway', 'providers'] as const).map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setView(tab)
+                }}
+                className={cn(
+                  'rounded-full px-2 py-0.5 font-medium transition',
+                  view === tab
+                    ? 'bg-orange-100 text-orange-700 shadow-sm'
+                    : 'text-primary-500 hover:text-primary-700',
+                )}
+              >
+                {tab === 'gateway' ? 'Gateway' : 'Providers'}
+              </button>
+            ))}
+          </div>
+          <span className="inline-flex items-center rounded-full border border-primary-200 bg-primary-100/70 px-2 py-0.5 text-[11px] font-medium text-primary-500 tabular-nums">
+            {providerCount}
+          </span>
         </div>
       }
     >
@@ -319,57 +338,95 @@ export function UsageMeterWidget({ draggable = false, onRemove }: UsageMeterWidg
         <div className="space-y-3">
           {activeProviders.length === 0 ? (
             <div className="rounded-xl border border-primary-200 bg-primary-100/45 p-4 text-center">
-              <p className="text-[13px] font-medium text-primary-700">No providers connected</p>
-              <p className="mt-1 text-[11px] text-primary-500">Run `claude` to authenticate or set API keys.</p>
+              <p className="text-sm font-semibold text-ink">
+                No providers connected
+              </p>
+              <p className="mt-1 text-sm text-primary-600">
+                Run `claude` to authenticate or set API keys.
+              </p>
             </div>
           ) : (
-            activeProviders.map((provider) => (
-              <div key={provider.provider} className="rounded-xl border border-primary-200 bg-primary-100/45 p-3">
+            activeProviders.map((provider, providerIndex) => (
+              <div
+                key={provider.provider}
+                className={cn(
+                  'rounded-xl border border-primary-200 p-3',
+                  providerIndex % 2 === 0
+                    ? 'bg-primary-50/90'
+                    : 'bg-primary-100/55',
+                )}
+              >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[13px] font-medium text-ink">{provider.displayName}</span>
+                    <span className="text-sm font-semibold text-ink">
+                      {provider.displayName}
+                    </span>
                     {provider.plan && (
-                      <span className="rounded-full bg-primary-200/60 px-1.5 py-0.5 text-[10px] font-medium text-primary-700">
+                      <span className="rounded-full border border-orange-200 bg-orange-100/55 px-1.5 py-0.5 text-[10px] font-medium text-orange-700">
                         {provider.plan}
                       </span>
                     )}
                   </div>
                   <span
                     className={cn(
-                      'rounded-full px-1.5 py-0.5 text-[10px] font-medium',
+                      'rounded-full px-2 py-0.5 text-[10px] font-medium',
                       provider.status === 'ok'
-                        ? 'bg-emerald-100 text-emerald-700'
+                        ? 'bg-orange-100 text-orange-700'
                         : provider.status === 'auth_expired'
-                          ? 'bg-amber-100 text-amber-700'
+                          ? 'bg-primary-200/70 text-primary-700'
                           : 'bg-red-100 text-red-700',
                     )}
                   >
-                    {provider.status === 'ok' ? 'Connected' : provider.status === 'auth_expired' ? 'Expired' : 'Error'}
+                    {provider.status === 'ok'
+                      ? 'Connected'
+                      : provider.status === 'auth_expired'
+                        ? 'Expired'
+                        : 'Error'}
                   </span>
                 </div>
                 {provider.status === 'ok' && provider.lines.length > 0 && (
                   <div className="mt-2.5 space-y-2">
                     {provider.lines.map((line, i) => {
-                      if (line.type === 'progress' && line.used !== undefined && line.limit !== undefined) {
-                        const pct = Math.min((line.used / line.limit) * 100, 100)
+                      if (
+                        line.type === 'progress' &&
+                        line.used !== undefined &&
+                        line.limit !== undefined
+                      ) {
+                        const pct = Math.min(
+                          (line.used / line.limit) * 100,
+                          100,
+                        )
                         const barColor =
-                          pct >= 90 ? 'bg-red-500' : pct >= 75 ? 'bg-amber-500' : pct >= 50 ? 'bg-yellow-500' : 'bg-emerald-500'
+                          pct >= 90
+                            ? 'bg-red-500'
+                            : pct >= 75
+                              ? 'bg-orange-500'
+                              : 'bg-orange-400'
                         return (
                           <div key={`${line.label}-${i}`}>
-                            <div className="flex items-center justify-between text-[11px]">
-                              <span className="text-primary-600">{line.label}</span>
-                              <span className="font-medium text-ink tabular-nums">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-primary-600">
+                                {line.label}
+                              </span>
+                              <span className="font-mono font-medium text-ink tabular-nums">
                                 {line.format === 'dollars'
                                   ? `$${line.used.toFixed(2)} / $${line.limit.toFixed(2)}`
                                   : `${Math.round(line.used)}%`}
                               </span>
                             </div>
                             <div className="mt-1 h-1.5 w-full rounded-full bg-primary-200/60">
-                              <div className={`h-1.5 rounded-full transition-all ${barColor}`} style={{ width: `${pct}%` }} />
+                              <div
+                                className={`h-1.5 rounded-full transition-all ${barColor}`}
+                                style={{ width: `${pct}%` }}
+                              />
                             </div>
                             {line.resetsAt && (
-                              <div className="mt-0.5 text-[10px] text-primary-400">
-                                resets {new Date(line.resetsAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              <div className="mt-0.5 font-mono text-[10px] text-primary-400 tabular-nums">
+                                resets{' '}
+                                {new Date(line.resetsAt).toLocaleTimeString(
+                                  [],
+                                  { hour: '2-digit', minute: '2-digit' },
+                                )}
                               </div>
                             )}
                           </div>
@@ -377,60 +434,79 @@ export function UsageMeterWidget({ draggable = false, onRemove }: UsageMeterWidg
                       }
                       if (line.type === 'badge') {
                         return (
-                          <div key={`${line.label}-${i}`} className="flex items-center gap-1.5 text-[11px]">
-                            <span className="text-primary-600">{line.label}</span>
-                            <span className="rounded-full border border-primary-200 bg-primary-100/70 px-1.5 py-0.5 text-[10px] font-medium text-primary-700 dark:border-primary-300 dark:bg-primary-200/50 dark:text-primary-800">
+                          <div
+                            key={`${line.label}-${i}`}
+                            className="flex items-center gap-1.5 text-xs"
+                          >
+                            <span className="text-primary-600">
+                              {line.label}
+                            </span>
+                            <span className="rounded-full border border-primary-200 bg-primary-100/70 px-1.5 py-0.5 font-mono text-[10px] font-medium text-primary-700">
                               {line.value ?? '—'}
                             </span>
                           </div>
                         )
                       }
                       return (
-                        <div key={`${line.label}-${i}`} className="flex items-center justify-between text-[11px]">
+                        <div
+                          key={`${line.label}-${i}`}
+                          className="flex items-center justify-between text-xs"
+                        >
                           <span className="text-primary-600">{line.label}</span>
-                          <span className="font-medium text-ink">{line.value ?? '—'}</span>
+                          <span className="font-mono font-medium text-ink">
+                            {line.value ?? '—'}
+                          </span>
                         </div>
                       )
                     })}
                   </div>
                 )}
                 {provider.status !== 'ok' && provider.message && (
-                  <p className="mt-2 text-[11px] text-primary-500">{provider.message}</p>
+                  <p className="mt-2 text-xs text-primary-500">
+                    {provider.message}
+                  </p>
                 )}
               </div>
             ))
           )}
         </div>
       ) : queryResult?.kind === 'unavailable' ? (
-        <div className="rounded-xl border border-primary-200 bg-primary-100/45 p-4 text-sm text-primary-700 text-pretty">
+        <div className="rounded-xl border border-primary-200 bg-primary-100/45 p-4 text-sm text-primary-600 text-pretty">
           {queryResult.message}
         </div>
       ) : queryResult?.kind === 'error' ? (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600 dark:border-red-800 dark:bg-red-950/40 dark:text-red-400 text-pretty">
+        <div className="rounded-xl border border-red-200 bg-red-50/80 p-4 text-sm text-red-700 text-pretty">
           {queryResult.message}
         </div>
       ) : !usageData ? (
         <div className="flex items-center gap-3 rounded-xl border border-primary-200 bg-primary-100/45 p-4">
           {loadingTimedOut ? (
             <>
-              <span className="text-[13px] text-primary-500">No usage data available</span>
+              <span className="text-sm text-primary-600">
+                No usage data available
+              </span>
               <button
                 type="button"
-                onClick={() => { setLoadingTimedOut(false); usageQuery.refetch() }}
-                className="text-[13px] font-medium text-primary-600 underline hover:text-ink"
+                onClick={() => {
+                  setLoadingTimedOut(false)
+                  usageQuery.refetch()
+                }}
+                className="text-sm font-medium text-orange-600 underline underline-offset-2 hover:text-orange-700"
               >
                 Retry
               </button>
             </>
           ) : (
             <>
-              <span className="size-4 animate-spin rounded-full border-2 border-primary-300 border-t-primary-600" />
-              <span className="text-[13px] text-primary-500">Loading usage data…</span>
+              <span className="size-4 animate-spin rounded-full border-2 border-primary-300 border-t-orange-600" />
+              <span className="text-sm text-primary-600">
+                Loading usage data…
+              </span>
             </>
           )}
         </div>
       ) : usageData.providers.length === 0 ? (
-        <div className="rounded-xl border border-primary-200 bg-primary-100/45 p-4 text-sm text-primary-700 text-pretty">
+        <div className="rounded-xl border border-primary-200 bg-primary-100/45 p-4 text-sm text-primary-600 text-pretty">
           No usage data reported by the Gateway yet.
         </div>
       ) : (
@@ -460,7 +536,7 @@ export function UsageMeterWidget({ draggable = false, onRemove }: UsageMeterWidg
                   cy="70"
                   r={radius}
                   fill="none"
-                  className="stroke-primary-500"
+                  className="stroke-orange-600"
                   strokeWidth="14"
                   strokeLinecap="round"
                   strokeDasharray={circumference}
@@ -469,29 +545,35 @@ export function UsageMeterWidget({ draggable = false, onRemove }: UsageMeterWidg
               </svg>
               <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
                 {usageData.usagePercent !== undefined ? (
-                  <span className="text-3xl font-medium text-ink tabular-nums">
+                  <span className="font-mono text-3xl font-semibold text-ink tabular-nums">
                     {Math.round(usageData.usagePercent)}%
                   </span>
                 ) : (
-                  <span className="text-sm font-medium text-ink tabular-nums">
+                  <span className="font-mono text-sm font-semibold text-ink tabular-nums">
                     {formatCompactTokens(usageData.totalInputOutput)}
                   </span>
                 )}
                 <span className="text-xs text-primary-600 text-pretty">
-                  {usageData.usagePercent !== undefined ? 'used' : 'in/out tokens'}
+                  {usageData.usagePercent !== undefined
+                    ? 'used'
+                    : 'in/out tokens'}
                 </span>
               </div>
             </div>
             <div className="mt-3 w-full space-y-1.5">
               <div className="rounded-lg border border-primary-200 bg-primary-50/80 px-3 py-2">
-                <p className="text-xs text-primary-600 text-pretty">Direct Cost</p>
-                <p className="text-lg font-medium text-ink tabular-nums">
+                <p className="text-xs text-primary-600 text-pretty">
+                  Direct Cost
+                </p>
+                <p className="font-mono text-lg font-semibold text-ink tabular-nums">
                   {formatUsd(usageData.totalDirectCost)}
                 </p>
               </div>
               <div className="rounded-lg border border-primary-200 bg-primary-50/60 px-3 py-1.5">
-                <p className="text-[11px] text-primary-500 text-pretty">+ Cache Cost</p>
-                <p className="text-sm text-primary-600 tabular-nums">
+                <p className="text-[11px] text-primary-500 text-pretty">
+                  + Cache Cost
+                </p>
+                <p className="font-mono text-sm text-primary-600 tabular-nums">
                   {formatUsd(usageData.totalCost - usageData.totalDirectCost)}
                 </p>
               </div>
@@ -500,18 +582,28 @@ export function UsageMeterWidget({ draggable = false, onRemove }: UsageMeterWidg
 
           <div className="space-y-3">
             {rows.map(function mapRow(row, index) {
-              const widthPercent = maxUsage > 0 ? (row.inputOutput / maxUsage) * 100 : 0
+              const widthPercent =
+                maxUsage > 0 ? (row.inputOutput / maxUsage) * 100 : 0
 
               return (
-                <div key={row.provider} className="space-y-1.5">
+                <div
+                  key={row.provider}
+                  className={cn(
+                    'space-y-1.5 rounded-lg border border-primary-200 px-3 py-2.5',
+                    index % 2 === 0 ? 'bg-primary-50/90' : 'bg-primary-100/55',
+                  )}
+                >
                   <div className="flex items-center justify-between gap-3">
-                    <span className="truncate text-sm text-primary-800 tabular-nums">
+                    <span className="truncate text-sm font-semibold text-ink tabular-nums">
                       {row.provider}
                     </span>
-                    <span className="shrink-0 text-xs text-primary-600 tabular-nums">
+                    <span className="shrink-0 font-mono text-xs text-primary-600 tabular-nums">
                       {formatCompactTokens(row.inputOutput)}
                       {row.cached > 0 ? (
-                        <span className="ml-1 text-primary-400" title={`${formatTokens(row.cached)} cached`}>
+                        <span
+                          className="ml-1 text-primary-400"
+                          title={`${formatTokens(row.cached)} cached`}
+                        >
                           +cache
                         </span>
                       ) : null}
@@ -520,8 +612,8 @@ export function UsageMeterWidget({ draggable = false, onRemove }: UsageMeterWidg
                   <div className="h-2.5 overflow-hidden rounded-full bg-primary-200/80">
                     <div
                       className={cn(
-                        'h-full rounded-full bg-primary-500 transition-[width] duration-500',
-                        index > 1 && 'bg-primary-400',
+                        'h-full rounded-full bg-orange-600 transition-[width] duration-500',
+                        index > 1 && 'bg-orange-500',
                       )}
                       style={{ width: `${widthPercent}%` }}
                     />

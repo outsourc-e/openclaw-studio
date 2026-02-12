@@ -2,8 +2,8 @@ import { UserGroupIcon } from '@hugeicons/core-free-icons'
 import { useQuery } from '@tanstack/react-query'
 import { useMemo } from 'react'
 import { DashboardGlassCard } from './dashboard-glass-card'
-import { cn } from '@/lib/utils'
 import type { SessionMeta } from '@/screens/chat/types'
+import { cn } from '@/lib/utils'
 
 type SessionsApiResponse = {
   sessions?: Array<Record<string, unknown>>
@@ -27,7 +27,6 @@ type AgentStatusWidgetProps = {
 function readString(value: unknown): string {
   return typeof value === 'string' ? value.trim() : ''
 }
-
 
 function readTimestamp(value: unknown): number {
   if (typeof value === 'number' && Number.isFinite(value)) {
@@ -84,7 +83,6 @@ function deriveName(session: SessionAgentSource): string {
   return friendlyId === 'main' ? 'Main Session' : `Session ${friendlyId}`
 }
 
-
 function deriveModel(session: SessionAgentSource): string {
   const lastMessage =
     session.lastMessage && typeof session.lastMessage === 'object'
@@ -135,11 +133,18 @@ function formatModelShort(raw: string): string {
   return name
 }
 
-function compareSessionRecency(a: SessionAgentSource, b: SessionAgentSource): number {
+function compareSessionRecency(
+  a: SessionAgentSource,
+  b: SessionAgentSource,
+): number {
   const aTime =
-    readTimestamp(a.updatedAt) || readTimestamp(a.startedAt) || readTimestamp(a.createdAt)
+    readTimestamp(a.updatedAt) ||
+    readTimestamp(a.startedAt) ||
+    readTimestamp(a.createdAt)
   const bTime =
-    readTimestamp(b.updatedAt) || readTimestamp(b.startedAt) || readTimestamp(b.createdAt)
+    readTimestamp(b.updatedAt) ||
+    readTimestamp(b.startedAt) ||
+    readTimestamp(b.createdAt)
   return bTime - aTime
 }
 
@@ -153,7 +158,10 @@ function toAgentRow(session: SessionAgentSource, now: number): AgentRow {
     startedAt > 0 ? Math.floor(Math.max(0, now - startedAt) / 1000) : 0
 
   return {
-    id: readString(session.key) || readString(session.friendlyId) || `agent-${now}`,
+    id:
+      readString(session.key) ||
+      readString(session.friendlyId) ||
+      `agent-${now}`,
     name: deriveName(session),
     model: deriveModel(session),
     status,
@@ -188,22 +196,30 @@ async function fetchSessions(): Promise<Array<SessionAgentSource>> {
   })
 }
 
-export function AgentStatusWidget({ draggable = false, onRemove }: AgentStatusWidgetProps) {
+export function AgentStatusWidget({
+  draggable = false,
+  onRemove,
+}: AgentStatusWidgetProps) {
   const sessionsQuery = useQuery({
     queryKey: ['dashboard', 'active-agent-sessions'],
     queryFn: fetchSessions,
     refetchInterval: 15_000,
   })
 
-  const agents = useMemo(function buildAgents() {
-    const rows = Array.isArray(sessionsQuery.data) ? sessionsQuery.data : []
-    if (rows.length === 0) return []
+  const agents = useMemo(
+    function buildAgents() {
+      const rows = Array.isArray(sessionsQuery.data) ? sessionsQuery.data : []
+      if (rows.length === 0) return []
 
-    const now = Date.now()
-    return [...rows].sort(compareSessionRecency).map(function mapAgent(session) {
-      return toAgentRow(session, now)
-    })
-  }, [sessionsQuery.data])
+      const now = Date.now()
+      return [...rows]
+        .sort(compareSessionRecency)
+        .map(function mapAgent(session) {
+          return toAgentRow(session, now)
+        })
+    },
+    [sessionsQuery.data],
+  )
 
   return (
     <DashboardGlassCard
@@ -211,39 +227,51 @@ export function AgentStatusWidget({ draggable = false, onRemove }: AgentStatusWi
       tier="primary"
       description=""
       icon={UserGroupIcon}
+      titleAccessory={
+        <span className="inline-flex items-center rounded-full border border-primary-200 bg-primary-100/70 px-2 py-0.5 text-[11px] font-medium text-primary-500 tabular-nums">
+          {agents.length}
+        </span>
+      }
       draggable={draggable}
       onRemove={onRemove}
-      className="h-full"
+      className="h-full rounded-xl border-primary-200 p-4 shadow-sm [&_h2]:text-sm [&_h2]:font-semibold [&_h2]:normal-case [&_h2]:text-ink"
     >
       {agents.length === 0 ? (
-        <div className="flex h-32 flex-col items-center justify-center gap-1 rounded-lg border border-primary-200 bg-primary-100/40">
-          <span className="text-[13px] text-primary-500">No active sessions</span>
-          <span className="text-[11px] text-primary-400">Sessions will appear here when running</span>
+        <div className="flex h-32 flex-col items-center justify-center gap-1 rounded-lg border border-primary-200 bg-primary-100/45">
+          <span className="text-sm text-primary-600">No active sessions</span>
+          <span className="text-xs text-primary-400">
+            Sessions will appear here when running
+          </span>
         </div>
       ) : (
-        <div className="max-h-80 space-y-1 overflow-y-auto">
-          {agents.map(function renderAgent(agent) {
+        <div className="max-h-80 space-y-2 overflow-y-auto">
+          {agents.map(function renderAgent(agent, index) {
             const model = formatModelShort(agent.model)
             return (
               <article
                 key={agent.id}
-                className="flex items-center gap-2.5 rounded-lg border border-primary-200 bg-primary-100/40 px-3 py-2"
+                className={cn(
+                  'flex items-center gap-2.5 rounded-lg border border-primary-200 px-3.5 py-2.5 text-sm',
+                  index % 2 === 0 ? 'bg-primary-50/90' : 'bg-primary-100/55',
+                )}
               >
                 <span
                   className={cn(
                     'size-1.5 shrink-0 rounded-full',
-                    agent.status === 'running' ? 'bg-emerald-500' : 'bg-primary-300',
+                    agent.status === 'running'
+                      ? 'bg-orange-500'
+                      : 'bg-primary-300',
                   )}
                 />
-                <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-ink">
+                <span className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">
                   {agent.name}
                 </span>
                 {model ? (
-                  <span className="shrink-0 rounded border border-primary-200 bg-primary-50/80 px-1.5 py-px text-[11px] text-primary-600">
+                  <span className="shrink-0 rounded-full border border-orange-200 bg-orange-100/55 px-2 py-0.5 text-xs font-medium text-orange-700">
                     {model}
                   </span>
                 ) : null}
-                <span className="shrink-0 text-[11px] text-primary-400 tabular-nums">
+                <span className="shrink-0 font-mono text-xs text-primary-400 tabular-nums">
                   {formatRelativeAge(agent.elapsedSeconds)}
                 </span>
               </article>

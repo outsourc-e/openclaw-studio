@@ -16,17 +16,26 @@ const themeScript = `
     const stored = localStorage.getItem('openclaw-settings')
     const fallback = localStorage.getItem('chat-settings')
     let theme = 'dark'
+    let accent = 'orange'
     if (stored) {
       const parsed = JSON.parse(stored)
       const storedTheme = parsed?.state?.settings?.theme
+      const storedAccent = parsed?.state?.settings?.accentColor
       if (storedTheme === 'light' || storedTheme === 'dark' || storedTheme === 'system') {
         theme = storedTheme
+      }
+      if (storedAccent === 'orange' || storedAccent === 'purple' || storedAccent === 'blue' || storedAccent === 'green') {
+        accent = storedAccent
       }
     } else if (fallback) {
       const parsed = JSON.parse(fallback)
       const storedTheme = parsed?.state?.settings?.theme
+      const storedAccent = parsed?.state?.settings?.accentColor
       if (storedTheme === 'light' || storedTheme === 'dark' || storedTheme === 'system') {
         theme = storedTheme
+      }
+      if (storedAccent === 'orange' || storedAccent === 'purple' || storedAccent === 'blue' || storedAccent === 'green') {
+        accent = storedAccent
       }
     }
     const root = document.documentElement
@@ -34,6 +43,7 @@ const themeScript = `
     const apply = () => {
       root.classList.remove('light', 'dark', 'system')
       root.classList.add(theme)
+      root.setAttribute('data-accent', accent)
       if (theme === 'system' && media.matches) {
         root.classList.add('dark')
       }

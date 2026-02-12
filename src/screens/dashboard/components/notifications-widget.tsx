@@ -45,17 +45,24 @@ function formatRelativeTime(timestamp: number): string {
   return `${days}d ago`
 }
 
-async function fetchSessionsForNotifications(): Promise<Array<Record<string, unknown>>> {
+async function fetchSessionsForNotifications(): Promise<
+  Array<Record<string, unknown>>
+> {
   const response = await fetch('/api/sessions')
   if (!response.ok) throw new Error('Unable to load notifications')
   const payload = (await response.json()) as SessionsApiResponse
   return Array.isArray(payload.sessions) ? payload.sessions : []
 }
 
-function toNotifications(rows: Array<Record<string, unknown>>): Array<DashboardNotification> {
+function toNotifications(
+  rows: Array<Record<string, unknown>>,
+): Array<DashboardNotification> {
   return rows
     .map(function mapSession(session, index) {
-      const key = readString(session.friendlyId) || readString(session.key) || `session-${index + 1}`
+      const key =
+        readString(session.friendlyId) ||
+        readString(session.key) ||
+        `session-${index + 1}`
       const updatedAt = normalizeTimestamp(
         session.updatedAt ?? session.startedAt ?? session.createdAt,
       )
@@ -98,53 +105,71 @@ function toNotifications(rows: Array<Record<string, unknown>>): Array<DashboardN
     })
 }
 
-export function NotificationsWidget({ draggable = false, onRemove }: NotificationsWidgetProps) {
+export function NotificationsWidget({
+  draggable = false,
+  onRemove,
+}: NotificationsWidgetProps) {
   const notificationsQuery = useQuery({
     queryKey: ['dashboard', 'notifications'],
     queryFn: fetchSessionsForNotifications,
     refetchInterval: 20_000,
   })
 
-  const notifications = useMemo(function buildNotifications() {
-    const rows = Array.isArray(notificationsQuery.data) ? notificationsQuery.data : []
-    return toNotifications(rows)
-  }, [notificationsQuery.data])
+  const notifications = useMemo(
+    function buildNotifications() {
+      const rows = Array.isArray(notificationsQuery.data)
+        ? notificationsQuery.data
+        : []
+      return toNotifications(rows)
+    },
+    [notificationsQuery.data],
+  )
 
   return (
     <DashboardGlassCard
       title="Notifications"
       description="Session lifecycle events — starts, stops, and errors."
       icon={Notification03Icon}
+      titleAccessory={
+        <span className="inline-flex items-center rounded-full border border-primary-200 bg-primary-100/70 px-2 py-0.5 text-[11px] font-medium text-primary-500 tabular-nums">
+          {notifications.length}
+        </span>
+      }
       draggable={draggable}
       onRemove={onRemove}
-      className="h-full"
+      className="h-full rounded-xl border-primary-200 p-4 shadow-sm [&_h2]:text-sm [&_h2]:font-semibold [&_h2]:normal-case [&_h2]:text-ink"
     >
       {notifications.length === 0 ? (
         <div className="flex h-[150px] items-center justify-center rounded-xl border border-primary-200 bg-primary-100/50 text-sm text-primary-600 text-pretty">
           No recent activity
         </div>
       ) : (
-        <div className="max-h-[190px] space-y-1.5 overflow-y-auto pr-1">
-          {notifications.map(function mapNotification(item) {
+        <div className="max-h-[190px] space-y-2 overflow-y-auto pr-1">
+          {notifications.map(function mapNotification(item, index) {
             return (
               <article
                 key={item.id}
-                className="rounded-lg border border-primary-200 bg-primary-50/80 px-2.5 py-2"
+                className={cn(
+                  'rounded-lg border border-primary-200 px-3 py-2.5',
+                  index % 2 === 0 ? 'bg-primary-50/90' : 'bg-primary-100/55',
+                )}
               >
                 <div className="flex items-center justify-between gap-2">
                   <span
                     className={cn(
-                      'text-xs font-medium',
-                      item.label === 'Error' ? 'text-red-600' : 'text-primary-700',
+                      'text-sm font-semibold',
+                      item.label === 'Error'
+                        ? 'text-red-700'
+                        : 'text-orange-700',
                     )}
                   >
                     {item.label}
                   </span>
-                  <span className="text-[11px] text-primary-600 tabular-nums">
+                  <span className="font-mono text-xs text-primary-500 tabular-nums">
                     {formatRelativeTime(item.occurredAt)}
                   </span>
                 </div>
-                <p className="mt-1 line-clamp-2 text-xs text-primary-700 text-pretty">
+                <p className="mt-1 line-clamp-2 text-sm text-primary-600 text-pretty">
                   {item.detail}
                 </p>
               </article>

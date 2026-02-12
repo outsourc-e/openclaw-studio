@@ -53,7 +53,7 @@ function ThinkingIndicator({
             {isStreaming ? 'Thinking live' : 'Thought process'}
           </span>
           {isStreaming ? (
-            <LoadingIndicator ariaLabel="Toggle loading indicator" />
+            <LoadingIndicator ariaLabel="Assistant thinking" />
           ) : null}
           <HugeiconsIcon
             icon={ArrowDown01Icon}

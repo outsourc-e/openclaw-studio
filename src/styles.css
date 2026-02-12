@@ -49,6 +49,94 @@
   --color-ink: oklch(0.95 0.002 80);
 }
 
+[data-accent='orange'] {
+  /* Default primary palette already uses hue 80. */
+}
+
+[data-accent='purple'].dark {
+  --color-primary-50: oklch(0.14 0.005 300);
+  --color-primary-100: oklch(0.18 0.005 300);
+  --color-primary-200: oklch(0.26 0.006 300);
+  --color-primary-300: oklch(0.34 0.006 300);
+  --color-primary-400: oklch(0.44 0.006 300);
+  --color-primary-500: oklch(0.55 0.006 300);
+  --color-primary-600: oklch(0.68 0.006 300);
+  --color-primary-700: oklch(0.76 0.005 300);
+  --color-primary-800: oklch(0.84 0.004 300);
+  --color-primary-900: oklch(0.90 0.003 300);
+  --color-primary-950: oklch(0.95 0.002 300);
+}
+
+[data-accent='purple']:not(.dark) {
+  --color-primary-50: oklch(0.992 0.002 300);
+  --color-primary-100: oklch(0.9821 0 300);
+  --color-primary-200: oklch(0.9461 0 300);
+  --color-primary-300: oklch(0.95 0.004 300);
+  --color-primary-400: oklch(0.875 0.005 300);
+  --color-primary-500: oklch(0.785 0.006 300);
+  --color-primary-600: oklch(0.67 0.007 300);
+  --color-primary-700: oklch(0.56 0.006 300);
+  --color-primary-800: oklch(0.45 0.005 300);
+  --color-primary-900: oklch(0.35 0.004 300);
+  --color-primary-950: oklch(0.25 0.003 300);
+}
+
+[data-accent='blue'].dark {
+  --color-primary-50: oklch(0.14 0.005 250);
+  --color-primary-100: oklch(0.18 0.005 250);
+  --color-primary-200: oklch(0.26 0.006 250);
+  --color-primary-300: oklch(0.34 0.006 250);
+  --color-primary-400: oklch(0.44 0.006 250);
+  --color-primary-500: oklch(0.55 0.006 250);
+  --color-primary-600: oklch(0.68 0.006 250);
+  --color-primary-700: oklch(0.76 0.005 250);
+  --color-primary-800: oklch(0.84 0.004 250);
+  --color-primary-900: oklch(0.90 0.003 250);
+  --color-primary-950: oklch(0.95 0.002 250);
+}
+
+[data-accent='blue']:not(.dark) {
+  --color-primary-50: oklch(0.992 0.002 250);
+  --color-primary-100: oklch(0.9821 0 250);
+  --color-primary-200: oklch(0.9461 0 250);
+  --color-primary-300: oklch(0.95 0.004 250);
+  --color-primary-400: oklch(0.875 0.005 250);
+  --color-primary-500: oklch(0.785 0.006 250);
+  --color-primary-600: oklch(0.67 0.007 250);
+  --color-primary-700: oklch(0.56 0.006 250);
+  --color-primary-800: oklch(0.45 0.005 250);
+  --color-primary-900: oklch(0.35 0.004 250);
+  --color-primary-950: oklch(0.25 0.003 250);
+}
+
+[data-accent='green'].dark {
+  --color-primary-50: oklch(0.14 0.005 150);
+  --color-primary-100: oklch(0.18 0.005 150);
+  --color-primary-200: oklch(0.26 0.006 150);
+  --color-primary-300: oklch(0.34 0.006 150);
+  --color-primary-400: oklch(0.44 0.006 150);
+  --color-primary-500: oklch(0.55 0.006 150);
+  --color-primary-600: oklch(0.68 0.006 150);
+  --color-primary-700: oklch(0.76 0.005 150);
+  --color-primary-800: oklch(0.84 0.004 150);
+  --color-primary-900: oklch(0.90 0.003 150);
+  --color-primary-950: oklch(0.95 0.002 150);
+}
+
+[data-accent='green']:not(.dark) {
+  --color-primary-50: oklch(0.992 0.002 150);
+  --color-primary-100: oklch(0.9821 0 150);
+  --color-primary-200: oklch(0.9461 0 150);
+  --color-primary-300: oklch(0.95 0.004 150);
+  --color-primary-400: oklch(0.875 0.005 150);
+  --color-primary-500: oklch(0.785 0.006 150);
+  --color-primary-600: oklch(0.67 0.007 150);
+  --color-primary-700: oklch(0.56 0.006 150);
+  --color-primary-800: oklch(0.45 0.005 150);
+  --color-primary-900: oklch(0.35 0.004 150);
+  --color-primary-950: oklch(0.25 0.003 150);
+}
+
 .light {
   color-scheme: light;
 }
@@ -132,7 +220,31 @@ code {
   display: inline-flex;
   margin-left: 0.25rem;
   vertical-align: text-bottom;
-  cursor: pointer;
+  cursor: default;
+}
+
+.three-dots-spinner {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 0.2rem;
+  line-height: 1;
+}
+
+.three-dots-spinner-dot {
+  width: 0.325rem;
+  height: 0.325rem;
+  border-radius: 9999px;
+  background-color: var(--color-primary-500);
+  opacity: 0.42;
+  animation: threeDotsSpinnerBounce 1.15s ease-in-out infinite;
+}
+
+.three-dots-spinner-dot:nth-child(2) {
+  animation-delay: 0.14s;
+}
+
+.three-dots-spinner-dot:nth-child(3) {
+  animation-delay: 0.28s;
 }
 
 .chat-streaming-lobster {
@@ -208,6 +320,19 @@ code {
   }
 }
 
+@keyframes threeDotsSpinnerBounce {
+  0%,
+  80%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.42;
+  }
+  40% {
+    transform: translateY(-3px);
+    opacity: 0.95;
+  }
+}
+
 @keyframes logoLoaderIconBounce {
   0% {
     opacity: 0.82;
@@ -261,6 +386,7 @@ code {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .three-dots-spinner-dot,
   .chat-streaming-lobster,
   .logo-loader-icon,
   .chat-streaming-message .chat-streaming-content > :last-child,

@@ -1,6 +1,5 @@
 /**
  * Compact ambient time + weather readout for the dashboard header.
- * Bordered pill style matching "Studio Overview". Pencil icon opens inline editor.
  */
 import { Edit02Icon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
@@ -20,7 +19,8 @@ type WttrPayload = {
 function toWeatherEmoji(condition: string): string {
   const n = condition.toLowerCase()
   if (n.includes('snow') || n.includes('blizzard')) return '❄️'
-  if (n.includes('rain') || n.includes('drizzle') || n.includes('storm')) return '🌧️'
+  if (n.includes('rain') || n.includes('drizzle') || n.includes('storm'))
+    return '🌧️'
   if (n.includes('cloud') || n.includes('overcast')) return '🌤️'
   return '☀️'
 }
@@ -38,7 +38,9 @@ function deriveLocationFromTimezone(): string {
   }
 }
 
-async function fetchCompactWeather(location?: string): Promise<{ emoji: string; tempF: number } | null> {
+async function fetchCompactWeather(
+  location?: string,
+): Promise<{ emoji: string; tempF: number } | null> {
   try {
     const loc = location?.trim() || deriveLocationFromTimezone()
     const url = loc
@@ -76,7 +78,10 @@ export function HeaderAmbientStatus() {
   useEffect(() => {
     if (!editing) return
     function handleClick(e: MouseEvent) {
-      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
+      if (
+        popoverRef.current &&
+        !popoverRef.current.contains(e.target as Node)
+      ) {
         setEditing(false)
       }
     }
@@ -89,21 +94,27 @@ export function HeaderAmbientStatus() {
     if (editing) inputRef.current?.focus()
   }, [editing])
 
-  const timeStr = useMemo(function buildTimeString() {
-    return new Intl.DateTimeFormat(undefined, {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: is12h,
-    }).format(now)
-  }, [now, is12h])
+  const timeStr = useMemo(
+    function buildTimeString() {
+      return new Intl.DateTimeFormat(undefined, {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: is12h,
+      }).format(now)
+    },
+    [now, is12h],
+  )
 
-  const dateStr = useMemo(function buildDateString() {
-    return new Intl.DateTimeFormat(undefined, {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-    }).format(now)
-  }, [now])
+  const dateStr = useMemo(
+    function buildDateString() {
+      return new Intl.DateTimeFormat(undefined, {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+      }).format(now)
+    },
+    [now],
+  )
 
   const weatherQuery = useQuery({
     queryKey: ['dashboard', 'weather', settings.weatherLocation],
@@ -122,40 +133,42 @@ export function HeaderAmbientStatus() {
   }
 
   return (
-    <div className="relative hidden sm:block">
-      {/* Pill — matches Studio Overview border style */}
-      <div className="inline-flex items-center gap-2 px-1 text-[11px] text-primary-700 tabular-nums">
-        <span className="text-orange-600 dark:text-orange-400">{timeStr}</span>
-        <span className="text-primary-500">·</span>
-        <span>{dateStr}</span>
+    <div className="relative hidden text-right sm:block">
+      <div className="inline-flex items-center justify-end gap-2 rounded-full border border-primary-200 bg-primary-100/65 px-3 py-1 text-[11px] text-primary-600 tabular-nums shadow-sm">
+        <span className="font-medium text-ink">{timeStr}</span>
+        <span className="text-primary-400">·</span>
+        <span className="text-primary-600">{dateStr}</span>
         {weather ? (
           <>
-            <span className="text-primary-500">·</span>
-            <span>
+            <span className="text-primary-400">·</span>
+            <span className="text-primary-600">
               {weather.emoji}{' '}
-              <span className="text-orange-600 dark:text-orange-400">{weather.tempF}°</span>
+              <span className="font-medium text-orange-600 tabular-nums">
+                {weather.tempF}°
+              </span>
             </span>
           </>
         ) : null}
         <button
           type="button"
-          onClick={() => { setDraft(settings.weatherLocation); setEditing(!editing) }}
-          className="ml-0.5 rounded p-0.5 text-primary-600 transition-colors hover:text-primary-900 dark:hover:text-primary-100"
+          onClick={() => {
+            setDraft(settings.weatherLocation)
+            setEditing(!editing)
+          }}
+          className="ml-0.5 rounded-full p-1 text-primary-500 transition-colors hover:bg-primary-50 hover:text-orange-600"
           aria-label="Edit time and weather settings"
           title="Edit settings"
         >
-          <HugeiconsIcon icon={Edit02Icon} size={12} strokeWidth={1.5} />
+          <HugeiconsIcon icon={Edit02Icon} size={14} strokeWidth={1.5} />
         </button>
       </div>
 
-      {/* Popover editor */}
       {editing ? (
         <div
           ref={popoverRef}
-          className="absolute right-0 top-full z-[9999] mt-2 w-64 rounded-xl border border-primary-200 bg-primary-50 p-3 shadow-xl backdrop-blur-xl dark:bg-primary-100"
+          className="absolute right-0 top-full z-50 mt-2 w-64 rounded-xl border border-primary-200 bg-primary-50 p-4 shadow-lg"
         >
           <div className="space-y-3">
-            {/* Weather location */}
             <div>
               <label className="text-[11px] font-medium uppercase tracking-wide text-primary-500">
                 Weather Location
@@ -165,13 +178,14 @@ export function HeaderAmbientStatus() {
                 type="text"
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleSave() }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSave()
+                }}
                 placeholder="ZIP or city (blank = auto)"
                 className="mt-1 w-full rounded-lg border border-primary-200 bg-primary-50 px-2.5 py-1.5 text-sm text-ink placeholder:text-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400 dark:bg-primary-50"
               />
             </div>
 
-            {/* Clock format */}
             <div>
               <label className="text-[11px] font-medium uppercase tracking-wide text-primary-500">
                 Time Format
@@ -179,14 +193,18 @@ export function HeaderAmbientStatus() {
               <div className="mt-1 flex gap-1.5">
                 <button
                   type="button"
-                  onClick={() => { update({ clockFormat: '12h' }); }}
+                  onClick={() => {
+                    update({ clockFormat: '12h' })
+                  }}
                   className={`flex-1 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors ${is12h ? 'border-primary-400 bg-primary-200/60 text-ink' : 'border-primary-200 text-primary-500 hover:bg-primary-100'}`}
                 >
                   12h
                 </button>
                 <button
                   type="button"
-                  onClick={() => { update({ clockFormat: '24h' }); }}
+                  onClick={() => {
+                    update({ clockFormat: '24h' })
+                  }}
                   className={`flex-1 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors ${!is12h ? 'border-primary-400 bg-primary-200/60 text-ink' : 'border-primary-200 text-primary-500 hover:bg-primary-100'}`}
                 >
                   24h
@@ -194,11 +212,16 @@ export function HeaderAmbientStatus() {
               </div>
             </div>
 
-            {/* Save / reset */}
             <div className="flex items-center justify-between">
               <button
                 type="button"
-                onClick={() => { update({ weatherLocation: '' }); setDraft(''); void queryClient.invalidateQueries({ queryKey: ['dashboard', 'weather'] }); }}
+                onClick={() => {
+                  update({ weatherLocation: '' })
+                  setDraft('')
+                  void queryClient.invalidateQueries({
+                    queryKey: ['dashboard', 'weather'],
+                  })
+                }}
                 className="text-[11px] text-primary-400 underline-offset-2 hover:text-primary-600 hover:underline"
               >
                 Reset to auto
@@ -206,7 +229,7 @@ export function HeaderAmbientStatus() {
               <button
                 type="button"
                 onClick={handleSave}
-                className="rounded-lg bg-primary-800 px-3 py-1.5 text-xs font-medium text-primary-50 hover:bg-primary-700 dark:bg-primary-700 dark:text-primary-100 dark:hover:bg-primary-600"
+                className="rounded-lg bg-orange-600 px-3 py-1.5 text-xs font-medium text-primary-50 hover:bg-orange-700"
               >
                 Save
               </button>

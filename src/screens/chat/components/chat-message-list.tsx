@@ -23,7 +23,7 @@ import {
   ChatContainerRoot,
   ChatContainerScrollAnchor,
 } from '@/components/prompt-kit/chat-container'
-import { BrailleSpinner } from '@/components/ui/braille-spinner'
+import { LoadingIndicator } from '@/components/loading-indicator'
 import { cn } from '@/lib/utils'
 
 const VIRTUAL_ROW_HEIGHT = 136
@@ -862,7 +862,10 @@ function ChatMessageListComponent({
         )}
         {showTypingIndicator ? (
           <div className="flex items-center gap-2 py-2 px-1">
-            <BrailleSpinner preset="claw" size={20} speed={120} className="text-primary-500" />
+            <LoadingIndicator
+              ariaLabel="Assistant is thinking"
+              className="!ml-0"
+            />
             <span className="text-xs text-primary-400 animate-pulse">Thinking…</span>
           </div>
         ) : null}

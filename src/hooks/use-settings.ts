@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { applyAccentColor } from '@/lib/accent-colors'
 
 export type SettingsThemeMode = 'system' | 'light' | 'dark'
 export type AccentColor = 'orange' | 'purple' | 'blue' | 'green'
@@ -99,3 +100,33 @@ export function applyTheme(theme: SettingsThemeMode) {
     root.classList.add('dark')
   }
 }
+
+function applySettingsAppearance(settings: StudioSettings) {
+  applyTheme(settings.theme)
+  applyAccentColor(settings.accentColor)
+}
+
+let didInitializeSettingsAppearance = false
+
+function initializeSettingsAppearance() {
+  if (didInitializeSettingsAppearance) return
+  if (typeof window === 'undefined') return
+
+  didInitializeSettingsAppearance = true
+  applySettingsAppearance(useSettingsStore.getState().settings)
+
+  useSettingsStore.subscribe(function handleSettingsChange(state, previousState) {
+    const nextSettings = state.settings
+    const previousSettings = previousState.settings
+
+    if (nextSettings.theme !== previousSettings.theme) {
+      applyTheme(nextSettings.theme)
+    }
+
+    if (nextSettings.accentColor !== previousSettings.accentColor) {
+      applyAccentColor(nextSettings.accentColor)
+    }
+  })
+}
+
+initializeSettingsAppearance()

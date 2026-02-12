@@ -79,7 +79,8 @@ function readString(value: unknown): string {
 }
 
 function toRecord(value: unknown): Record<string, unknown> {
-  if (value && typeof value === 'object') return value as Record<string, unknown>
+  if (value && typeof value === 'object')
+    return value as Record<string, unknown>
   return {}
 }
 
@@ -95,7 +96,10 @@ function formatUsd(amount: number): string {
 function formatMonthDay(dateIso: string): string {
   const value = new Date(dateIso)
   if (Number.isNaN(value.getTime())) return 'N/A'
-  return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(value)
+  return new Intl.DateTimeFormat(undefined, {
+    month: 'short',
+    day: 'numeric',
+  }).format(value)
 }
 
 function sumAmounts(points: Array<CostPoint>): number {
@@ -159,8 +163,7 @@ function parseCostPayload(payload: unknown): CostTrackerData {
     })
 
   const totalAmountRaw = readNumber(total.amount)
-  const totalAmount =
-    totalAmountRaw > 0 ? totalAmountRaw : sumAmounts(points)
+  const totalAmount = totalAmountRaw > 0 ? totalAmountRaw : sumAmounts(points)
 
   return {
     totalAmount,
@@ -176,9 +179,7 @@ function parseErrorMessage(payload: CostApiResponse): string {
 async function fetchCost(): Promise<CostQueryResult> {
   try {
     const response = await fetch('/api/cost')
-    const payload = (await response
-      .json()
-      .catch(() => ({}))) as CostApiResponse
+    const payload = (await response.json().catch(() => ({}))) as CostApiResponse
 
     if (response.status === 501 || payload.unavailable) {
       return {
@@ -272,7 +273,10 @@ function getSparklinePoints(points: Array<CostPoint>): {
   }
 }
 
-export function CostTrackerWidget({ draggable = false, onRemove }: CostTrackerWidgetProps) {
+export function CostTrackerWidget({
+  draggable = false,
+  onRemove,
+}: CostTrackerWidgetProps) {
   const costQuery = useQuery({
     queryKey: ['dashboard', 'cost'],
     queryFn: fetchCost,
@@ -296,6 +300,7 @@ export function CostTrackerWidget({ draggable = false, onRemove }: CostTrackerWi
   })
 
   const providers = providerQuery.data?.providers ?? []
+  const providerCount = providers.length
 
   const queryResult = costQuery.data
   const costData = queryResult?.kind === 'ok' ? queryResult.data : null
@@ -312,48 +317,62 @@ export function CostTrackerWidget({ draggable = false, onRemove }: CostTrackerWi
       tier="primary"
       description=""
       icon={MoneyBag02Icon}
+      titleAccessory={
+        <span className="inline-flex items-center rounded-full border border-primary-200 bg-primary-100/70 px-2 py-0.5 text-[11px] font-medium text-primary-500 tabular-nums">
+          {providerCount}
+        </span>
+      }
       draggable={draggable}
       onRemove={onRemove}
-      className="h-full"
+      className="h-full rounded-xl border-primary-200 p-4 shadow-sm [&_h2]:text-sm [&_h2]:font-semibold [&_h2]:normal-case [&_h2]:text-ink"
     >
       {queryResult?.kind === 'unavailable' ? (
-        <div className="rounded-lg border border-primary-200 bg-primary-100/40 p-4 text-sm text-primary-700 text-pretty">
+        <div className="rounded-lg border border-primary-200 bg-primary-100/45 p-4 text-sm text-primary-600 text-pretty">
           {queryResult.message}
         </div>
       ) : queryResult?.kind === 'error' ? (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600 dark:border-red-800 dark:bg-red-950/40 dark:text-red-400 text-pretty">
+        <div className="rounded-lg border border-red-200 bg-red-50/80 p-4 text-sm text-red-700 text-pretty">
           {queryResult.message}
         </div>
       ) : !costData ? (
-        <div className="rounded-lg border border-primary-200 bg-primary-100/40 p-4 text-sm text-primary-700 text-pretty">
+        <div className="rounded-lg border border-primary-200 bg-primary-100/45 p-4 text-sm text-primary-600 text-pretty">
           Loading cost data...
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="rounded-lg border border-primary-200 bg-primary-100/40 px-3 py-2">
-            <p className="text-[11px] font-medium uppercase tracking-wide text-primary-500">Period Spend</p>
-            <p className="text-2xl font-bold text-ink tabular-nums">
+          <div className="rounded-lg border border-primary-200 bg-primary-100/55 px-4 py-3">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-primary-500">
+              Period Spend
+            </p>
+            <p className="mt-1 font-mono text-2xl font-bold text-ink tabular-nums">
               {formatUsd(costData.totalAmount)}
             </p>
           </div>
 
           <div className="grid grid-cols-3 gap-2">
-            {metrics.map(function mapMetric(metric) {
+            {metrics.map(function mapMetric(metric, index) {
               const isPositive = metric.changePercent >= 0
 
               return (
                 <div
                   key={metric.label}
-                  className="rounded-lg border border-primary-200 bg-primary-100/40 px-3 py-2.5"
+                  className={cn(
+                    'rounded-lg border border-primary-200 px-3.5 py-3',
+                    index % 2 === 0 ? 'bg-primary-50/90' : 'bg-primary-100/55',
+                  )}
                 >
-                  <p className="text-[11px] text-primary-600 text-balance">{metric.label}</p>
-                  <p className="mt-1 text-lg font-medium text-ink tabular-nums">{metric.amountLabel}</p>
+                  <p className="text-xs text-primary-600 text-balance">
+                    {metric.label}
+                  </p>
+                  <p className="mt-1 font-mono text-lg font-semibold text-ink tabular-nums">
+                    {metric.amountLabel}
+                  </p>
                   <span
                     className={cn(
-                      'mt-2 inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium tabular-nums',
+                      'mt-2 inline-flex items-center rounded-md border px-2 py-0.5 font-mono text-xs font-medium tabular-nums',
                       isPositive
-                        ? 'border-green-500/30 bg-green-500/12 text-green-600'
-                        : 'border-red-500/30 bg-red-500/12 text-red-600',
+                        ? 'border-orange-300 bg-orange-100/60 text-orange-700'
+                        : 'border-red-300 bg-red-100/70 text-red-700',
                     )}
                   >
                     {formatChangeLabel(metric.changePercent)}
@@ -363,9 +382,9 @@ export function CostTrackerWidget({ draggable = false, onRemove }: CostTrackerWi
             })}
           </div>
 
-          <div className="rounded-lg border border-primary-200 bg-primary-100/40 p-3">
+          <div className="rounded-lg border border-primary-200 bg-primary-100/45 p-3">
             {sparkline.values.length === 0 ? (
-              <div className="h-28 rounded-lg border border-primary-200 bg-primary-50/60 p-3 text-sm text-primary-700 text-pretty">
+              <div className="h-28 rounded-lg border border-primary-200 bg-primary-50/70 p-3 text-sm text-primary-600 text-pretty">
                 No cost history reported by the Gateway yet.
               </div>
             ) : (
@@ -380,13 +399,13 @@ export function CostTrackerWidget({ draggable = false, onRemove }: CostTrackerWi
                   <path
                     d={pathData}
                     fill="none"
-                    className="stroke-amber-500"
+                    className="stroke-orange-600"
                     strokeWidth="2"
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   />
                 </svg>
-                <div className="mt-1 flex items-center justify-between text-[11px] text-primary-600 tabular-nums">
+                <div className="mt-1 flex items-center justify-between font-mono text-xs text-primary-500 tabular-nums">
                   <span className="text-pretty">{sparkline.labels[0]}</span>
                   <span className="text-pretty">{sparkline.labels[1]}</span>
                 </div>
@@ -400,70 +419,107 @@ export function CostTrackerWidget({ draggable = false, onRemove }: CostTrackerWi
               <p className="text-[11px] font-medium uppercase tracking-wide text-primary-500">
                 Providers
               </p>
-              {providers.map((provider) => (
+              {providers.map((provider, index) => (
                 <div
                   key={provider.provider}
-                  className="rounded-lg border border-primary-200 bg-primary-100/40 px-3 py-2.5"
+                  className={cn(
+                    'rounded-lg border border-primary-200 px-3.5 py-3',
+                    index % 2 === 0 ? 'bg-primary-50/90' : 'bg-primary-100/55',
+                  )}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-[13px] font-medium text-ink">{provider.displayName}</span>
+                      <span className="text-sm font-semibold text-ink">
+                        {provider.displayName}
+                      </span>
                       {provider.plan && (
-                        <span className="rounded-full bg-primary-200/60 px-1.5 py-0.5 text-[10px] font-medium text-primary-700">
+                        <span className="rounded-full border border-orange-200 bg-orange-100/55 px-1.5 py-0.5 text-[10px] font-medium text-orange-700">
                           {provider.plan}
                         </span>
                       )}
                     </div>
                     <span
                       className={cn(
-                        'rounded-full px-1.5 py-0.5 text-[10px] font-medium',
+                        'rounded-full px-2 py-0.5 text-[10px] font-medium',
                         provider.status === 'ok'
-                          ? 'bg-emerald-100 text-emerald-700'
+                          ? 'bg-orange-100 text-orange-700'
                           : provider.status === 'auth_expired'
-                            ? 'bg-amber-100 text-amber-700'
+                            ? 'bg-primary-200/70 text-primary-700'
                             : 'bg-red-100 text-red-700',
                       )}
                     >
-                      {provider.status === 'ok' ? 'Connected' : provider.status === 'auth_expired' ? 'Expired' : 'Error'}
+                      {provider.status === 'ok'
+                        ? 'Connected'
+                        : provider.status === 'auth_expired'
+                          ? 'Expired'
+                          : 'Error'}
                     </span>
                   </div>
                   {provider.status === 'ok' && provider.lines.length > 0 && (
                     <div className="mt-2 space-y-2">
                       {provider.lines.map((line, i) => {
-                        if (line.type === 'progress' && line.used !== undefined && line.limit !== undefined) {
-                          const pct = Math.min((line.used / line.limit) * 100, 100)
+                        if (
+                          line.type === 'progress' &&
+                          line.used !== undefined &&
+                          line.limit !== undefined
+                        ) {
+                          const pct = Math.min(
+                            (line.used / line.limit) * 100,
+                            100,
+                          )
                           const barColor =
-                            pct >= 90 ? 'bg-red-500' : pct >= 75 ? 'bg-amber-500' : pct >= 50 ? 'bg-yellow-500' : 'bg-emerald-500'
+                            pct >= 90
+                              ? 'bg-red-500'
+                              : pct >= 75
+                                ? 'bg-orange-500'
+                                : 'bg-orange-400'
                           return (
                             <div key={`${line.label}-${i}`}>
-                              <div className="flex items-center justify-between text-[11px]">
-                                <span className="text-primary-600">{line.label}</span>
-                                <span className="font-medium text-ink tabular-nums">
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="text-primary-600">
+                                  {line.label}
+                                </span>
+                                <span className="font-mono font-medium text-ink tabular-nums">
                                   {line.format === 'dollars'
                                     ? `$${line.used.toFixed(2)} / $${line.limit.toFixed(2)}`
                                     : `${Math.round(line.used)}%`}
                                 </span>
                               </div>
                               <div className="mt-1 h-1.5 w-full rounded-full bg-primary-200/60">
-                                <div className={`h-1.5 rounded-full transition-all ${barColor}`} style={{ width: `${pct}%` }} />
+                                <div
+                                  className={`h-1.5 rounded-full transition-all ${barColor}`}
+                                  style={{ width: `${pct}%` }}
+                                />
                               </div>
                             </div>
                           )
                         }
                         if (line.type === 'badge') {
                           return (
-                            <div key={`${line.label}-${i}`} className="flex items-center gap-1.5 text-[11px]">
-                              <span className="text-primary-600">{line.label}</span>
-                              <span className="rounded-full border border-primary-200 bg-primary-100/70 px-1.5 py-0.5 text-[10px] font-medium text-primary-700 dark:border-primary-300 dark:bg-primary-200/50 dark:text-primary-800">
+                            <div
+                              key={`${line.label}-${i}`}
+                              className="flex items-center gap-1.5 text-xs"
+                            >
+                              <span className="text-primary-600">
+                                {line.label}
+                              </span>
+                              <span className="rounded-full border border-primary-200 bg-primary-100/70 px-1.5 py-0.5 font-mono text-[10px] font-medium text-primary-700">
                                 {line.value ?? '—'}
                               </span>
                             </div>
                           )
                         }
                         return (
-                          <div key={`${line.label}-${i}`} className="flex items-center justify-between text-[11px]">
-                            <span className="text-primary-600">{line.label}</span>
-                            <span className="font-medium text-ink">{line.value ?? '—'}</span>
+                          <div
+                            key={`${line.label}-${i}`}
+                            className="flex items-center justify-between text-xs"
+                          >
+                            <span className="text-primary-600">
+                              {line.label}
+                            </span>
+                            <span className="font-mono font-medium text-ink">
+                              {line.value ?? '—'}
+                            </span>
                           </div>
                         )
                       })}

@@ -11,7 +11,7 @@ import {
   getChatProfileDisplayName,
   useChatSettings,
 } from '@/hooks/use-chat-settings'
-import type { ThemeMode } from '@/hooks/use-chat-settings'
+import type { LoaderStyle, ThemeMode } from '@/hooks/use-chat-settings'
 import {
   DialogClose,
   DialogContent,
@@ -25,9 +25,30 @@ import { useSettings } from '@/hooks/use-settings'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { UserAvatar } from '@/components/avatars'
+import { LogoLoader } from '@/components/logo-loader'
+import { BrailleSpinner } from '@/components/ui/braille-spinner'
+import type { BrailleSpinnerPreset } from '@/components/ui/braille-spinner'
+import { ThreeDotsSpinner } from '@/components/ui/three-dots-spinner'
+import { cn } from '@/lib/utils'
 
 const PROFILE_IMAGE_MAX_DIMENSION = 128
 const PROFILE_IMAGE_MAX_FILE_SIZE = 10 * 1024 * 1024
+
+type LoaderStyleOption = {
+  value: LoaderStyle
+  label: string
+}
+
+const LOADER_STYLE_OPTIONS: Array<LoaderStyleOption> = [
+  { value: 'dots', label: 'Dots' },
+  { value: 'braille-claw', label: 'Braille Claw' },
+  { value: 'braille-orbit', label: 'Braille Orbit' },
+  { value: 'braille-breathe', label: 'Braille Breathe' },
+  { value: 'braille-pulse', label: 'Braille Pulse' },
+  { value: 'braille-wave', label: 'Braille Wave' },
+  { value: 'lobster', label: 'Lobster' },
+  { value: 'logo', label: 'Logo' },
+]
 
 function isAcceptedProfileImage(file: File): boolean {
   return file.type.startsWith('image/')
@@ -136,6 +157,53 @@ function SettingsRow({ label, description, children }: SettingsRowProps) {
       </div>
       <div className="flex items-center gap-2">{children}</div>
     </div>
+  )
+}
+
+function getLoaderBraillePreset(loaderStyle: LoaderStyle): BrailleSpinnerPreset | null {
+  if (loaderStyle === 'braille-claw') return 'claw'
+  if (loaderStyle === 'braille-orbit') return 'orbit'
+  if (loaderStyle === 'braille-breathe') return 'breathe'
+  if (loaderStyle === 'braille-pulse') return 'pulse'
+  if (loaderStyle === 'braille-wave') return 'wave'
+  return null
+}
+
+type LoaderPreviewProps = {
+  loaderStyle: LoaderStyle
+}
+
+function LoaderPreview({ loaderStyle }: LoaderPreviewProps) {
+  if (loaderStyle === 'dots') {
+    return <ThreeDotsSpinner />
+  }
+
+  if (loaderStyle === 'lobster') {
+    return (
+      <span className="inline-block leading-none text-sm animate-pulse" aria-hidden="true">
+        🦞
+      </span>
+    )
+  }
+
+  if (loaderStyle === 'logo') {
+    return <LogoLoader />
+  }
+
+  const braillePreset = getLoaderBraillePreset(loaderStyle)
+  if (!braillePreset) {
+    return <ThreeDotsSpinner />
+  }
+
+  return (
+    <span aria-hidden="true">
+      <BrailleSpinner
+        preset={braillePreset}
+        size={16}
+        speed={120}
+        className="text-primary-500"
+      />
+    </span>
   )
 }
 
@@ -368,6 +436,38 @@ export function SettingsDialog({
                   </TabsList>
                 </Tabs>
               </SettingsRow>
+            </SettingsSection>
+
+            <SettingsSection title="Loading Animation">
+              <p className="text-xs text-primary-500 text-pretty">
+                Choose the animation shown while the assistant is streaming.
+              </p>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {LOADER_STYLE_OPTIONS.map((option) => {
+                  const isActive = settings.loaderStyle === option.value
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => updateSettings({ loaderStyle: option.value })}
+                      className={cn(
+                        'flex min-h-16 flex-col items-center justify-center gap-2 rounded-md border px-2 py-2 transition-colors',
+                        isActive
+                          ? 'border-primary-500 bg-primary-100 text-primary-900'
+                          : 'border-primary-200 bg-primary-50 text-primary-700 hover:bg-primary-100',
+                      )}
+                      aria-pressed={isActive}
+                    >
+                      <span className="flex h-5 items-center justify-center">
+                        <LoaderPreview loaderStyle={option.value} />
+                      </span>
+                      <span className="text-[11px] font-medium text-center text-pretty leading-4">
+                        {option.label}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
             </SettingsSection>
 
             <SettingsSection title="Chat">

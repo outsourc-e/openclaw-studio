@@ -37,30 +37,36 @@ export function HeroMetricsRow({
   totalSpend,
 }: HeroMetricsRowProps) {
   const metrics: Array<HeroMetric> = [
-    { label: 'Total Sessions', value: `${totalSessions}`, icon: Activity01Icon },
+    {
+      label: 'Total Sessions',
+      value: `${totalSessions}`,
+      icon: Activity01Icon,
+    },
     { label: 'Active Agents', value: `${activeAgents}`, icon: UserGroupIcon },
     { label: 'Uptime', value: formatUptime(uptimeSeconds), icon: Timer02Icon },
     { label: 'Cost', value: totalSpend, icon: ChartLineData02Icon },
   ]
 
   return (
-    <div className="mb-3 grid grid-cols-2 gap-2 md:grid-cols-4">
+    <div className="mb-4 grid grid-cols-2 gap-4 md:grid-cols-4">
       {metrics.map((m) => (
         <div
           key={m.label}
-          className="flex items-center gap-2.5 rounded-lg border border-primary-300 bg-primary-50/95 px-3 py-2.5 dark:border-primary-200 dark:bg-primary-50/90"
+          className="group flex items-center gap-3 rounded-xl border border-primary-200 bg-primary-50 px-4 py-3.5 shadow-sm transition-transform duration-150 hover:-translate-y-[1px]"
         >
-          <HugeiconsIcon
-            icon={m.icon}
-            size={15}
-            strokeWidth={1.5}
-            className="shrink-0 text-orange-600 dark:text-orange-400"
-          />
+          <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-lg bg-orange-100/70">
+            <HugeiconsIcon
+              icon={m.icon}
+              size={20}
+              strokeWidth={1.5}
+              className="shrink-0 text-orange-600"
+            />
+          </span>
           <div className="min-w-0">
-            <p className="truncate text-base font-medium tabular-nums text-orange-600 leading-tight dark:text-orange-400">
+            <p className="truncate text-2xl font-bold font-mono tabular-nums text-ink leading-none">
               {m.value}
             </p>
-            <p className="text-[10px] uppercase tracking-wide text-primary-700 leading-tight dark:text-primary-700">
+            <p className="mt-1 text-xs uppercase tracking-wider text-primary-500">
               {m.label}
             </p>
           </div>

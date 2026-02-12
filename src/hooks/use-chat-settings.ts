@@ -3,12 +3,22 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
 export type ThemeMode = 'system' | 'light' | 'dark'
+export type LoaderStyle =
+  | 'dots'
+  | 'braille-claw'
+  | 'braille-orbit'
+  | 'braille-breathe'
+  | 'braille-pulse'
+  | 'braille-wave'
+  | 'lobster'
+  | 'logo'
 export const DEFAULT_CHAT_DISPLAY_NAME = 'User'
 
 export type ChatSettings = {
   showToolMessages: boolean
   showReasoningBlocks: boolean
   theme: ThemeMode
+  loaderStyle: LoaderStyle
   displayName: string
   avatarDataUrl: string | null
 }
@@ -23,6 +33,7 @@ function defaultChatSettings(): ChatSettings {
     showToolMessages: false,
     showReasoningBlocks: false,
     theme: 'dark',
+    loaderStyle: 'dots',
     displayName: DEFAULT_CHAT_DISPLAY_NAME,
     avatarDataUrl: null,
   }

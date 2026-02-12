@@ -6,7 +6,7 @@ import { useCallback, useState } from 'react'
 import type { WidgetId } from '../constants/grid-config'
 import { WIDGET_REGISTRY } from '../constants/grid-config'
 
-const STORAGE_KEY = 'openclaw-dashboard-visible-widgets-v2'
+const STORAGE_KEY = 'openclaw-dashboard-visible-widgets-v3'
 
 /** Widgets hidden by default — available via Widgets menu */
 const HIDDEN_BY_DEFAULT: WidgetId[] = ['notifications']

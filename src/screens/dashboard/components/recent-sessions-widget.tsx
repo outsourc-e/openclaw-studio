@@ -8,6 +8,7 @@ import type { SessionMeta } from '@/screens/chat/types'
 import { Button } from '@/components/ui/button'
 import { chatQueryKeys, fetchSessions } from '@/screens/chat/chat-queries'
 import { getMessageTimestamp, textFromMessage } from '@/screens/chat/utils'
+import { cn } from '@/lib/utils'
 
 type RecentSessionsWidgetProps = {
   onOpenSession: (sessionKey: string) => void
@@ -42,7 +43,9 @@ function toSessionTitle(session: SessionMeta): string {
   if (title) return title
   const derived = cleanTitle(session.derivedTitle ?? '')
   if (derived) return derived
-  return session.friendlyId === 'main' ? 'Main Session' : `Session ${session.friendlyId}`
+  return session.friendlyId === 'main'
+    ? 'Main Session'
+    : `Session ${session.friendlyId}`
 }
 
 function toSessionPreview(session: SessionMeta): string {
@@ -53,7 +56,8 @@ function toSessionPreview(session: SessionMeta): string {
     }
   }
   const title = (session.label ?? session.title ?? '').toLowerCase()
-  if (title.startsWith('cron:') || title.includes('cron')) return 'Scheduled task'
+  if (title.startsWith('cron:') || title.includes('cron'))
+    return 'Scheduled task'
   return 'New session'
 }
 
@@ -74,23 +78,26 @@ export function RecentSessionsWidget({
     refetchInterval: 30_000,
   })
 
-  const sessions = useMemo(function buildRecentSessions() {
-    const rows = Array.isArray(sessionsQuery.data) ? sessionsQuery.data : []
+  const sessions = useMemo(
+    function buildRecentSessions() {
+      const rows = Array.isArray(sessionsQuery.data) ? sessionsQuery.data : []
 
-    return [...rows]
-      .sort(function sortByMostRecent(a, b) {
-        return toSessionUpdatedAt(b) - toSessionUpdatedAt(a)
-      })
-      .slice(0, 5)
-      .map(function mapSession(session): RecentSession {
-        return {
-          friendlyId: session.friendlyId,
-          title: toSessionTitle(session),
-          preview: toSessionPreview(session),
-          updatedAt: toSessionUpdatedAt(session),
-        }
-      })
-  }, [sessionsQuery.data])
+      return [...rows]
+        .sort(function sortByMostRecent(a, b) {
+          return toSessionUpdatedAt(b) - toSessionUpdatedAt(a)
+        })
+        .slice(0, 5)
+        .map(function mapSession(session): RecentSession {
+          return {
+            friendlyId: session.friendlyId,
+            title: toSessionTitle(session),
+            preview: toSessionPreview(session),
+            updatedAt: toSessionUpdatedAt(session),
+          }
+        })
+    },
+    [sessionsQuery.data],
+  )
 
   const isLoading = sessionsQuery.isLoading && sessions.length === 0
 
@@ -99,42 +106,57 @@ export function RecentSessionsWidget({
       title="Recent Sessions"
       description=""
       icon={Clock01Icon}
+      titleAccessory={
+        <span className="inline-flex items-center rounded-full border border-primary-200 bg-primary-100/70 px-2 py-0.5 text-[11px] font-medium text-primary-500 tabular-nums">
+          {sessions.length}
+        </span>
+      }
       draggable={draggable}
       onRemove={onRemove}
-      className="h-full"
+      className="h-full rounded-xl border-primary-200 p-4 shadow-sm [&_h2]:text-sm [&_h2]:font-semibold [&_h2]:normal-case [&_h2]:text-ink"
     >
       {isLoading ? (
-        <div className="flex h-32 items-center justify-center rounded-lg border border-primary-200 bg-primary-100/40 text-xs text-primary-500">
+        <div className="flex h-32 items-center justify-center rounded-lg border border-primary-200 bg-primary-100/45 text-sm text-primary-600">
           Loading sessions...
         </div>
       ) : sessions.length === 0 ? (
-        <div className="flex h-32 items-center justify-center rounded-lg border border-primary-200 bg-primary-100/40 text-xs text-primary-500">
+        <div className="flex h-32 items-center justify-center rounded-lg border border-primary-200 bg-primary-100/45 text-sm text-primary-600">
           No sessions yet
         </div>
       ) : (
-        <div className="space-y-2">
-          {sessions.map(function mapSession(session) {
+        <div className="space-y-2.5">
+          {sessions.map(function mapSession(session, index) {
             return (
               <Button
                 key={session.friendlyId}
                 variant="outline"
-                className="group h-auto w-full flex-col items-start rounded-xl border-primary-200 bg-primary-50/80 px-3 py-2.5 transition-colors hover:bg-primary-100/70"
+                className={cn(
+                  'group h-auto w-full flex-col items-start rounded-lg border border-primary-200 px-3.5 py-3 text-left shadow-sm transition-all hover:-translate-y-[1px] hover:border-orange-200',
+                  index % 2 === 0
+                    ? 'bg-primary-50/90 hover:bg-primary-50'
+                    : 'bg-primary-100/55 hover:bg-primary-100/70',
+                )}
                 onClick={function onSessionClick() {
                   onOpenSession(session.friendlyId)
                 }}
               >
                 <div className="flex w-full items-center justify-between gap-3">
-                  <span className="line-clamp-1 text-sm font-medium text-ink text-balance">
+                  <span className="line-clamp-1 text-sm font-semibold text-ink text-balance">
                     {session.title}
                   </span>
                   <span className="flex shrink-0 items-center gap-1">
-                    <span className="text-[11px] text-primary-600 tabular-nums">
+                    <span className="font-mono text-xs text-primary-500 tabular-nums">
                       {formatSessionTimestamp(session.updatedAt)}
                     </span>
-                    <HugeiconsIcon icon={ArrowRight01Icon} size={12} strokeWidth={1.5} className="text-primary-300 opacity-0 transition-opacity group-hover:opacity-100" />
+                    <HugeiconsIcon
+                      icon={ArrowRight01Icon}
+                      size={14}
+                      strokeWidth={1.5}
+                      className="text-orange-500 opacity-0 transition-opacity group-hover:opacity-100"
+                    />
                   </span>
                 </div>
-                <p className="mt-1 line-clamp-2 w-full text-left text-xs text-primary-600 text-pretty">
+                <p className="mt-1 line-clamp-2 w-full text-left text-sm text-primary-600 text-pretty">
                   {session.preview}
                 </p>
               </Button>

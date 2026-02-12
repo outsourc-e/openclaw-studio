@@ -52,6 +52,10 @@ export const SIZE_TIERS: Record<WidgetSizeTier, TierDimensions> = {
 
 /* ── Widget Registry ── */
 export type WidgetId =
+  | 'quick-actions'
+  | 'system-info'
+  | 'skills'
+  | 'model-usage-chart'
   | 'usage-meter'
   | 'tasks'
   | 'agent-status'
@@ -68,6 +72,11 @@ type WidgetRegistryEntry = {
 }
 
 export const WIDGET_REGISTRY: Array<WidgetRegistryEntry> = [
+  // ── Quick controls ──
+  { id: 'quick-actions', defaultTier: 'S', allowedTiers: ['S', 'M'] },
+  { id: 'system-info', defaultTier: 'S', allowedTiers: ['S', 'M'] },
+  { id: 'skills', defaultTier: 'M', allowedTiers: ['M', 'L'] },
+  { id: 'model-usage-chart', defaultTier: 'M', allowedTiers: ['M', 'L'] },
   // ── Above fold: Operational truth ──
   { id: 'agent-status', defaultTier: 'M', allowedTiers: ['M', 'L'] },
   { id: 'cost-tracker', defaultTier: 'M', allowedTiers: ['M', 'L'] },
@@ -139,20 +148,20 @@ function buildFlowLayout(breakpoint: keyof typeof GRID_COLS): Layout {
 function buildLgLayout(): Layout {
   const c = (_id: WidgetId, tier: WidgetSizeTier) => tierConstraints(tier, 'lg')
   return [
-    // ── Above fold: Operational truth ──
-    // Row 0: Active Agents (6) + Cost Tracker (6)
-    { i: 'agent-status', x: 0, y: 0, ...c('agent-status', 'M') },
-    { i: 'cost-tracker', x: 6, y: 0, ...c('cost-tracker', 'M') },
-    // Row 1: Usage Meter (6) + Recent Sessions (6)
-    { i: 'usage-meter', x: 0, y: 5, ...c('usage-meter', 'M') },
-    { i: 'recent-sessions', x: 6, y: 5, ...c('recent-sessions', 'M') },
-    // ── Mid: Streams ──
-    // Row 2: Activity Log (6) + Notifications (6)
-    { i: 'activity-log', x: 0, y: 10, ...c('activity-log', 'M') },
-    { i: 'notifications', x: 6, y: 10, ...c('notifications', 'M') },
-    // ── Below fold ──
-    // Row 3: Tasks Demo (6)
-    { i: 'tasks', x: 0, y: 15, ...c('tasks', 'M') },
+    // ── Top: Launch + telemetry ──
+    { i: 'quick-actions', x: 0, y: 0, ...c('quick-actions', 'S') },
+    { i: 'system-info', x: 3, y: 0, ...c('system-info', 'S') },
+    { i: 'model-usage-chart', x: 6, y: 0, ...c('model-usage-chart', 'M') },
+    { i: 'skills', x: 0, y: 3, ...c('skills', 'M') },
+    // ── Operational truth ──
+    { i: 'agent-status', x: 6, y: 5, ...c('agent-status', 'M') },
+    { i: 'cost-tracker', x: 0, y: 8, ...c('cost-tracker', 'M') },
+    { i: 'usage-meter', x: 6, y: 10, ...c('usage-meter', 'M') },
+    { i: 'recent-sessions', x: 0, y: 13, ...c('recent-sessions', 'M') },
+    // ── Stream + backlog ──
+    { i: 'activity-log', x: 6, y: 15, ...c('activity-log', 'M') },
+    { i: 'notifications', x: 0, y: 18, ...c('notifications', 'M') },
+    { i: 'tasks', x: 6, y: 20, ...c('tasks', 'M') },
   ] as Layout
 }
 
@@ -164,7 +173,7 @@ export const DEFAULT_LAYOUTS: ResponsiveLayouts = {
 }
 
 /* ── Layout Persistence ── */
-const LAYOUT_STORAGE_KEY = 'openclaw-dashboard-layouts-v3'
+const LAYOUT_STORAGE_KEY = 'openclaw-dashboard-layouts-v4'
 const LEGACY_LAYOUT_STORAGE_KEY = 'openclaw-dashboard-layout'
 
 const BREAKPOINT_KEYS = Object.keys(GRID_COLS) as Array<keyof typeof GRID_COLS>
