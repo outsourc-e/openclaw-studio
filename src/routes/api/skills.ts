@@ -488,31 +488,48 @@ async function collectInstalledSkillEntries(): Promise<
     return entries
   }
 
+  async function collectSkillFoldersRecursively(basePath: string): Promise<Array<string>> {
+    const folders: Array<string> = []
+    const stack: Array<string> = [basePath]
+
+    while (stack.length > 0) {
+      const current = stack.pop()
+      if (!current) break
+
+      const skillPath = path.join(current, 'SKILL.md')
+      if (await pathExists(skillPath)) {
+        folders.push(current)
+      }
+
+      const nestedDirs = await fs.readdir(current, { withFileTypes: true }).catch(() => [])
+      for (const nested of nestedDirs) {
+        if (!nested.isDirectory() || nested.name.startsWith('.')) continue
+        stack.push(path.join(current, nested.name))
+      }
+    }
+
+    return folders
+  }
+
   const dirs = await fs.readdir(INSTALLED_ROOT, { withFileTypes: true })
+  const seen = new Set<string>()
 
   for (const dir of dirs) {
     if (!dir.isDirectory() || dir.name.startsWith('.')) continue
-
-    const directSkillPath = path.join(INSTALLED_ROOT, dir.name, 'SKILL.md')
-    if (await pathExists(directSkillPath)) {
-      entries.push({
-        id: dir.name,
-        owner: dir.name,
-        folderPath: path.join(INSTALLED_ROOT, dir.name),
-      })
-      continue
-    }
-
     const nestedBase = path.join(INSTALLED_ROOT, dir.name)
-    const nestedDirs = await fs.readdir(nestedBase, { withFileTypes: true })
-    for (const nested of nestedDirs) {
-      if (!nested.isDirectory() || nested.name.startsWith('.')) continue
-      const nestedSkillPath = path.join(nestedBase, nested.name, 'SKILL.md')
-      if (!(await pathExists(nestedSkillPath))) continue
+    const skillFolders = await collectSkillFoldersRecursively(nestedBase)
+
+    for (const folderPath of skillFolders) {
+      const relativePath = path.relative(INSTALLED_ROOT, folderPath)
+      if (!relativePath || relativePath.startsWith('..')) continue
+      const id = relativePath.split(path.sep).join('/')
+      if (seen.has(id)) continue
+
+      seen.add(id)
       entries.push({
-        id: `${dir.name}/${nested.name}`,
+        id,
         owner: dir.name,
-        folderPath: path.join(nestedBase, nested.name),
+        folderPath,
       })
     }
   }
