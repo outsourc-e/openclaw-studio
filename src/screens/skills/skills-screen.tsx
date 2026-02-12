@@ -423,9 +423,11 @@ export function SkillsScreen() {
                 <DialogDescription className="mt-1 text-pretty">
                   by {selectedSkill.author} • {selectedSkill.category} • {selectedSkill.fileCount.toLocaleString()} files
                 </DialogDescription>
-                <div className="mt-2">
-                  <SecurityBadge security={selectedSkill.security} />
-                </div>
+                {selectedSkill.security && (
+                  <div className="mt-3 rounded-xl border border-primary-200 bg-primary-50/80 overflow-hidden">
+                    <SecurityBadge security={selectedSkill.security} compact={false} />
+                  </div>
+                )}
               </div>
 
               <ScrollAreaRoot className="h-[56vh]">
@@ -527,51 +529,106 @@ type SkillsGridProps = {
   onToggle: (skillId: string, enabled: boolean) => void
 }
 
-const SECURITY_CONFIG: Record<string, { label: string; icon: string; className: string }> = {
-  safe: { label: 'Verified Safe', icon: '🛡️', className: 'border-green-300 bg-green-50 text-green-700' },
-  low: { label: 'Low Risk', icon: '✅', className: 'border-blue-300 bg-blue-50 text-blue-700' },
-  medium: { label: 'Medium Risk', icon: '⚠️', className: 'border-amber-300 bg-amber-50 text-amber-700' },
-  high: { label: 'High Risk', icon: '🔴', className: 'border-red-300 bg-red-50 text-red-700' },
+const SECURITY_BADGE: Record<string, { label: string; badgeClass: string; confidence: string }> = {
+  safe: { label: 'Benign', badgeClass: 'bg-green-100 text-green-700 border-green-200', confidence: 'HIGH CONFIDENCE' },
+  low: { label: 'Benign', badgeClass: 'bg-green-100 text-green-700 border-green-200', confidence: 'MODERATE' },
+  medium: { label: 'Caution', badgeClass: 'bg-amber-100 text-amber-700 border-amber-200', confidence: 'REVIEW RECOMMENDED' },
+  high: { label: 'Warning', badgeClass: 'bg-red-100 text-red-700 border-red-200', confidence: 'MANUAL REVIEW' },
 }
 
-function SecurityBadge({ security }: { security?: SecurityRisk }) {
+function SecurityBadge({ security, compact = true }: { security?: SecurityRisk; compact?: boolean }) {
   if (!security) return null
-  const config = SECURITY_CONFIG[security.level]
+  const config = SECURITY_BADGE[security.level]
   if (!config) return null
 
-  const [showTooltip, setShowTooltip] = useState(false)
+  const [expanded, setExpanded] = useState(false)
+
+  // Compact badge for card grid
+  if (compact) {
+    return (
+      <div className="relative">
+        <button
+          type="button"
+          className={cn(
+            'inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium transition-colors',
+            config.badgeClass,
+          )}
+          onMouseEnter={() => setExpanded(true)}
+          onMouseLeave={() => setExpanded(false)}
+          onClick={(e) => { e.stopPropagation(); setExpanded((v) => !v) }}
+        >
+          {config.label}
+        </button>
+        {expanded && (
+          <div className="absolute left-0 bottom-[calc(100%+6px)] z-50 w-72 rounded-xl border border-primary-200 bg-surface p-0 shadow-xl overflow-hidden">
+            <SecurityScanCard security={security} />
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // Full card for detail dialog
+  return <SecurityScanCard security={security} />
+}
+
+function SecurityScanCard({ security }: { security: SecurityRisk }) {
+  const [showDetails, setShowDetails] = useState(false)
+  const config = SECURITY_BADGE[security.level]
+  if (!config) return null
+
+  const summaryText = security.flags.length === 0
+    ? 'No risky patterns detected. This skill appears safe to install.'
+    : security.level === 'high'
+      ? `Found ${security.flags.length} potential security concern${security.flags.length !== 1 ? 's' : ''}. Review before installing.`
+      : `The skill's code was scanned for common risk patterns. ${security.flags.length} item${security.flags.length !== 1 ? 's' : ''} noted.`
 
   return (
-    <div className="relative">
-      <button
-        type="button"
-        className={cn(
-          'inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium transition-colors',
-          config.className,
-        )}
-        onMouseEnter={() => setShowTooltip(true)}
-        onMouseLeave={() => setShowTooltip(false)}
-        onClick={(e) => { e.stopPropagation(); setShowTooltip((v) => !v) }}
-      >
-        <span className="text-[10px]">{config.icon}</span>
-        {config.label}
-      </button>
-      {showTooltip && security.flags.length > 0 && (
-        <div className="absolute left-0 bottom-[calc(100%+4px)] z-50 w-56 rounded-lg border border-primary-200 bg-surface p-3 shadow-xl text-xs">
-          <p className="font-semibold text-ink mb-1.5">Security Scan</p>
-          <ul className="space-y-1">
-            {security.flags.map((flag) => (
-              <li key={flag} className="flex items-start gap-1.5 text-primary-600">
-                <span className="mt-0.5 text-[10px]">•</span>
-                {flag}
-              </li>
-            ))}
-          </ul>
-          <p className="mt-2 text-[10px] text-primary-400">
-            Risk score: {security.score} · Scanned SKILL.md + scripts
-          </p>
+    <div className="text-xs">
+      <div className="px-3 pt-3 pb-2">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-primary-400 mb-2">Security Scan</p>
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2">
+            <span className="text-primary-500 font-medium w-16 shrink-0">ClawSuite</span>
+            <span className={cn('rounded-md border px-1.5 py-0.5 text-[10px] font-semibold', config.badgeClass)}>
+              {config.label}
+            </span>
+            <span className="text-[10px] text-primary-400 uppercase tracking-wide font-medium">
+              {config.confidence}
+            </span>
+          </div>
+        </div>
+      </div>
+      <div className="px-3 pb-2">
+        <p className="text-primary-500 text-pretty leading-relaxed">{summaryText}</p>
+      </div>
+      {security.flags.length > 0 && (
+        <div className="border-t border-primary-100">
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setShowDetails((v) => !v) }}
+            className="flex w-full items-center justify-between px-3 py-2 text-accent-500 hover:text-accent-600 transition-colors"
+          >
+            <span className="text-[11px] font-medium">Details</span>
+            <span className="text-[10px]">{showDetails ? '▲' : '▼'}</span>
+          </button>
+          {showDetails && (
+            <div className="px-3 pb-3 space-y-1">
+              {security.flags.map((flag) => (
+                <div key={flag} className="flex items-start gap-2 text-primary-600">
+                  <span className="mt-0.5 text-[9px] text-primary-400">●</span>
+                  <span>{flag}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
+      <div className="border-t border-primary-100 px-3 py-2">
+        <p className="text-[10px] text-primary-400 italic">
+          Like a lobster shell, security has layers — review code before you run it.
+        </p>
+      </div>
     </div>
   )
 }

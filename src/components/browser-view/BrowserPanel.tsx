@@ -277,11 +277,42 @@ function BrowserPanel() {
                 <HugeiconsIcon icon={GlobeIcon} size={20} strokeWidth={1.5} />
               </div>
               <h3 className="text-base font-medium text-primary-900 text-balance">
-                Browser control requires gateway support
+                Browser Control Setup
               </h3>
               <p className="max-w-md text-sm text-primary-600 text-pretty">
-                This gateway does not expose browser RPC methods. Enable browser tooling in the gateway and reconnect a controlled browser.
+                Connect a browser so your AI agent can browse the web, fill forms, and extract data.
               </p>
+              <div className="mt-2 w-full max-w-md rounded-xl border border-primary-200 bg-surface p-4 text-left space-y-3">
+                <div className="flex items-start gap-3">
+                  <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-accent-500/15 text-xs font-bold text-accent-600">1</span>
+                  <div>
+                    <p className="text-sm font-medium text-ink">Install the Chrome Extension</p>
+                    <p className="text-xs text-primary-500 mt-0.5">Install the <a href="https://docs.openclaw.ai/browser" target="_blank" rel="noopener noreferrer" className="text-accent-500 hover:underline">OpenClaw Browser Relay</a> extension from the Chrome Web Store.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-accent-500/15 text-xs font-bold text-accent-600">2</span>
+                  <div>
+                    <p className="text-sm font-medium text-ink">Enable Browser RPC</p>
+                    <p className="text-xs text-primary-500 mt-0.5">Add <code className="rounded bg-primary-100 px-1 py-0.5 font-mono text-[11px]">browser: true</code> to your OpenClaw gateway config.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-accent-500/15 text-xs font-bold text-accent-600">3</span>
+                  <div>
+                    <p className="text-sm font-medium text-ink">Attach a Tab</p>
+                    <p className="text-xs text-primary-500 mt-0.5">Click the OpenClaw toolbar icon on any Chrome tab to connect it. The badge turns ON when attached.</p>
+                  </div>
+                </div>
+              </div>
+              <a
+                href="https://docs.openclaw.ai/browser"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 inline-flex items-center gap-1 rounded-lg bg-accent-500/10 px-4 py-2 text-sm font-medium text-accent-600 hover:bg-accent-500/20 transition-colors"
+              >
+                View Full Setup Guide →
+              </a>
             </div>
           ) : screenshotUrl ? (
             <BrowserScreenshot
