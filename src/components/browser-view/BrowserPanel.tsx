@@ -207,10 +207,12 @@ function BrowserPanel() {
     Boolean(screenshotQuery.data?.gatewaySupportRequired) ||
     isGatewaySupportError(errorText)
   const showGatewaySupportPlaceholder = demoMode && gatewaySupportRequired
-  const [useLocalBrowser, setUseLocalBrowser] = useState(false)
 
-  // Auto-switch to local browser when gateway doesn't support it
-  if (showGatewaySupportPlaceholder || useLocalBrowser) {
+  // Default to local browser — gateway RPC browser is an advanced/optional mode
+  // Show local browser immediately, no waiting for gateway probe
+  const gatewayBrowserAvailable = tabsQuery.isSuccess && !showGatewaySupportPlaceholder && (tabsQuery.data?.tabs?.length ?? 0) > 0
+
+  if (!gatewayBrowserAvailable) {
     return (
       <motion.main
         initial={{ opacity: 0 }}

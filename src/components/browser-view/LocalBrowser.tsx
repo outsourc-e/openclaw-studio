@@ -12,7 +12,7 @@ import {
   AiChat02Icon,
 } from '@hugeicons/core-free-icons'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -45,25 +45,44 @@ export function LocalBrowser() {
   const screenshotRef = useRef<HTMLDivElement>(null)
   const imgRef = useRef<HTMLImageElement>(null)
 
-  // Poll for screenshot updates
+  // Check if browser is already running on mount (persist across page nav)
+  useEffect(() => {
+    browserAction('screenshot').then((state) => {
+      if (state.running) {
+        setIsLaunched(true)
+        setUrlInput(state.url || '')
+        queryClient.setQueryData(['local-browser', 'state'], state)
+      }
+    }).catch(() => {})
+  }, [queryClient])
+
+  // Poll for screenshot updates — faster (800ms) for responsiveness
   const stateQuery = useQuery<BrowserState>({
     queryKey: ['local-browser', 'state'],
     queryFn: () => browserAction('screenshot'),
     enabled: isLaunched,
-    refetchInterval: 2000,
-    staleTime: 1000,
+    refetchInterval: 800,
+    staleTime: 400,
   })
 
   const currentState = stateQuery.data
   const currentUrl = currentState?.url || ''
   const currentTitle = currentState?.title || ''
 
-  // Mutations
+  // Sync URL bar when page changes
+  useEffect(() => {
+    if (currentUrl && currentUrl !== urlInput && !document.activeElement?.matches('input[type="text"]')) {
+      setUrlInput(currentUrl)
+    }
+  }, [currentUrl])
+
+  // Mutations — all immediately refetch screenshot
   const launchMutation = useMutation({
     mutationFn: () => browserAction('launch'),
     onSuccess: (data) => {
       setIsLaunched(true)
       queryClient.setQueryData(['local-browser', 'state'], data)
+      setUrlInput(data.url || '')
     },
   })
 

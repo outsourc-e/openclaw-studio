@@ -178,11 +178,10 @@ async function captureScreenshot(): Promise<void> {
   if (!pageInstance) return
   try {
     const buffer = await pageInstance.screenshot({
-      type: 'jpeg',
-      quality: 75,
+      type: 'png',
       timeout: SCREENSHOT_TIMEOUT,
     })
-    lastScreenshot = `data:image/jpeg;base64,${buffer.toString('base64')}`
+    lastScreenshot = `data:image/png;base64,${buffer.toString('base64')}`
     lastUrl = pageInstance.url()
     lastTitle = await pageInstance.title().catch(() => '')
   } catch {
