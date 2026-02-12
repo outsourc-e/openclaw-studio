@@ -291,14 +291,8 @@ export function AgentViewPanel() {
   const [viewMode, setViewMode] = useState<'expanded' | 'compact'>('compact')
   const [cliAgentsExpanded, setCliAgentsExpanded] = useState(true)
   const [browserPreviewExpanded, setBrowserPreviewExpanded] = useState(true)
-  const [selectedCliAgentPid, setSelectedCliAgentPid] = useState<number | null>(
-    null,
-  )
   const cliAgentsQuery = useCliAgents()
   const cliAgents = cliAgentsQuery.data ?? []
-  const selectedCliAgent = cliAgents.find(function findSelectedCliAgent(agent) {
-    return agent.pid === selectedCliAgentPid
-  }) || null
 
   // Auto-expand history when there are entries
   useEffect(() => {
@@ -786,59 +780,41 @@ export function AgentViewPanel() {
                       </span>
                     </div>
                     <CollapsiblePanel contentClassName="pt-1">
-                      <div className="space-y-1">
+                      <div className="space-y-0.5">
                         {cliAgentsQuery.isLoading ? (
-                          <p className="px-3 py-1.5 text-[11px] text-primary-500 tabular-nums">
+                          <p className="px-2 py-1 text-[11px] text-primary-500 tabular-nums">
                             Scanning...
                           </p>
                         ) : null}
                         {!cliAgentsQuery.isLoading && !cliAgents.length ? (
-                          <p className="px-3 py-1.5 text-[11px] text-primary-500 text-pretty">
-                            No codex agents detected
+                          <p className="px-2 py-1 text-[11px] text-primary-500">
+                            No agents running
                           </p>
                         ) : null}
                         {cliAgents.map(function renderCliAgent(agent) {
                           return (
-                            <button
+                            <div
                               key={agent.pid}
-                              type="button"
-                              onClick={function handleSelectCliAgent() {
-                                setSelectedCliAgentPid(agent.pid)
-                              }}
-                              className={cn(
-                                'w-full rounded-lg border border-primary-200 bg-primary-100/50 px-2.5 py-2 text-left transition-colors hover:bg-primary-200/75',
-                                selectedCliAgentPid === agent.pid &&
-                                  'border-primary-300 bg-primary-200',
-                              )}
-                              title={`${agent.name} (PID ${agent.pid})`}
+                              className="flex items-center gap-1.5 rounded-md px-2 py-1 hover:bg-primary-200/50"
+                              title={agent.task}
                             >
-                              <div className="flex items-center gap-2">
-                                <span
-                                  className={cn(
-                                    'size-2 rounded-full',
-                                    agent.status === 'running'
-                                      ? 'bg-emerald-500'
-                                      : 'bg-gray-400',
-                                  )}
-                                />
-                                <span className="min-w-0 flex-1 truncate text-xs font-medium text-primary-900">
-                                  {agent.name}
-                                </span>
-                                <span className="rounded-full border border-primary-200 bg-primary-50/80 px-1.5 py-0.5 text-[10px] text-primary-600 tabular-nums">
-                                  {formatRuntimeLabel(agent.runtimeSeconds)}
-                                </span>
-                              </div>
-                              <p className="mt-1 truncate text-[11px] text-primary-600 text-pretty">
-                                {agent.task}
-                              </p>
-                            </button>
+                              <span
+                                className={cn(
+                                  'size-1.5 shrink-0 rounded-full',
+                                  agent.status === 'running'
+                                    ? 'bg-emerald-500'
+                                    : 'bg-gray-400',
+                                )}
+                              />
+                              <span className="min-w-0 flex-1 truncate text-[11px] font-medium text-primary-800">
+                                {agent.name}
+                              </span>
+                              <span className="shrink-0 text-[10px] text-primary-500 tabular-nums">
+                                {formatRuntimeLabel(agent.runtimeSeconds)}
+                              </span>
+                            </div>
                           )
                         })}
-                        {selectedCliAgent ? (
-                          <p className="px-3 pb-1 text-[11px] text-primary-500 tabular-nums text-pretty">
-                            PID {selectedCliAgent.pid} - {selectedCliAgent.status}
-                          </p>
-                        ) : null}
                       </div>
                     </CollapsiblePanel>
                   </Collapsible>
