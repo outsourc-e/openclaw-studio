@@ -575,7 +575,7 @@ function MessageItemComponent({
             data-chat-message-bubble={isUser ? 'true' : undefined}
             className={cn(
               'rounded-[12px] break-words whitespace-normal min-w-0 text-primary-900 flex flex-col gap-2',
-              effectiveIsStreaming && !isUser ? 'chat-streaming-message chat-streaming-glow' : '',
+              effectiveIsStreaming && !isUser && remoteStreamingActive ? 'chat-streaming-message chat-streaming-glow' : '',
               !isUser
                 ? 'bg-transparent w-full'
                 : 'bg-primary-100 max-w-[75%] rounded-2xl px-4 py-2.5',

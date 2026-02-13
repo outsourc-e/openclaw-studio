@@ -384,8 +384,9 @@ function ChatMessageListComponent({
       return { streamingTargets: new Set<string>(), signatureById: nextSignatures }
     }
 
-    // Only typewriter the last new assistant message
-    if (lastNewAssistantId) toStream.add(lastNewAssistantId)
+    // Typewriter disabled — causes empty message bugs and glow artifacts
+    // TODO: re-enable once animation lifecycle is more robust
+    // if (lastNewAssistantId) toStream.add(lastNewAssistantId)
     
     // Auto-clear streaming targets after animation completes (~8s max)
     if (toStream.size > 0) {
