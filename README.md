@@ -121,7 +121,30 @@ npm run preview
 
 ### Optional: Desktop App (Tauri)
 
-ClawSuite can be packaged as a native desktop application using Tauri:
+ClawSuite can be packaged as a native desktop application using Tauri.
+
+#### Ubuntu / Debian Prerequisites
+
+Install the Rust toolchain and required system libraries before building:
+
+```bash
+# Install Rust via rustup
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+source "$HOME/.cargo/env"
+
+# Install system dependencies
+sudo apt update
+sudo apt install -y \
+  build-essential \
+  pkg-config \
+  libssl-dev \
+  libgtk-3-dev \
+  libwebkit2gtk-4.1-dev \
+  libappindicator3-dev \
+  librsvg2-dev
+```
+
+#### Run / Build
 
 ```bash
 # Install Tauri CLI (if not already installed)
