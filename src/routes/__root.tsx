@@ -15,6 +15,7 @@ import { Toaster } from '@/components/ui/toast'
 
 const themeScript = `
 (() => {
+  window.process = window.process || { env: {}, platform: 'browser' };
   try {
     const stored = localStorage.getItem('openclaw-settings')
     const fallback = localStorage.getItem('chat-settings')
