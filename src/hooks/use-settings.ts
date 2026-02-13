@@ -27,7 +27,7 @@ type SettingsState = {
 
 export const defaultStudioSettings: StudioSettings = {
   gatewayUrl: '',
-  theme: 'dark',
+  theme: 'light',
   accentColor: 'orange',
   editorFontSize: 13,
   editorWordWrap: true,

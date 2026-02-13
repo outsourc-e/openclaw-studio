@@ -132,7 +132,10 @@ export function useChatHistory({
         if (text.startsWith('A subagent task')) return false
         if (text.startsWith('[Queued announce messages')) return false
         if (text.startsWith('Pre-compaction memory flush')) return false
+        if (text.includes('Pre-compaction memory flush')) return false
+        if (text.includes('Store durable memories now')) return false
         if (text.includes('Summarize this naturally for the user')) return false
+        if (text.includes('APPEND new content only and do not overwrite')) return false
         if (text.includes('Stats: runtime') && text.includes('sessionKey agent:codex:subagent:')) return false
         return true
       }

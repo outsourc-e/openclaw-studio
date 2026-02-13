@@ -146,7 +146,8 @@ function ChatMessageListComponent({
       const cleanedText = textFromMessage(msg).trim()
 
       if (msg.role === 'assistant') {
-        return cleanedText !== 'HEARTBEAT_OK'
+        if (cleanedText === 'HEARTBEAT_OK' || cleanedText === 'NO_REPLY') return false
+        return true
       }
 
       if (msg.role === 'user') {

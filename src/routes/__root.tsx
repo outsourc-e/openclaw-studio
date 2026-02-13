@@ -13,8 +13,7 @@ import { WorkspaceShell } from '@/components/workspace-shell'
 import { useTaskReminders } from '@/hooks/use-task-reminders'
 import { UpdateNotifier } from '@/components/update-notifier'
 import { Toaster } from '@/components/ui/toast'
-// OnboardingTour disabled — conflicts with wizard modal. TODO: re-enable after wizard.
-// import { OnboardingTour } from '@/components/onboarding/onboarding-tour'
+import { OnboardingTour } from '@/components/onboarding/onboarding-tour'
 
 const themeScript = `
 (() => {
@@ -183,7 +182,7 @@ function RootLayout() {
       <Toaster />
       <WorkspaceShell />
       <SearchModal />
-      {/* <OnboardingTour /> */}
+      <OnboardingTour />
     </QueryClientProvider>
   )
 }
