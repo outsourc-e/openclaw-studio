@@ -232,29 +232,40 @@ export function ChatScreen({
     void historyQuery.refetch()
   }
 
-  // SINGLE mechanism to clear waitingForResponse: SSE done event
-  // All other competing mechanisms removed to prevent race conditions.
-  // The done event is the authoritative signal that generation is complete.
+  // Track when done event fires so we know generation is complete
+  const doneReceivedRef = useRef(false)
   useEffect(() => {
-    if (lastCompletedRunAt && waitingForResponse) {
-      // Small delay to let history refetch complete
-      const timer = window.setTimeout(() => streamFinish(), 100)
-      return () => window.clearTimeout(timer)
+    if (lastCompletedRunAt) {
+      doneReceivedRef.current = true
     }
-  }, [lastCompletedRunAt, waitingForResponse, streamFinish])
+  }, [lastCompletedRunAt])
 
-  // Failsafe: if SSE done event never fires (e.g. connection dropped),
-  // clear state when we see an assistant response in the display
+  // Clear waitingForResponse ONLY when assistant response is visible in display
+  // This prevents the blank gap between dots disappearing and response loading
   useEffect(() => {
     if (!waitingForResponse) return
     if (finalDisplayMessages.length === 0) return
     const last = finalDisplayMessages[finalDisplayMessages.length - 1]
     if (last && last.role === 'assistant') {
-      // Only clear if we've been waiting at least 2s (avoid clearing on stale messages)
-      const timer = window.setTimeout(() => streamFinish(), 2000)
-      return () => window.clearTimeout(timer)
+      streamFinish()
     }
   }, [finalDisplayMessages.length, waitingForResponse, streamFinish])
+
+  // Failsafe: if response never appears in display (e.g. filtered out),
+  // clear after done event + 5s
+  useEffect(() => {
+    if (lastCompletedRunAt && waitingForResponse) {
+      const timer = window.setTimeout(() => streamFinish(), 5000)
+      return () => window.clearTimeout(timer)
+    }
+  }, [lastCompletedRunAt, waitingForResponse, streamFinish])
+
+  // Reset done tracking when new message sent
+  useEffect(() => {
+    if (waitingForResponse) {
+      doneReceivedRef.current = false
+    }
+  }, [waitingForResponse])
 
   useAutoSessionTitle({
     friendlyId: activeFriendlyId,
