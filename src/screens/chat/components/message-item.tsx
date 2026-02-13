@@ -298,10 +298,10 @@ function MessageItemComponent({
     initialDisplayText,
   )
   const [revealedWordCount, setRevealedWordCount] = useState(() =>
-    remoteStreamingActive ? 0 : countWords(initialDisplayText),
+    (remoteStreamingActive || _simulateStreaming) ? 0 : countWords(initialDisplayText),
   )
   const [revealedText, setRevealedText] = useState(() =>
-    remoteStreamingActive ? '' : initialDisplayText,
+    (remoteStreamingActive || _simulateStreaming) ? '' : initialDisplayText,
   )
   const revealTimerRef = useRef<number | null>(null)
   const targetWordCountRef = useRef(countWords(initialDisplayText))
