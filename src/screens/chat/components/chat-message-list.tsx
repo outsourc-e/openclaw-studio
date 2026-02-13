@@ -415,10 +415,9 @@ function ChatMessageListComponent({
     if (!waitingForResponse) return false
     // If streaming has visible text, don't show dots
     if (isStreaming && streamingText && streamingText.length > 0) return false
-    // If there's an assistant message after the last user message, don't show dots
-    if (typeof lastUserIndex === 'number' && typeof lastAssistantIndex === 'number' && lastAssistantIndex > lastUserIndex) {
-      return false
-    }
+    // If the LAST message in the list is from the assistant, we already have a response
+    const lastMessage = displayMessages[displayMessages.length - 1]
+    if (lastMessage && lastMessage.role === 'assistant') return false
     return true
   })()
 

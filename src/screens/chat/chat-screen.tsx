@@ -232,68 +232,29 @@ export function ChatScreen({
     void historyQuery.refetch()
   }
 
-  // Idle detection: when latest displayable assistant message is stable for 4s, finish.
-  // Uses displayMessages (filtered) instead of historyMessages so that tool calls
-  // (which arrive after the text response) don't prevent completion detection.
+  // SINGLE mechanism to clear waitingForResponse: SSE done event
+  // All other competing mechanisms removed to prevent race conditions.
+  // The done event is the authoritative signal that generation is complete.
   useEffect(() => {
-    if (displayMessages.length === 0) return
-    const latestDisplay = displayMessages[displayMessages.length - 1]
-    // Check both display messages and raw history for assistant completion
-    if (latestDisplay.role === 'assistant') {
-      const signature = `${displayMessages.length}:${textFromMessage(latestDisplay).slice(-64)}`
-      if (signature !== lastAssistantSignature.current) {
-        lastAssistantSignature.current = signature
-        if (streamIdleTimer.current) {
-          window.clearTimeout(streamIdleTimer.current)
-        }
-        streamIdleTimer.current = window.setTimeout(() => {
-          streamFinish()
-        }, 1500)
-      }
-    } else if (latestDisplay.role === 'user' && waitingForResponse) {
-      // User message is last displayable message — check raw history for
-      // assistant responses that were filtered out (e.g. tool-call-only messages).
-      // If raw history has grown since we sent, the agent is actively responding.
-      const lastRaw = historyMessages[historyMessages.length - 1]
-      if (lastRaw && lastRaw.role !== 'user') {
-        // Agent is working (tool calls in progress). Reset idle timer so we
-        // keep polling, but also set a longer timeout to eventually finish.
-        if (streamIdleTimer.current) {
-          window.clearTimeout(streamIdleTimer.current)
-        }
-        streamIdleTimer.current = window.setTimeout(() => {
-          streamFinish()
-        }, 3000)
-      }
+    if (lastCompletedRunAt && waitingForResponse) {
+      // Small delay to let history refetch complete
+      const timer = window.setTimeout(() => streamFinish(), 100)
+      return () => window.clearTimeout(timer)
     }
-  }, [displayMessages, historyMessages, waitingForResponse, streamFinish])
+  }, [lastCompletedRunAt, waitingForResponse, streamFinish])
 
-  // Clear waiting state when assistant response appears (min 800ms thinking display)
-  const waitingStartRef = useRef<number>(0)
-  useEffect(() => {
-    if (waitingForResponse) {
-      waitingStartRef.current = Date.now()
-    }
-  }, [waitingForResponse])
-
+  // Failsafe: if SSE done event never fires (e.g. connection dropped),
+  // clear state when we see an assistant response in the display
   useEffect(() => {
     if (!waitingForResponse) return
     if (finalDisplayMessages.length === 0) return
     const last = finalDisplayMessages[finalDisplayMessages.length - 1]
     if (last && last.role === 'assistant') {
-      const elapsed = Date.now() - waitingStartRef.current
-      const minDelay = Math.max(0, 800 - elapsed)
-      const timer = window.setTimeout(() => streamFinish(), minDelay)
+      // Only clear if we've been waiting at least 2s (avoid clearing on stale messages)
+      const timer = window.setTimeout(() => streamFinish(), 2000)
       return () => window.clearTimeout(timer)
     }
-  }, [finalDisplayMessages, waitingForResponse, streamFinish])
-
-  // When SSE reports a run completed, immediately finish streaming
-  useEffect(() => {
-    if (lastCompletedRunAt && waitingForResponse) {
-      streamFinish()
-    }
-  }, [lastCompletedRunAt, waitingForResponse, streamFinish])
+  }, [finalDisplayMessages.length, waitingForResponse, streamFinish])
 
   useAutoSessionTitle({
     friendlyId: activeFriendlyId,
@@ -653,8 +614,12 @@ export function ChatScreen({
       }),
     })
       .then(async (res) => {
-        if (!res.ok) throw new Error(await readError(res))
-        streamStart()
+        if (!res.ok) {
+          let errorText = `HTTP ${res.status}`
+          try { errorText = await readError(res) } catch { /* ignore parse errors */ }
+          throw new Error(errorText)
+        }
+        try { streamStart() } catch { /* don't fail send on stream setup error */ }
       })
       .catch((err: unknown) => {
         window.clearTimeout(failsafeTimer)
