@@ -43,6 +43,16 @@ function stripChannelPrefix(text: string): string {
 function cleanUserText(raw: string): string {
   let text = raw
 
+  // Remove "Conversation info (untrusted metadata):" headers + JSON block
+  // Format: "Conversation info (untrusted metadata):\n```json\n{...}\n```\n\n"
+  text = text.replace(
+    /Conversation info \(untrusted metadata\):\s*```json[\s\S]*?```\s*/gi,
+    '',
+  )
+
+  // Remove timestamp prefixes like "[Fri 2026-02-13 10:45 EST]"
+  text = text.replace(/^\[[A-Z][a-z]{2}\s+\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}\s+[A-Z]{3}\]\s*/gm, '')
+
   // Remove [media attached: ...] blocks (may span multiple lines)
   text = text.replace(/\[media attached:[^\]]*\]\s*/gi, '')
 
