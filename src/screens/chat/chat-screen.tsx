@@ -232,40 +232,33 @@ export function ChatScreen({
     void historyQuery.refetch()
   }
 
-  // Track when done event fires so we know generation is complete
-  const doneReceivedRef = useRef(false)
-  useEffect(() => {
-    if (lastCompletedRunAt) {
-      doneReceivedRef.current = true
-    }
-  }, [lastCompletedRunAt])
+  // Track message count when waiting started — only clear when NEW assistant msg appears
+  const messageCountAtSendRef = useRef(0)
 
-  // Clear waitingForResponse ONLY when assistant response is visible in display
-  // This prevents the blank gap between dots disappearing and response loading
+  useEffect(() => {
+    if (waitingForResponse) {
+      messageCountAtSendRef.current = finalDisplayMessages.length
+    }
+  }, [waitingForResponse]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Clear waitingForResponse when a NEW assistant message appears after send
   useEffect(() => {
     if (!waitingForResponse) return
-    if (finalDisplayMessages.length === 0) return
+    // Only check if display has grown since we sent
+    if (finalDisplayMessages.length <= messageCountAtSendRef.current) return
     const last = finalDisplayMessages[finalDisplayMessages.length - 1]
     if (last && last.role === 'assistant') {
       streamFinish()
     }
   }, [finalDisplayMessages.length, waitingForResponse, streamFinish])
 
-  // Failsafe: if response never appears in display (e.g. filtered out),
-  // clear after done event + 5s
+  // Failsafe: clear after done event + 5s if response never shows in display
   useEffect(() => {
     if (lastCompletedRunAt && waitingForResponse) {
       const timer = window.setTimeout(() => streamFinish(), 5000)
       return () => window.clearTimeout(timer)
     }
   }, [lastCompletedRunAt, waitingForResponse, streamFinish])
-
-  // Reset done tracking when new message sent
-  useEffect(() => {
-    if (waitingForResponse) {
-      doneReceivedRef.current = false
-    }
-  }, [waitingForResponse])
 
   useAutoSessionTitle({
     friendlyId: activeFriendlyId,
