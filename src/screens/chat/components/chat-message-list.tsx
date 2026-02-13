@@ -90,6 +90,9 @@ function ChatMessageListComponent({
   const stickToBottomRef = useRef(true)
   const messageSignatureRef = useRef<Map<string, string>>(new Map())
   const initialRenderRef = useRef(true)
+  const streamingTargetsClearRef = useRef<(() => void) | null>(null)
+  const [streamingCleared, setStreamingCleared] = useState(0)
+  streamingTargetsClearRef.current = () => setStreamingCleared((c) => c + 1)
   const lastScrollTopRef = useRef(0)
   const isNearBottomRef = useRef(true)
   const [isNearBottom, setIsNearBottom] = useState(true)
@@ -383,8 +386,17 @@ function ChatMessageListComponent({
 
     // Only typewriter the last new assistant message
     if (lastNewAssistantId) toStream.add(lastNewAssistantId)
+    
+    // Auto-clear streaming targets after animation completes (~8s max)
+    if (toStream.size > 0) {
+      setTimeout(() => {
+        streamingTargetsClearRef.current?.()
+      }, 8000)
+    }
+    
     return { streamingTargets: toStream, signatureById: nextSignatures }
-  }, [displayMessages])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [displayMessages, streamingCleared])
 
   const lastAssistantIndex = displayMessages
     .map((message, index) => ({ message, index }))

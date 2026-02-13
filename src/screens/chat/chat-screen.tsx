@@ -268,6 +268,18 @@ export function ChatScreen({
     }
   }, [displayMessages, historyMessages, waitingForResponse, streamFinish])
 
+  // Also clear waiting state when finalDisplayMessages has a new assistant response
+  useEffect(() => {
+    if (!waitingForResponse) return
+    if (finalDisplayMessages.length === 0) return
+    const last = finalDisplayMessages[finalDisplayMessages.length - 1]
+    if (last && last.role === 'assistant') {
+      // Give typewriter animation a moment, then clear
+      const timer = window.setTimeout(() => streamFinish(), 500)
+      return () => window.clearTimeout(timer)
+    }
+  }, [finalDisplayMessages, waitingForResponse, streamFinish])
+
   // When SSE reports a run completed, immediately finish streaming
   useEffect(() => {
     if (lastCompletedRunAt && waitingForResponse) {
