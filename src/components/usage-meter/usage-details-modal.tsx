@@ -280,6 +280,14 @@ export function UsageDetailsModal({
       if (res.ok) {
         // Optimistic update
         setDefaultModel(modelString)
+        // Also switch the active session's model
+        try {
+          await fetch('/api/model-switch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model: modelString }),
+          })
+        } catch { /* best effort — session switch is secondary */ }
       }
     } catch (error) {
       console.error('Failed to set default model:', error)
