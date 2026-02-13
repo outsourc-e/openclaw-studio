@@ -88,12 +88,10 @@ export function useChatHistory({
       }
     },
     enabled:
+      !isNewChat && // Don't fetch history for new chats
       Boolean(sessionKeyForHistory) &&
       !isRedirecting &&
-      (!sessionsReady ||
-        activeExists ||
-        Boolean(explicitRouteSessionKey) ||
-        isNewChat),
+      (!sessionsReady || activeExists || Boolean(explicitRouteSessionKey)),
     placeholderData: function useCachedHistory(): HistoryResponse | undefined {
       return queryClient.getQueryData(historyKey)
     },

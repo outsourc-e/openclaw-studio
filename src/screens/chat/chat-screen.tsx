@@ -383,17 +383,20 @@ export function ChatScreen({
     retry: false,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
-    refetchOnMount: 'always',
+    refetchOnMount: false, // Don't block UI on mount
+    staleTime: 30_000, // 30 seconds
   })
   const gatewayStatusMountRef = useRef(Date.now())
+  // Don't show gateway errors for new chats - let users type freely
   const gatewayStatusError =
-    gatewayStatusQuery.error instanceof Error
+    !isNewChat &&
+    (gatewayStatusQuery.error instanceof Error
       ? gatewayStatusQuery.error.message
       : gatewayStatusQuery.data && !gatewayStatusQuery.data.ok
         ? gatewayStatusQuery.data.error || 'Gateway unavailable'
-        : null
+        : null)
   const gatewayError = gatewayStatusError ?? sessionsError ?? historyError
-  const showErrorNotice = Boolean(gatewayError)
+  const showErrorNotice = Boolean(gatewayError) && !isNewChat
   const handleGatewayRefetch = useCallback(() => {
     void gatewayStatusQuery.refetch()
     void sessionsQuery.refetch()

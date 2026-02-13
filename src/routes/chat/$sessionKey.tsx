@@ -62,6 +62,14 @@ function ChatRoute() {
     forcedSession?.friendlyId === activeFriendlyId
       ? forcedSession.sessionKey
       : undefined
+
+  // Clear history cache when navigating to new chat
+  useEffect(() => {
+    if (isNewChat) {
+      queryClient.removeQueries({ queryKey: ['chat', 'history', 'new', 'new'] })
+    }
+  }, [isNewChat, queryClient])
+
   const handleSessionResolved = useCallback(
     function handleSessionResolved(payload: {
       friendlyId: string
