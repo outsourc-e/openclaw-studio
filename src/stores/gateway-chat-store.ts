@@ -77,7 +77,7 @@ export const useGatewayChatStore = create<GatewayChatState>((set, get) => ({
           if (existing.role !== event.message.role) return false
           const existingTs = getMessageTimestamp(existing)
           const newTs = getMessageTimestamp(event.message)
-          return Math.abs(existingTs - newTs) < 1000
+          return Math.abs(existingTs - newTs) < 5000
         })
 
         if (!isDuplicate) {
@@ -260,7 +260,7 @@ export const useGatewayChatStore = create<GatewayChatState>((set, get) => ({
         // Second check: match by timestamp proximity (2s window) and role
         if (histMsg.role !== rtMsg.role) return false
         const histTimestamp = getMessageTimestamp(histMsg)
-        return Math.abs(histTimestamp - rtTimestamp) < 2000
+        return Math.abs(histTimestamp - rtTimestamp) < 10000
       })
     })
     

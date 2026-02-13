@@ -58,9 +58,8 @@ export function useRealtimeChatHistory({
           const prevData = queryClient.getQueryData(key) as { messages?: GatewayMessage[] } | undefined
           const prevCount = prevData?.messages?.length ?? 0
 
-          // Small delay to let gateway persist the final message
-          setTimeout(() => {
-            queryClient.invalidateQueries({ queryKey: key }).then(() => {
+          // Refetch immediately — done event message is already in realtime store
+          queryClient.invalidateQueries({ queryKey: key }).then(() => {
               // Check for compaction — significant message count drop
               const newData = queryClient.getQueryData(key) as { messages?: GatewayMessage[] } | undefined
               const newCount = newData?.messages?.length ?? 0
@@ -72,7 +71,6 @@ export function useRealtimeChatHistory({
                 })
               }
             })
-          }, 500)
         }
       }
     }, [sessionKey, friendlyId, queryClient]),

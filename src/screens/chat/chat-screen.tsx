@@ -39,7 +39,7 @@ import {
 } from './pending-send'
 import { useChatMeasurements } from './hooks/use-chat-measurements'
 import { useChatHistory } from './hooks/use-chat-history'
-// import { useRealtimeChatHistory } from './hooks/use-realtime-chat-history'
+import { useRealtimeChatHistory } from './hooks/use-realtime-chat-history'
 import { useChatMobile } from './hooks/use-chat-mobile'
 import { useChatSessions } from './hooks/use-chat-sessions'
 import { useAutoSessionTitle } from './hooks/use-auto-session-title'
@@ -141,8 +141,41 @@ export function ChatScreen({
     queryClient,
   })
 
-  // Display messages from polling (proven upstream approach)
-  const finalDisplayMessages = displayMessages
+  // Wire SSE realtime stream for instant message delivery
+  const {
+    messages: realtimeMessages,
+    lastCompletedRunAt,
+  } = useRealtimeChatHistory({
+    sessionKey: resolvedSessionKey || activeCanonicalKey,
+    friendlyId: activeFriendlyId,
+    historyMessages,
+    enabled: !isNewChat && !isRedirecting,
+  })
+
+  // Use realtime-merged messages for display (SSE + history)
+  // Re-apply display filter to realtime messages
+  const finalDisplayMessages = useMemo(() => {
+    // Rebuild display filter on merged messages
+    return realtimeMessages.filter((msg) => {
+      if (msg.role === 'user') {
+        const text = textFromMessage(msg)
+        if (text.startsWith('A subagent task')) return false
+        return true
+      }
+      if (msg.role === 'assistant') {
+        if (msg.__streamingStatus === 'streaming') return true
+        if ((msg as any).__optimisticId && !msg.content?.length) return true
+        const content = msg.content
+        if (!content || !Array.isArray(content)) return false
+        if (content.length === 0) return false
+        const hasText = content.some(
+          (c) => c.type === 'text' && typeof c.text === 'string' && c.text.trim().length > 0
+        )
+        return hasText
+      }
+      return false
+    })
+  }, [realtimeMessages])
 
   // Derive streaming state: when waiting for response and the last display message
   // is from the assistant, treat it as actively streaming (enables cursor + glow)
@@ -209,7 +242,7 @@ export function ChatScreen({
         }
         streamIdleTimer.current = window.setTimeout(() => {
           streamFinish()
-        }, 4000)
+        }, 1500)
       }
     } else if (latestDisplay.role === 'user' && waitingForResponse) {
       // User message is last displayable message — check raw history for
@@ -224,10 +257,17 @@ export function ChatScreen({
         }
         streamIdleTimer.current = window.setTimeout(() => {
           streamFinish()
-        }, 8000)
+        }, 3000)
       }
     }
   }, [displayMessages, historyMessages, waitingForResponse, streamFinish])
+
+  // When SSE reports a run completed, immediately finish streaming
+  useEffect(() => {
+    if (lastCompletedRunAt && waitingForResponse) {
+      streamFinish()
+    }
+  }, [lastCompletedRunAt, waitingForResponse, streamFinish])
 
   useAutoSessionTitle({
     friendlyId: activeFriendlyId,
