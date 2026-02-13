@@ -20,6 +20,7 @@ export function createOptimisticMessage(
     content: textContent.length > 0 ? textContent : undefined,
     attachments: attachments.length > 0 ? attachments : undefined,
     __optimisticId: optimisticId,
+    __createdAt: timestamp,
     clientId,
     client_id: clientId,
     status: 'sending',

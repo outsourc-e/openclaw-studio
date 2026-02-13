@@ -6,6 +6,7 @@ import { ContextAlertModal } from './context-alert-modal'
 import { DialogContent, DialogRoot } from '@/components/ui/dialog'
 import { MenuContent, MenuItem, MenuRoot, MenuTrigger } from '@/components/ui/menu'
 import { cn } from '@/lib/utils'
+import { toast } from '@/components/ui/toast'
 import { SEARCH_MODAL_EVENTS } from '@/hooks/use-search-modal'
 
 const POLL_INTERVAL_MS = 10_000
@@ -443,7 +444,9 @@ export function UsageMeter() {
       setUsage(parsed)
       setError(null)
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
+      const errorMessage = err instanceof Error ? err.message : String(err)
+      setError(errorMessage)
+      toast('Failed to fetch usage data', { type: 'error' })
     }
   }, [])
 
@@ -465,7 +468,9 @@ export function UsageMeter() {
       setProviderUpdatedAt(data?.updatedAt ?? Date.now())
       setProviderError(null)
     } catch (err) {
-      setProviderError(err instanceof Error ? err.message : String(err))
+      const errorMessage = err instanceof Error ? err.message : String(err)
+      setProviderError(errorMessage)
+      toast('Failed to fetch provider usage', { type: 'error' })
     }
   }, [])
 

@@ -15,7 +15,7 @@ import {
   UserIcon,
   MessageMultiple01Icon,
 } from '@hugeicons/core-free-icons'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Component } from 'react'
 import type * as React from 'react'
 import type { AccentColor, SettingsThemeMode } from '@/hooks/use-settings'
 import { Button } from '@/components/ui/button'
@@ -60,8 +60,8 @@ const SECTIONS: Array<{ id: SectionId; label: string; icon: any }> = [
 function SectionHeader({ title, description }: { title: string; description: string }) {
   return (
     <div className="mb-4">
-      <h3 className="text-sm font-semibold text-primary-900">{title}</h3>
-      <p className="text-xs text-primary-500">{description}</p>
+      <h3 className="text-sm font-semibold text-primary-900 dark:text-gray-100">{title}</h3>
+      <p className="text-xs text-primary-500 dark:text-gray-400">{description}</p>
     </div>
   )
 }
@@ -70,8 +70,8 @@ function Row({ label, description, children }: { label: string; description?: st
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 py-2">
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium text-primary-900">{label}</p>
-        {description && <p className="text-xs text-primary-500">{description}</p>}
+        <p className="text-sm font-medium text-primary-900 dark:text-gray-100">{label}</p>
+        {description && <p className="text-xs text-primary-500 dark:text-gray-400">{description}</p>}
       </div>
       <div className="flex items-center gap-2">{children}</div>
     </div>
@@ -113,7 +113,7 @@ function ProfileContent() {
       <SectionHeader title="Profile" description="Your display name and avatar for chat." />
       <div className="flex items-center gap-4 pb-2">
         <UserAvatar size={48} src={cs.avatarDataUrl} alt={displayName} />
-        <div><p className="text-sm font-medium text-primary-900">{displayName}</p><p className="text-xs text-primary-500">Shown in sidebar and chat.</p></div>
+        <div><p className="text-sm font-medium text-primary-900 dark:text-gray-100">{displayName}</p><p className="text-xs text-primary-500 dark:text-gray-400">Shown in sidebar and chat.</p></div>
       </div>
       <Row label="Display name"><Input value={cs.displayName} onChange={(e) => updateCS({ displayName: e.target.value })} placeholder="User" className="h-8 w-48" /></Row>
       <Row label="Profile picture">
@@ -190,7 +190,7 @@ function LoaderContent() {
   }
   return (
     <div className="pt-2">
-      <p className="mb-2 text-xs text-primary-500">Loading animation</p>
+      <p className="mb-2 text-xs text-primary-500 dark:text-gray-400">Loading animation</p>
       <div className="grid grid-cols-4 gap-1.5">
         {styles.map((o) => (
           <button key={o.value} type="button" onClick={() => updateCS({ loaderStyle: o.value })}
@@ -313,9 +313,41 @@ function AdvancedContent() {
   )
 }
 
+// ── Error Boundary ──────────────────────────────────────────────────────
+
+class SettingsErrorBoundary extends Component<
+  { children: React.ReactNode },
+  { error: Error | null }
+> {
+  state = { error: null as Error | null }
+
+  static getDerivedStateFromError(error: Error) {
+    return { error }
+  }
+
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="flex h-full items-center justify-center p-8 text-center">
+          <div>
+            <p className="mb-2 text-sm font-medium text-red-500">Settings failed to load</p>
+            <button
+              onClick={() => this.setState({ error: null })}
+              className="text-xs text-primary-600 underline hover:text-primary-900"
+            >
+              Try again
+            </button>
+          </div>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
+
 // ── Main Dialog ─────────────────────────────────────────────────────────
 
-const CONTENT_MAP: Record<SectionId, () => JSX.Element> = {
+const CONTENT_MAP: Record<SectionId, () => React.JSX.Element> = {
   profile: ProfileContent,
   appearance: AppearanceContent,
   chat: ChatContent,
@@ -345,40 +377,42 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
             </div>
             <DialogClose
               render={
-                <Button size="icon-sm" variant="ghost" className="text-primary-500 hover:bg-primary-100" aria-label="Close">
+                <Button size="icon-sm" variant="ghost" className="text-primary-500 dark:text-gray-400 hover:bg-primary-100 dark:hover:bg-gray-800" aria-label="Close">
                   <HugeiconsIcon icon={Cancel01Icon} size={18} strokeWidth={1.5} />
                 </Button>
               }
             />
           </div>
 
-          {/* Horizontal tabs */}
-          <div className="flex gap-0.5 border-b border-primary-200 px-5 overflow-x-auto scrollbar-none">
-            {SECTIONS.map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                onClick={() => setActive(s.id)}
-                className={cn(
-                  'flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2.5 text-xs font-medium transition-colors',
-                  active === s.id
-                    ? 'border-accent-500 text-accent-600'
-                    : 'border-transparent text-primary-500 hover:text-primary-700',
-                )}
-              >
-                <HugeiconsIcon icon={s.icon} size={14} strokeWidth={1.5} />
-                {s.label}
-              </button>
-            ))}
-          </div>
+          <SettingsErrorBoundary>
+            {/* Horizontal tabs */}
+            <div className="flex gap-0.5 border-b border-primary-200 px-5 overflow-x-auto scrollbar-none">
+              {SECTIONS.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => setActive(s.id)}
+                  className={cn(
+                    'flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2.5 text-xs font-medium transition-colors',
+                    active === s.id
+                      ? 'border-accent-500 text-accent-600'
+                      : 'border-transparent text-primary-500 dark:text-gray-400 hover:text-primary-700 dark:hover:text-gray-200',
+                  )}
+                >
+                  <HugeiconsIcon icon={s.icon} size={14} strokeWidth={1.5} />
+                  {s.label}
+                </button>
+              ))}
+            </div>
 
-          {/* Content */}
-          <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4">
-            <ActiveContent />
-          </div>
+            {/* Content */}
+            <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4">
+              <ActiveContent />
+            </div>
+          </SettingsErrorBoundary>
 
           {/* Footer */}
-          <div className="border-t border-primary-200 px-5 py-2.5 text-xs text-primary-500 flex items-center gap-1.5">
+          <div className="border-t border-primary-200 dark:border-gray-700 px-5 py-2.5 text-xs text-primary-500 dark:text-gray-400 flex items-center gap-1.5">
             <HugeiconsIcon icon={Settings02Icon} size={14} strokeWidth={1.5} />
             Changes saved automatically.
           </div>

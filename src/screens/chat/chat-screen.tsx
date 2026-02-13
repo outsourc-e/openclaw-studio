@@ -51,6 +51,7 @@ import type {
 } from './components/chat-composer'
 import type { GatewayAttachment } from './types'
 import { cn } from '@/lib/utils'
+import { toast } from '@/components/ui/toast'
 import { FileExplorerSidebar } from '@/components/file-explorer'
 import { SEARCH_MODAL_EVENTS } from '@/hooks/use-search-modal'
 import { SIDEBAR_TOGGLE_EVENT } from '@/hooks/use-global-shortcuts'
@@ -653,7 +654,9 @@ export function ChatScreen({
             },
           )
         }
-        setError(`Failed to send message. ${messageText}`)
+        const errorMessage = `Failed to send message. ${messageText}`
+        setError(errorMessage)
+        toast('Failed to send message', { type: 'error' })
         setPendingGeneration(false)
         setWaitingForResponse(false)
       })

@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/scroll-area'
 import { Markdown } from '@/components/prompt-kit/markdown'
 import { cn } from '@/lib/utils'
+import { toast } from '@/components/ui/toast'
 
 type SkillsTab = 'installed' | 'marketplace' | 'featured'
 type SkillsSort = 'name' | 'category'
@@ -217,7 +218,9 @@ export function SkillsScreen() {
         }
       })
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : String(err))
+      const errorMessage = err instanceof Error ? err.message : String(err)
+      setActionError(errorMessage)
+      toast(errorMessage, { type: 'error', icon: '❌' })
     } finally {
       setActionSkillId(null)
     }
@@ -652,10 +655,10 @@ function SkillsGrid({
     return (
       <div className="rounded-xl border border-dashed border-primary-200 bg-primary-100/40 px-4 py-8 text-center">
         <p className="text-sm font-medium text-primary-700">
-          {isMarketplace && !searchInput ? 'Marketplace Not Configured' : 'No skills found'}
+          {isMarketplace ? 'Marketplace Not Configured' : 'No skills found'}
         </p>
         <p className="mt-1 text-xs text-primary-500 text-pretty max-w-sm mx-auto">
-          {isMarketplace && !searchInput ? (
+          {isMarketplace ? (
             <>
               Run <code className="rounded bg-primary-200 px-1.5 py-0.5 font-mono text-[11px]">clawdhub sync</code> in your terminal to download the skills registry, or browse skills at{' '}
               <a href="https://clawdhub.com" target="_blank" rel="noopener noreferrer" className="text-accent-500 hover:underline">clawdhub.com</a>
@@ -840,11 +843,7 @@ function FeaturedGrid({
               </span>
             </div>
 
-            <div className="mb-3 flex size-full min-h-[102px] items-center justify-center rounded-xl border border-primary-200 bg-linear-to-br from-muted/80 via-muted/50 to-muted/80 text-sm text-primary-500 text-pretty">
-              Preview unavailable
-            </div>
-
-            <p className="line-clamp-3 text-sm text-primary-500 text-pretty">
+            <p className="line-clamp-3 mb-3 text-sm text-primary-500 text-pretty">
               {skill.description}
             </p>
 

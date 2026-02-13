@@ -239,7 +239,9 @@ function mergeOptimisticHistoryMessages(
 ): Array<GatewayMessage> {
   if (!optimisticMessages.length) return serverMessages
 
+  const now = Date.now()
   const merged = [...serverMessages]
+  
   for (const optimisticMessage of optimisticMessages) {
     const hasMatch = serverMessages.some((serverMessage) => {
       if (
@@ -268,7 +270,15 @@ function mergeOptimisticHistoryMessages(
     })
 
     if (!hasMatch) {
-      merged.push(optimisticMessage)
+      // Preserve optimistic messages that are still "sending" or created within the last 10 seconds
+      const createdAt = (optimisticMessage as any).__createdAt || optimisticMessage.timestamp || 0
+      const age = now - createdAt
+      const isRecent = age < 10000
+      const isSending = optimisticMessage.status === 'sending' || Boolean(optimisticMessage.__optimisticId)
+      
+      if (isSending && isRecent) {
+        merged.push(optimisticMessage)
+      }
     }
   }
 

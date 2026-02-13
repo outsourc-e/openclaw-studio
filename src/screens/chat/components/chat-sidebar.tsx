@@ -304,7 +304,7 @@ function SectionLabel({
   if (isCollapsed) return null
 
   const labelContent = (
-    <span className="text-[10px] font-semibold uppercase tracking-wider text-primary-500 select-none">
+    <span className="text-[10px] font-semibold uppercase tracking-wider text-primary-500 dark:text-gray-400 select-none">
       {label}
     </span>
   )
@@ -319,7 +319,7 @@ function SectionLabel({
         {navigateTo ? (
           <Link
             to={navigateTo}
-            className="text-[10px] font-semibold uppercase tracking-wider text-primary-500 hover:text-primary-700 select-none transition-colors"
+            className="text-[10px] font-semibold uppercase tracking-wider text-primary-500 dark:text-gray-400 hover:text-primary-700 dark:hover:text-gray-200 select-none transition-colors"
           >
             {label}
           </Link>
@@ -355,7 +355,7 @@ function SectionLabel({
       {navigateTo ? (
         <Link
           to={navigateTo}
-          className="text-[10px] font-semibold uppercase tracking-wider text-primary-500 hover:text-primary-700 select-none transition-colors"
+          className="text-[10px] font-semibold uppercase tracking-wider text-primary-500 dark:text-gray-400 hover:text-primary-700 dark:hover:text-gray-200 select-none transition-colors"
         >
           {label}
         </Link>
@@ -465,8 +465,6 @@ function ChatSidebarComponent({
     paths,
     handleOpenSettings,
     closeSettings,
-    copySessionsDir,
-    copyStorePath,
   } = useSidebarSettings()
   const profileDisplayName = useChatSettingsStore(selectChatProfileDisplayName)
   const profileAvatarDataUrl = useChatSettingsStore(
@@ -976,7 +974,7 @@ function ChatSidebarComponent({
                 <HugeiconsIcon icon={Settings01Icon} size={20} strokeWidth={1.5} />
                 Settings
               </span>
-              <kbd className="ml-auto text-[10px] text-primary-500 font-mono">{mod},</kbd>
+              <kbd className="ml-auto text-[10px] text-primary-500 dark:text-gray-400 font-mono">{mod},</kbd>
             </MenuItem>
             <MenuItem
               onClick={function onOpenProviders() {
@@ -988,7 +986,7 @@ function ChatSidebarComponent({
                 <HugeiconsIcon icon={ApiIcon} size={20} strokeWidth={1.5} />
                 Providers
               </span>
-              <kbd className="ml-auto text-[10px] text-primary-500 font-mono">{mod}P</kbd>
+              <kbd className="ml-auto text-[10px] text-primary-500 dark:text-gray-400 font-mono">{mod}P</kbd>
             </MenuItem>
           </MenuContent>
         </MenuRoot>

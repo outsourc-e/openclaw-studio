@@ -38,7 +38,8 @@ function StreamingCursor() {
   return <LoadingIndicator ariaLabel="Assistant is streaming" />
 }
 
-const WORDS_PER_TICK = 3
+const WORDS_PER_TICK = 4
+const TICK_INTERVAL_MS = 50
 
 function isWhitespaceCharacter(value: string): boolean {
   return /\s/.test(value)
@@ -302,7 +303,7 @@ function MessageItemComponent({
   const [revealedText, setRevealedText] = useState(() =>
     remoteStreamingActive ? '' : initialDisplayText,
   )
-  const revealFrameRef = useRef<number | null>(null)
+  const revealTimerRef = useRef<number | null>(null)
   const targetWordCountRef = useRef(countWords(initialDisplayText))
   const previousTextRef = useRef(initialDisplayText)
   const previousTextLengthRef = useRef(initialDisplayText.length)
@@ -328,15 +329,22 @@ function MessageItemComponent({
     )
   }, [remoteStreamingActive, remoteStreamingText, fullText])
 
+  // Reset word count when simulate streaming starts for a new message
+  useEffect(() => {
+    if (_simulateStreaming && !remoteStreamingActive) {
+      setRevealedWordCount(0)
+    }
+  }, [_streamingKey, _simulateStreaming, remoteStreamingActive])
+
   useEffect(() => {
     return () => {
-      if (revealFrameRef.current !== null) {
-        window.cancelAnimationFrame(revealFrameRef.current)
+      if (revealTimerRef.current !== null) {
+        window.clearInterval(revealTimerRef.current)
       }
     }
   }, [])
 
-  const effectiveIsStreaming = remoteStreamingActive
+  const effectiveIsStreaming = remoteStreamingActive || _simulateStreaming
   const assistantDisplayText = effectiveIsStreaming ? revealedText : displayText
 
   useEffect(() => {
@@ -352,9 +360,9 @@ function MessageItemComponent({
     previousTextLengthRef.current = displayText.length
 
     if (!effectiveIsStreaming) {
-      if (revealFrameRef.current !== null) {
-        window.cancelAnimationFrame(revealFrameRef.current)
-        revealFrameRef.current = null
+      if (revealTimerRef.current !== null) {
+        window.clearInterval(revealTimerRef.current)
+        revealTimerRef.current = null
       }
       setRevealedWordCount(totalWords)
       return
@@ -365,34 +373,44 @@ function MessageItemComponent({
       return
     }
 
-    if (revealFrameRef.current !== null) {
+    if (revealTimerRef.current !== null) {
       return
     }
 
-    function tick() {
-      setRevealedWordCount((currentWordCount) => {
-        const targetWordCount = targetWordCountRef.current
-        if (currentWordCount >= targetWordCount) {
-          revealFrameRef.current = null
-          return currentWordCount
-        }
+    // Don't start animation if already fully revealed
+    setRevealedWordCount((currentWordCount) => {
+      if (currentWordCount >= totalWords) {
+        return currentWordCount
+      }
 
-        const nextWordCount = Math.min(
-          targetWordCount,
-          currentWordCount + WORDS_PER_TICK,
-        )
+      function tick() {
+        setRevealedWordCount((currentWordCount) => {
+          const targetWordCount = targetWordCountRef.current
+          if (currentWordCount >= targetWordCount) {
+            if (revealTimerRef.current !== null) {
+              window.clearInterval(revealTimerRef.current)
+              revealTimerRef.current = null
+            }
+            return currentWordCount
+          }
 
-        if (nextWordCount < targetWordCount) {
-          revealFrameRef.current = window.requestAnimationFrame(tick)
-        } else {
-          revealFrameRef.current = null
-        }
+          const nextWordCount = Math.min(
+            targetWordCount,
+            currentWordCount + WORDS_PER_TICK,
+          )
 
-        return nextWordCount
-      })
-    }
+          if (nextWordCount >= targetWordCount && revealTimerRef.current !== null) {
+            window.clearInterval(revealTimerRef.current)
+            revealTimerRef.current = null
+          }
 
-    revealFrameRef.current = window.requestAnimationFrame(tick)
+          return nextWordCount
+        })
+      }
+
+      revealTimerRef.current = window.setInterval(tick, TICK_INTERVAL_MS)
+      return currentWordCount
+    })
   }, [displayText, effectiveIsStreaming])
 
   useEffect(() => {

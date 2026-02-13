@@ -697,10 +697,10 @@ function ChatMessageListComponent({
             value={messageSearchValue}
             onChange={(e) => setMessageSearchValue(e.target.value)}
             placeholder="Search messages..."
-            className="min-w-0 flex-1 rounded-md border border-primary-200 bg-white px-2.5 py-1.5 text-sm text-primary-900 outline-none placeholder:text-primary-400 focus:border-primary-400 focus:ring-1 focus:ring-primary-400"
+            className="min-w-0 flex-1 rounded-md border border-primary-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-2.5 py-1.5 text-sm text-primary-900 dark:text-gray-100 outline-none placeholder:text-primary-400 dark:placeholder:text-gray-500 focus:border-primary-400 dark:focus:border-primary-500 focus:ring-1 focus:ring-primary-400 dark:focus:ring-primary-500"
           />
           {isMessageSearchActive && (
-            <span className="shrink-0 text-xs text-primary-500">
+            <span className="shrink-0 text-xs text-primary-500 dark:text-gray-400">
               {messageSearchMatches.length > 0
                 ? `${activeSearchMatchIndex + 1} of ${messageSearchMatches.length}`
                 : 'No matches'}
@@ -711,7 +711,7 @@ function ChatMessageListComponent({
               type="button"
               onClick={jumpToPreviousMatch}
               disabled={messageSearchMatches.length === 0}
-              className="rounded p-1 text-primary-500 hover:bg-primary-200 hover:text-primary-700 disabled:opacity-30"
+              className="rounded p-1 text-primary-500 dark:text-gray-400 hover:bg-primary-200 dark:hover:bg-gray-800 hover:text-primary-700 dark:hover:text-gray-200 disabled:opacity-30"
               aria-label="Previous match"
             >
               <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M4 10l4-4 4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -720,7 +720,7 @@ function ChatMessageListComponent({
               type="button"
               onClick={jumpToNextMatch}
               disabled={messageSearchMatches.length === 0}
-              className="rounded p-1 text-primary-500 hover:bg-primary-200 hover:text-primary-700 disabled:opacity-30"
+              className="rounded p-1 text-primary-500 dark:text-gray-400 hover:bg-primary-200 dark:hover:bg-gray-800 hover:text-primary-700 dark:hover:text-gray-200 disabled:opacity-30"
               aria-label="Next match"
             >
               <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -728,7 +728,7 @@ function ChatMessageListComponent({
             <button
               type="button"
               onClick={closeMessageSearch}
-              className="rounded p-1 text-primary-500 hover:bg-primary-200 hover:text-primary-700"
+              className="rounded p-1 text-primary-500 dark:text-gray-400 hover:bg-primary-200 dark:hover:bg-gray-800 hover:text-primary-700 dark:hover:text-gray-200"
               aria-label="Close search"
             >
               <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>

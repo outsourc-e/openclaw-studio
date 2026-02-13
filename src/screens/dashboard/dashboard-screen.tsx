@@ -41,6 +41,7 @@ import {
   fetchSessions,
 } from '@/screens/chat/chat-queries'
 import { cn } from '@/lib/utils'
+import { toast } from '@/components/ui/toast'
 
 type SessionStatusPayload = {
   ok?: boolean
@@ -57,15 +58,26 @@ type SessionStatusPayload = {
 }
 
 async function fetchSessionStatus(): Promise<SessionStatusPayload> {
-  const response = await fetch('/api/session-status')
-  if (!response.ok) return {}
-  return response.json() as Promise<SessionStatusPayload>
+  try {
+    const response = await fetch('/api/session-status')
+    if (!response.ok) {
+      toast('Failed to fetch session status', { type: 'error' })
+      return {}
+    }
+    return response.json() as Promise<SessionStatusPayload>
+  } catch (err) {
+    toast('Failed to fetch session status', { type: 'error' })
+    return {}
+  }
 }
 
 async function fetchHeroCost(): Promise<string> {
   try {
     const response = await fetch('/api/cost')
-    if (!response.ok) return '—'
+    if (!response.ok) {
+      toast('Failed to fetch cost data', { type: 'error' })
+      return '—'
+    }
     const data = (await response.json()) as Record<string, unknown>
     const cost = data.cost as Record<string, unknown> | undefined
     const total = cost?.total as Record<string, unknown> | undefined
@@ -74,6 +86,7 @@ async function fetchHeroCost(): Promise<string> {
     if (typeof amount === 'string') return `$${amount}`
     return '—'
   } catch {
+    toast('Failed to fetch cost data', { type: 'error' })
     return '—'
   }
 }
@@ -165,7 +178,7 @@ export function DashboardScreen() {
     refetchInterval: 60_000,
   })
 
-  const handleRefreshAll = useCallback(
+  const _handleRefreshAll = useCallback(
     async function handleRefreshAll() {
       await Promise.allSettled([
         sessionsQuery.refetch(),
@@ -270,7 +283,7 @@ export function DashboardScreen() {
                 <button
                   type="button"
                   onClick={() => setDashSettingsOpen(true)}
-                  className="inline-flex size-7 items-center justify-center rounded-full text-primary-600 transition-colors hover:bg-primary-50 hover:text-accent-600"
+                  className="inline-flex size-7 items-center justify-center rounded-full text-primary-600 dark:text-primary-400 transition-colors hover:bg-primary-50 dark:hover:bg-gray-800 hover:text-accent-600 dark:hover:text-accent-400"
                   aria-label="Settings"
                   title="Settings"
                 >
@@ -293,6 +306,8 @@ export function DashboardScreen() {
           activeAgents={systemStatus.activeAgents}
           uptimeSeconds={systemStatus.uptimeSeconds}
           totalSpend={heroCostQuery.data ?? '—'}
+          costError={heroCostQuery.isError}
+          onRetryCost={() => heroCostQuery.refetch()}
         />
 
         {/* Inline widget controls — belongs with the grid, not the header */}
@@ -301,7 +316,7 @@ export function DashboardScreen() {
           <button
             type="button"
             onClick={handleResetLayout}
-            className="inline-flex items-center gap-1 rounded-lg border border-primary-200 bg-primary-50 px-2.5 py-1 text-[11px] text-primary-600 transition-colors hover:border-accent-200 hover:text-accent-600"
+            className="inline-flex items-center gap-1 rounded-lg border border-primary-200 dark:border-gray-700 bg-primary-50 dark:bg-gray-800 px-2.5 py-1 text-[11px] text-primary-600 dark:text-primary-400 transition-colors hover:border-accent-200 dark:hover:border-accent-600 hover:text-accent-600 dark:hover:text-accent-400"
             aria-label="Reset Layout"
             title="Reset Layout"
           >

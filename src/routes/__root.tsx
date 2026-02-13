@@ -78,11 +78,11 @@ export const Route = createRootRoute({
       },
       {
         property: 'og:image',
-        content: '/cover.webp',
+        content: '/cover.png',
       },
       {
         property: 'og:image:type',
-        content: 'image/webp',
+        content: 'image/png',
       },
       {
         name: 'twitter:card',
@@ -90,7 +90,7 @@ export const Route = createRootRoute({
       },
       {
         name: 'twitter:image',
-        content: '/cover.webp',
+        content: '/cover.png',
       },
     ],
     links: [
