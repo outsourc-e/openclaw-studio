@@ -156,8 +156,8 @@ export function useChatHistory({
     })
 
     // Second pass: mark intermediate assistant messages as narration
-    // (messages with tool calls that have a LATER assistant message after them)
-    // Mark intermediate assistant messages as narration (compact ⚡ rows)
+    // Only hide messages that are PURELY tool calls (no substantial text)
+    // Messages with real text + tool calls are real responses — always show them
     for (let i = 0; i < filtered.length; i++) {
       const msg = filtered[i]
       if (msg.role !== 'assistant') continue
@@ -166,6 +166,14 @@ export function useChatHistory({
         (c: any) => c.type === 'toolCall' || c.type === 'tool_use' || c.type === 'toolUse'
       )
       if (!hasToolCall) continue
+      
+      // Check if this message has substantial text (not just empty/whitespace)
+      const substantialText = content.some(
+        (c: any) => c.type === 'text' && typeof c.text === 'string' && c.text.trim().length > 20
+      )
+      // If it has real text content, it's a response — never hide it
+      if (substantialText) continue
+      
       const hasLater = filtered.slice(i + 1).some((m: GatewayMessage) => m.role === 'assistant')
       if (hasLater) {
         if (!showToolMessages) {
