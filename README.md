@@ -1,12 +1,12 @@
 # ClawSuite
 
-### Command Center for OpenClaw
+### The Full-Stack Command Center for OpenClaw
 
-**ClawSuite** is an open-source, self-hosted chat interface for OpenClaw AI agents. Build, monitor, and interact with AI-powered automation through a beautifully designed dashboard that puts you in full control.
+**ClawSuite** is an open-source, self-hosted platform for OpenClaw AI agents. Not just a chat wrapper — it's a complete command center with built-in browser automation, skills marketplace, real-time dashboard, multi-agent orchestration, and enterprise-grade security scanning.
 
 ![ClawSuite Dashboard](./public/screenshots/dashboard.png)
 
-> Self-hosted command center — chat with any model, orchestrate agents, manage your gateway.
+> The first full-stack OpenClaw platform. Chat, browse, orchestrate, monitor — all in one place.
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Node Version](https://img.shields.io/badge/node-%3E%3D22.0.0-brightgreen.svg)](https://nodejs.org/)
@@ -38,12 +38,23 @@
 - Budget alerts and spending insights
 - Gateway health monitoring
 
+### 🌐 **Built-in Browser**
+- Headed Chromium with stealth anti-detection
+- Agent handoff — share pages directly with your AI
+- Persistent sessions (login once, cookies survive restarts)
+- Control panel for web automation tasks
+
+### 🛒 **Skills Marketplace**
+- Browse 2,000+ skills from ClawdHub registry
+- One-click install with dependency resolution
+- **Security scanning** — every skill scanned for suspicious patterns before install
+- Auto-discovery of locally installed skills
+
 ### 🛠️ **Developer Tools**
-- **Terminal**: Full-featured integrated terminal with PTY support
+- **Terminal**: Integrated terminal with cross-platform support
 - **File Explorer**: Browse workspace files with Monaco code editor
 - **Debug Console**: Gateway diagnostics with pattern-based troubleshooter
 - **Memory Viewer**: Inspect and manage agent memory state
-- **Skills Browser**: Discover and install skills from ClawdHub
 - **Cron Manager**: Schedule recurring tasks and automation
 
 ### 🔍 **Power User Features**
@@ -53,12 +64,19 @@
 - **Session Management**: Pause, resume, or switch between conversations
 - **Keyboard Shortcuts**: Press `?` to see all shortcuts
 
-### ⚙️ **Configuration & Setup**
+### 🎨 **Customization**
+- Dynamic accent color system (pick any color)
+- 3-way theme toggle (System / Light / Dark)
+- Settings popup dialog with 6 tabs
 - Provider setup wizard with guided onboarding
-- Model switcher with undo, confirmations, and premium detection
-- Custom gateway URL configuration
-- Dark/light theme toggle
-- Persistent settings across sessions
+- Model switcher — always accessible, never disabled
+
+### 🔒 **Security-First**
+- Server-side API routes (keys never exposed to browser)
+- Rate limiting on all endpoints
+- Zod validation on all inputs
+- Skills security scanning before install
+- No hardcoded secrets in source
 
 ---
 
