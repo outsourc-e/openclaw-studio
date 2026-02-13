@@ -64,8 +64,10 @@ type ParsedFrontmatter = {
 }
 
 const CACHE_TTL_MS = 5 * 60 * 1000
-const INSTALLED_ROOT = '/Users/aurora/.openclaw/workspace/skills'
-const MARKETPLACE_ROOT = '/Users/aurora/.openclaw/workspace/openclaw-skills-registry/skills'
+const HOME_DIR = os.homedir()
+const WORKSPACE_ROOT = path.join(HOME_DIR, '.openclaw', 'workspace')
+const INSTALLED_ROOT = path.join(WORKSPACE_ROOT, 'skills')
+const MARKETPLACE_ROOT = path.join(WORKSPACE_ROOT, 'openclaw-skills-registry', 'skills')
 
 const KNOWN_CATEGORIES = [
   'All',
