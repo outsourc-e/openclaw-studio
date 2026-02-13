@@ -6,16 +6,25 @@ Thanks for your interest in contributing! Here's how to get started.
 
 1. **Fork** the repo and clone your fork
 2. **Install dependencies:** `npm install`
-3. **Set up env:** Copy `.env.example` to `.env` and fill in your gateway details
-4. **Run dev server:** `npm run dev`
-5. **Make your changes** on a feature branch
-6. **Open a PR** against `main`
+3. **Install Playwright:** `npx playwright install chromium` (required for Browser tab)
+4. **Set up environment:**
+   ```bash
+   cp .env.example .env
+   # Edit .env with your gateway URL and token
+   # Find token: openclaw config get gateway.auth.token
+   ```
+5. **Run dev server:** `npm run dev`
+6. **Make your changes** on a feature branch
+7. **Open a PR** against `main`
 
 ## Development
 
 ```bash
-# Install
+# Install dependencies
 npm install
+
+# Install Playwright browser
+npx playwright install chromium
 
 # Dev server (default: localhost:3000)
 npm run dev
@@ -25,7 +34,16 @@ npm run typecheck
 
 # Lint
 npm run lint
+
+# Build for production
+npm run build
 ```
+
+**First-time setup:**
+- Copy `.env.example` to `.env`
+- Set `CLAWDBOT_GATEWAY_URL` (default: `ws://127.0.0.1:18789`)
+- Set `CLAWDBOT_GATEWAY_TOKEN` (find with `openclaw config get gateway.auth.token`)
+- See [README.md](README.md#environment-setup) for detailed environment variable documentation
 
 ## Guidelines
 

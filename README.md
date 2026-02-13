@@ -425,15 +425,23 @@ ClawSuite is built on top of the incredible [OpenClaw](https://openclaw.ai) proj
 
 ### Playwright Browser Setup
 
-The **Browser tab** requires Playwright's Chromium binary. If you skip the install step, clicking "Launch Browser" will silently fail.
+The **Browser tab** uses Playwright's Chromium binary for browser automation features:
+- Headed browser with stealth anti-detection
+- Direct page handoff to AI agents
+- Persistent sessions (cookies survive restarts)
+- Web scraping and automation tasks
+
+**Installation:**
 
 ```bash
-# Install Chromium (required)
+# Install Chromium binary (required for Browser tab)
 npx playwright install chromium
 
 # If you encounter missing system dependencies (common on fresh Ubuntu/Debian):
 npx playwright install-deps chromium
 ```
+
+**Note:** If you skip this step, clicking "Launch Browser" in the UI will fail silently. The install downloads ~350MB.
 
 ### Terminal Shell
 
