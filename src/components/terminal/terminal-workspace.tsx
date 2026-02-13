@@ -327,7 +327,6 @@ export function TerminalWorkspace({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           cwd: DEFAULT_TERMINAL_CWD,
-          command: ['/bin/bash'],
           cols: terminal.cols,
           rows: terminal.rows,
         }),

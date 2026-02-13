@@ -41,8 +41,8 @@ export function createTerminalSession(params: {
   const emitter = new EventEmitter()
   const sessionId = randomUUID()
 
-  const shell = params.command?.[0] ?? process.env.SHELL ?? '/bin/bash'
   const home = process.env.HOME ?? homedir() ?? '/tmp'
+  const shell = params.command?.[0] ?? process.env.SHELL ?? (process.platform === 'win32' ? 'powershell.exe' : '/bin/bash')
   let cwd = params.cwd ?? home
   if (cwd.startsWith('~')) {
     cwd = cwd.replace('~', home)
