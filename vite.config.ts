@@ -67,8 +67,9 @@ const config = defineConfig(({ mode, isSsrBuild }) => {
       ],
     },
     server: {
-      host: allowedHosts.length > 0 ? '0.0.0.0' : undefined,
-      allowedHosts: allowedHosts.length > 0 ? allowedHosts : undefined,
+      // Force IPv4 — 'localhost' resolves to ::1 (IPv6) on Windows, breaking gateway connectivity
+      host: allowedHosts.length > 0 ? '0.0.0.0' : '127.0.0.1',
+      allowedHosts: allowedHosts.length > 0 ? [...allowedHosts, '127.0.0.1', 'localhost'] : ['127.0.0.1', 'localhost'],
       proxy: {
         '/gateway-ui': {
           target: proxyTarget,
