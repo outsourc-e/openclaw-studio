@@ -92,6 +92,21 @@ export function MessageActionsBar({
           </TooltipRoot>
         </TooltipProvider>
       )}
+      {isQueued && onRetry && (
+        <TooltipProvider>
+          <TooltipRoot>
+            <TooltipTrigger
+              type="button"
+              onClick={onRetry}
+              className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-primary-700 hover:bg-primary-100 transition-colors"
+            >
+              <HugeiconsIcon icon={RefreshIcon} size={14} strokeWidth={1.6} />
+              <span className="text-[11px] font-medium">Retry</span>
+            </TooltipTrigger>
+            <TooltipContent side="top">Resend queued message</TooltipContent>
+          </TooltipRoot>
+        </TooltipProvider>
+      )}
       <TooltipProvider>
         <TooltipRoot>
           <TooltipTrigger

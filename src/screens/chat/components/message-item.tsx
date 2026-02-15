@@ -107,6 +107,7 @@ function getWordBoundaryIndex(text: string, wordCount: number): number {
 type MessageItemProps = {
   message: GatewayMessage
   toolResultsByCallId?: Map<string, GatewayMessage>
+  onRetryMessage?: (message: GatewayMessage) => void
   forceActionsVisible?: boolean
   wrapperRef?: React.RefObject<HTMLDivElement | null>
   wrapperClassName?: string
@@ -257,6 +258,7 @@ function attachmentSource(attachment: GatewayAttachment | undefined): string {
 function MessageItemComponent({
   message,
   toolResultsByCallId,
+  onRetryMessage,
   forceActionsVisible = false,
   wrapperRef,
   wrapperClassName,
@@ -468,6 +470,7 @@ function MessageItemComponent({
   const hasInlineImages = inlineImages.length > 0
 
   const hasText = displayText.length > 0
+  const canRetryMessage = isUser && (hasText || hasAttachments || hasInlineImages)
 
   // Get tool calls from this message (for assistant messages)
   const toolCalls = role === 'assistant' ? getToolCallsFromMessage(message) : []
@@ -724,14 +727,11 @@ function MessageItemComponent({
           timestamp={timestamp}
           align={isUser ? 'end' : 'start'}
           forceVisible={forceActionsVisible}
-          isQueued={isUser && isQueued}
+          isQueued={isUser && isQueued && !isFailed}
           isFailed={isUser && isFailed}
           onRetry={
-            isFailed
-              ? () => {
-                  // TODO: Wire up retry handler from parent
-                  void fullText
-                }
+            canRetryMessage && (isQueued || isFailed) && onRetryMessage
+              ? () => onRetryMessage(message)
               : undefined
           }
         />
@@ -748,6 +748,7 @@ function areMessagesEqual(
     return false
   }
   if (prevProps.wrapperClassName !== nextProps.wrapperClassName) return false
+  if (prevProps.onRetryMessage !== nextProps.onRetryMessage) return false
   if (prevProps.wrapperDataMessageId !== nextProps.wrapperDataMessageId) {
     return false
   }

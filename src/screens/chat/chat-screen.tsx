@@ -49,7 +49,7 @@ import type {
   ChatComposerHandle,
   ChatComposerHelpers,
 } from './components/chat-composer'
-import type { GatewayAttachment } from './types'
+import type { GatewayAttachment, GatewayMessage } from './types'
 import { cn } from '@/lib/utils'
 import { toast } from '@/components/ui/toast'
 import { FileExplorerSidebar } from '@/components/file-explorer'
@@ -76,6 +76,62 @@ type ChatScreenProps = {
   compact?: boolean
 }
 
+function normalizeMessageValue(value: unknown): string {
+  if (typeof value !== 'string') return ''
+  const trimmed = value.trim()
+  return trimmed.length > 0 ? trimmed : ''
+}
+
+function getMessageClientId(message: GatewayMessage): string {
+  const raw = message as Record<string, unknown>
+  const directClientId = normalizeMessageValue(raw.clientId)
+  if (directClientId) return directClientId
+
+  const alternateClientId = normalizeMessageValue(raw.client_id)
+  if (alternateClientId) return alternateClientId
+
+  const optimisticId = normalizeMessageValue(raw.__optimisticId)
+  if (optimisticId.startsWith('opt-')) {
+    return optimisticId.slice(4)
+  }
+  return ''
+}
+
+function getRetryMessageKey(message: GatewayMessage): string {
+  const clientId = getMessageClientId(message)
+  if (clientId) return `client:${clientId}`
+
+  const raw = message as Record<string, unknown>
+  const optimisticId = normalizeMessageValue(raw.__optimisticId)
+  if (optimisticId) return `optimistic:${optimisticId}`
+
+  const messageId = normalizeMessageValue(raw.id)
+  if (messageId) return `id:${messageId}`
+
+  const timestamp = normalizeMessageValue(
+    typeof raw.timestamp === 'number' ? String(raw.timestamp) : raw.timestamp,
+  )
+  const messageText = textFromMessage(message).trim()
+  return `fallback:${message.role ?? 'unknown'}:${timestamp}:${messageText}`
+}
+
+function isRetryableQueuedMessage(message: GatewayMessage): boolean {
+  if ((message.role || '') !== 'user') return false
+  const raw = message as Record<string, unknown>
+  const status = normalizeMessageValue(raw.status)
+  const optimisticId = normalizeMessageValue(raw.__optimisticId)
+  return status === 'sending' || status === 'error' || optimisticId.length > 0
+}
+
+function getMessageRetryAttachments(
+  message: GatewayMessage,
+): Array<GatewayAttachment> {
+  if (!Array.isArray(message.attachments)) return []
+  return message.attachments.filter((attachment) => {
+    return Boolean(attachment) && typeof attachment === 'object'
+  })
+}
+
 export function ChatScreen({
   activeFriendlyId,
   isNewChat = false,
@@ -98,6 +154,9 @@ export function ChatScreen({
   const streamIdleTimer = useRef<number | null>(null)
   const lastAssistantSignature = useRef('')
   const refreshHistoryRef = useRef<() => void>(() => {})
+  const retriedQueuedMessageKeysRef = useRef(new Set<string>())
+  const hasSeenGatewayDisconnectRef = useRef(false)
+  const hadGatewayErrorRef = useRef(false)
 
   const pendingStartRef = useRef(false)
   const composerHandleRef = useRef<ChatComposerHandle | null>(null)
@@ -147,7 +206,7 @@ export function ChatScreen({
   })
 
   // Wire SSE realtime stream for instant message delivery
-  const { messages: realtimeMessages, lastCompletedRunAt } =
+  const { messages: realtimeMessages, lastCompletedRunAt, connectionState } =
     useRealtimeChatHistory({
       sessionKey: resolvedSessionKey || activeCanonicalKey,
       friendlyId: activeFriendlyId,
@@ -511,6 +570,7 @@ export function ChatScreen({
   useEffect(() => {
     const resetKey = isNewChat ? 'new' : activeFriendlyId
     if (!resetKey) return
+    retriedQueuedMessageKeysRef.current.clear()
     if (pendingStartRef.current) {
       pendingStartRef.current = false
       return
@@ -705,6 +765,122 @@ export function ChatScreen({
         setWaitingForResponse(false)
       })
   }
+
+  const retryQueuedMessage = useCallback(
+    function retryQueuedMessage(message: GatewayMessage, mode: 'manual' | 'auto') {
+      if (!isRetryableQueuedMessage(message)) return false
+
+      const body = textFromMessage(message).trim()
+      const attachments = getMessageRetryAttachments(message)
+      if (body.length === 0 && attachments.length === 0) return false
+
+      const retryKey = getRetryMessageKey(message)
+      if (mode === 'auto' && retriedQueuedMessageKeysRef.current.has(retryKey)) {
+        return false
+      }
+
+      const sessionKeyForSend =
+        forcedSessionKey || resolvedSessionKey || activeSessionKey || 'main'
+      const sessionKeyForMessage = sessionKeyForHistory || sessionKeyForSend
+      const existingClientId = getMessageClientId(message)
+
+      if (existingClientId) {
+        updateHistoryMessageByClientId(
+          queryClient,
+          activeFriendlyId,
+          sessionKeyForMessage,
+          existingClientId,
+          function markSending(currentMessage) {
+            return { ...currentMessage, status: 'sending' }
+          },
+        )
+      }
+
+      if (mode === 'auto') {
+        retriedQueuedMessageKeysRef.current.add(retryKey)
+      }
+
+      sendMessage(
+        sessionKeyForSend,
+        activeFriendlyId,
+        body,
+        attachments,
+        true,
+        existingClientId,
+      )
+      return true
+    },
+    [
+      activeFriendlyId,
+      activeSessionKey,
+      forcedSessionKey,
+      queryClient,
+      resolvedSessionKey,
+      sessionKeyForHistory,
+    ],
+  )
+
+  const flushRetryableMessages = useCallback(
+    function flushRetryableMessages() {
+      for (const message of finalDisplayMessages) {
+        retryQueuedMessage(message, 'auto')
+      }
+    },
+    [finalDisplayMessages, retryQueuedMessage],
+  )
+
+  const handleRetryMessage = useCallback(
+    function handleRetryMessage(message: GatewayMessage) {
+      const retryKey = getRetryMessageKey(message)
+      retriedQueuedMessageKeysRef.current.delete(retryKey)
+      retryQueuedMessage(message, 'manual')
+    },
+    [retryQueuedMessage],
+  )
+
+  useEffect(() => {
+    if (connectionState === 'error' || connectionState === 'disconnected') {
+      hasSeenGatewayDisconnectRef.current = true
+      retriedQueuedMessageKeysRef.current.clear()
+      return
+    }
+
+    if (connectionState === 'connected' && hasSeenGatewayDisconnectRef.current) {
+      hasSeenGatewayDisconnectRef.current = false
+      flushRetryableMessages()
+    }
+  }, [connectionState, flushRetryableMessages])
+
+  useEffect(() => {
+    if (gatewayStatusError) {
+      hadGatewayErrorRef.current = true
+      retriedQueuedMessageKeysRef.current.clear()
+      return
+    }
+
+    const isGatewayHealthy = gatewayStatusQuery.data?.ok === true
+    if (isGatewayHealthy && hadGatewayErrorRef.current) {
+      hadGatewayErrorRef.current = false
+      flushRetryableMessages()
+    }
+  }, [flushRetryableMessages, gatewayStatusError, gatewayStatusQuery.data])
+
+  useEffect(() => {
+    function handleGatewayHealthRestored() {
+      retriedQueuedMessageKeysRef.current.clear()
+      hadGatewayErrorRef.current = false
+      flushRetryableMessages()
+      handleGatewayRefetch()
+    }
+
+    window.addEventListener('gateway:health-restored', handleGatewayHealthRestored)
+    return () => {
+      window.removeEventListener(
+        'gateway:health-restored',
+        handleGatewayHealthRestored,
+      )
+    }
+  }, [flushRetryableMessages, handleGatewayRefetch])
 
   const createSessionForMessage = useCallback(async () => {
     setCreatingSession(true)
@@ -930,6 +1106,7 @@ export function ChatScreen({
           {hideUi ? null : (
             <ChatMessageList
               messages={finalDisplayMessages}
+              onRetryMessage={handleRetryMessage}
               loading={historyLoading}
               empty={historyEmpty}
               emptyState={

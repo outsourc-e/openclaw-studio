@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Alert02Icon, Cancel01Icon, Settings02Icon } from '@hugeicons/core-free-icons'
 import { Button } from '@/components/ui/button'
@@ -8,7 +8,8 @@ import { useGatewaySetupStore } from '@/hooks/use-gateway-setup'
 import { cn } from '@/lib/utils'
 
 const BANNER_STORAGE_KEY = 'clawsuite-gateway-banner-dismissed'
-const CHECK_INTERVAL_MS = 30_000 // Check every 30 seconds
+const CHECK_INTERVAL_MS = 5_000 // Check every 5 seconds
+const DISMISS_ANIMATION_MS = 220
 
 async function checkGatewayHealth(): Promise<boolean> {
   try {
@@ -30,7 +31,13 @@ async function checkGatewayHealth(): Promise<boolean> {
 export function GatewayReconnectBanner() {
   const [isVisible, setIsVisible] = useState(false)
   const [isDismissed, setIsDismissed] = useState(false)
+  const [isFadingOut, setIsFadingOut] = useState(false)
   const { open: openSetupWizard } = useGatewaySetupStore()
+  const isVisibleRef = useRef(isVisible)
+
+  useEffect(() => {
+    isVisibleRef.current = isVisible
+  }, [isVisible])
 
   useEffect(() => {
     // Only run on client
@@ -46,6 +53,31 @@ export function GatewayReconnectBanner() {
     let mounted = true
 
     let failCount = 0
+    let wasUnhealthy = false
+    let fadeTimer: number | null = null
+
+    function clearFadeTimer() {
+      if (fadeTimer !== null) {
+        window.clearTimeout(fadeTimer)
+        fadeTimer = null
+      }
+    }
+
+    function hideBannerWithFade() {
+      if (!isVisibleRef.current) {
+        setIsVisible(false)
+        setIsFadingOut(false)
+        return
+      }
+
+      clearFadeTimer()
+      setIsFadingOut(true)
+      fadeTimer = window.setTimeout(() => {
+        if (!mounted) return
+        setIsVisible(false)
+        setIsFadingOut(false)
+      }, DISMISS_ANIMATION_MS)
+    }
 
     async function checkHealth() {
       if (!mounted) return
@@ -53,12 +85,20 @@ export function GatewayReconnectBanner() {
       if (!mounted) return
 
       if (healthy) {
+        const shouldNotifyRestored = wasUnhealthy
         failCount = 0
-        setIsVisible(false)
+        wasUnhealthy = false
+        hideBannerWithFade()
+        if (shouldNotifyRestored && typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('gateway:health-restored'))
+        }
       } else {
         failCount++
         // Only show banner after 2 consecutive failures (avoids flash on slow initial connect)
         if (failCount >= 2 && !isDismissed) {
+          wasUnhealthy = true
+          clearFadeTimer()
+          setIsFadingOut(false)
           setIsVisible(true)
         }
       }
@@ -76,6 +116,7 @@ export function GatewayReconnectBanner() {
       mounted = false
       clearTimeout(initialTimer)
       clearInterval(interval)
+      clearFadeTimer()
     }
   }, [isDismissed])
 
@@ -90,46 +131,50 @@ export function GatewayReconnectBanner() {
     handleDismiss()
   }
 
-  if (!isVisible || isDismissed) return null
+  if ((!isVisible && !isFadingOut) || isDismissed) return null
 
   return (
     <div
       className={cn(
-        'fixed top-0 left-0 right-0 z-50 border-b border-red-200 bg-gradient-to-r from-red-50 to-red-100',
-        'flex items-center justify-between gap-4 px-4 py-2.5 shadow-sm',
+        'fixed bottom-4 left-4 right-4 sm:left-auto sm:w-80 z-40 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 shadow-lg',
+        'transition-all duration-200 ease-out',
+        (isVisible && !isFadingOut
+          ? 'translate-y-0 opacity-100'
+          : 'translate-y-2 opacity-0 pointer-events-none'),
       )}
       role="alert"
       aria-live="polite"
     >
-      <div className="flex items-center gap-2">
+      <div className="flex items-start gap-2">
         <HugeiconsIcon
           icon={Alert02Icon}
-          className="size-5 shrink-0 text-red-600"
-          strokeWidth={2}
+          size={20}
+          className="shrink-0 text-red-600"
+          strokeWidth={1.5}
         />
-        <p className="text-sm font-medium text-red-900">
+        <p className="text-xs font-medium text-red-900">
           Gateway connection lost.{' '}
-          <span className="font-normal text-red-700">
+          <span className="font-normal text-red-700 text-pretty">
             Check your connection or reconfigure in settings.
           </span>
         </p>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="mt-2 flex items-center gap-2">
         <Button
           variant="secondary"
           size="sm"
           onClick={handleOpenSettings}
-          className="shrink-0 border-red-300 bg-white text-red-700 hover:bg-red-50"
+          className="h-7 shrink-0 border-red-300 bg-red-100 px-2 text-xs text-red-700 hover:bg-red-200"
         >
-          <HugeiconsIcon icon={Settings02Icon} size={14} strokeWidth={1.5} />
+          <HugeiconsIcon icon={Settings02Icon} size={20} strokeWidth={1.5} />
           Reconfigure
         </Button>
         <button
           onClick={handleDismiss}
-          className="shrink-0 rounded p-1 text-red-600 transition-colors hover:bg-red-200/50"
+          className="shrink-0 rounded p-1 text-red-600 transition-colors hover:bg-red-200/70"
           aria-label="Dismiss banner"
         >
-          <HugeiconsIcon icon={Cancel01Icon} size={18} strokeWidth={1.5} />
+          <HugeiconsIcon icon={Cancel01Icon} size={20} strokeWidth={1.5} />
         </button>
       </div>
     </div>

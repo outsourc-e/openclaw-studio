@@ -36,6 +36,7 @@ function escapeAttributeSelector(value: string): string {
 
 type ChatMessageListProps = {
   messages: Array<GatewayMessage>
+  onRetryMessage?: (message: GatewayMessage) => void
   loading: boolean
   empty: boolean
   emptyState?: React.ReactNode
@@ -57,6 +58,7 @@ type ChatMessageListProps = {
 
 function ChatMessageListComponent({
   messages,
+  onRetryMessage,
   loading,
   empty,
   emptyState,
@@ -502,6 +504,7 @@ function ChatMessageListComponent({
       <MessageItem
         key={stableId}
         message={chatMessage}
+        onRetryMessage={onRetryMessage}
         toolResultsByCallId={hasToolCalls ? toolResultsByCallId : undefined}
         forceActionsVisible={forceActionsVisible}
         wrapperClassName={spacingClass}
@@ -888,6 +891,7 @@ function ChatMessageListComponent({
                     <MessageItem
                       key={stableId}
                       message={chatMessage}
+                      onRetryMessage={onRetryMessage}
                       toolResultsByCallId={
                         hasToolCalls ? toolResultsByCallId : undefined
                       }
@@ -1046,6 +1050,7 @@ function areChatMessageListEqual(
 ) {
   return (
     prev.messages === next.messages &&
+    prev.onRetryMessage === next.onRetryMessage &&
     prev.loading === next.loading &&
     prev.empty === next.empty &&
     prev.emptyState === next.emptyState &&
