@@ -37,6 +37,16 @@ export function useGatewayChatStream(
   const reconnectAttempts = useRef(0)
   const mountedRef = useRef(true)
 
+  // Store callbacks in refs to avoid reconnecting when they change
+  const onUserMessageRef = useRef(onUserMessage)
+  const onChunkRef = useRef(onChunk)
+  const onThinkingRef = useRef(onThinking)
+  const onDoneRef = useRef(onDone)
+  onUserMessageRef.current = onUserMessage
+  onChunkRef.current = onChunk
+  onThinkingRef.current = onThinking
+  onDoneRef.current = onDone
+
   const connect = useCallback(() => {
     if (!enabled || !mountedRef.current) return
 
@@ -98,7 +108,7 @@ export function useGatewayChatStream(
           sessionKey: string
         }
         processEvent({ type: 'chunk', ...data })
-        onChunk?.(data.text, data.sessionKey)
+        onChunkRef.current?.(data.text, data.sessionKey)
       } catch {
         // Ignore parse errors
       }
@@ -113,7 +123,7 @@ export function useGatewayChatStream(
           sessionKey: string
         }
         processEvent({ type: 'thinking', ...data })
-        onThinking?.(data.text, data.sessionKey)
+        onThinkingRef.current?.(data.text, data.sessionKey)
       } catch {
         // Ignore parse errors
       }
@@ -145,7 +155,7 @@ export function useGatewayChatStream(
           source?: string
         }
         processEvent({ type: 'user_message', ...data })
-        onUserMessage?.(data.message, data.source)
+        onUserMessageRef.current?.(data.message, data.source)
       } catch {
         // Ignore parse errors
       }
@@ -175,7 +185,7 @@ export function useGatewayChatStream(
           message?: GatewayMessage
         }
         processEvent({ type: 'done', ...data })
-        onDone?.(data.state, data.sessionKey)
+        onDoneRef.current?.(data.state, data.sessionKey)
       } catch {
         // Ignore parse errors
       }
@@ -186,13 +196,8 @@ export function useGatewayChatStream(
     })
   }, [
     enabled,
-    sessionKey,
     setConnectionState,
     processEvent,
-    onUserMessage,
-    onChunk,
-    onThinking,
-    onDone,
   ])
 
   const scheduleReconnect = useCallback(() => {
